@@ -12,30 +12,13 @@ function Navbar() {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
 
   return (
-    <nav className="flex items-center justify-between bg-white shadow-sm border-b border-gray-200 px-6 py-4">
-      {/* Search Bar */}
-      <div className="flex-1 max-w-lg">
-        <div className="relative">
-          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <MagnifyingGlassIcon className="h-5 w-5 text-gray-400" />
-          </div>
-          <input
-            type="text"
-            className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-xl bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200"
-            placeholder="Search inventory, products, orders..."
-          />
-        </div>
-      </div>
+    <nav className="flex items-center justify-end bg-white shadow-sm border-b border-gray-200 px-6 py-4">
+
 
       {/* Icons and Profile */}
       <div className="flex items-center gap-6">
         {/* Cart with Badge */}
-        <div className="relative">
-          <ShoppingCartIcon className="w-6 h-6 text-gray-600 hover:text-indigo-600 cursor-pointer transition-colors duration-200" />
-          <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-medium">
-            3
-          </span>
-        </div>
+   
 
         {/* Notifications with Badge */}
         <div className="relative">
@@ -45,13 +28,7 @@ function Navbar() {
           </span>
         </div>
 
-        {/* Messages with Badge */}
-        <div className="relative">
-          <ChatBubbleOvalLeftIcon className="w-6 h-6 text-gray-600 hover:text-indigo-600 cursor-pointer transition-colors duration-200" />
-          <span className="absolute -top-2 -right-2 bg-green-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-medium">
-            2
-          </span>
-        </div>
+ 
 
         {/* Divider */}
         <div className="h-8 w-px bg-gray-300"></div>
@@ -67,7 +44,7 @@ function Navbar() {
                 <span className="text-white text-sm font-medium">BC</span>
               </div>
               <div className="hidden md:block text-left">
-                <p className="text-sm font-medium text-gray-900">Bunchhorng</p>
+                <p className="text-sm font-medium text-gray-900">Ploy</p>
                 <p className="text-xs text-gray-500">Admini</p>
               </div>
               <ChevronDownIcon className={`w-4 h-4 text-gray-500 transition-transform duration-200 ${isProfileOpen ? 'rotate-180' : ''}`} />
@@ -78,8 +55,8 @@ function Navbar() {
           {isProfileOpen && (
             <div className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-lg border border-gray-200 py-2 z-50">
               <div className="px-4 py-3 border-b border-gray-100">
-                <p className="text-sm font-medium text-gray-900">Bunchhorng</p>
-                <p className="text-sm text-gray-500">chhorng@gmail.com</p>
+                <p className="text-sm font-medium text-gray-900">MOKA</p>
+                <p className="text-sm text-gray-500">moka@gmail.com</p>
               </div>
               
               <a href="#" className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors duration-150">
