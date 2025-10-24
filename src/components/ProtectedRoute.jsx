@@ -5,6 +5,7 @@ const ProtectedRoute = ({ children }) => {
   const token = localStorage.getItem("token");
 
   if (!token) {
+    alert("You need to login first!"); // <-- added alert here
     return <Navigate to="/login" replace />;
   }
 

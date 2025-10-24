@@ -1,7 +1,8 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import axios from "axios";
 import {
-  FaUserTie,
   FaBuilding,
+  FaUserTie,
   FaPhoneAlt,
   FaEnvelope,
   FaMapMarkerAlt,
@@ -9,148 +10,161 @@ import {
   FaEdit,
   FaTrash,
   FaSave,
-  FaStar,
+  FaSearch,
 } from "react-icons/fa";
 
-/**
- * Suppliers Management Page
- * CRUD UI — Add, Edit, View, Delete supplier info
- * Ready for backend integration
- */
+const API_BASE = "http://localhost:8000/api";
+const token = localStorage.getItem("token");
+
 function Suppliers() {
-  // State
   const [suppliers, setSuppliers] = useState([]);
   const [editingIndex, setEditingIndex] = useState(null);
   const [form, setForm] = useState({
     name: "",
     company: "",
-    contact: "",
-    email: "",
     phone: "",
+    email: "",
     address: "",
     notes: "",
-    rating: 0,
   });
+  const [searchTerm, setSearchTerm] = useState("");
+  const [sortConfig, setSortConfig] = useState({ key: "name", direction: "asc" });
 
-  // Handle input change
+  const fetchSuppliers = () => {
+    axios
+      .get(`${API_BASE}/suppliers`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      .then((res) => {
+        if (res.data && res.data.data) setSuppliers(res.data.data);
+      })
+      .catch((err) => console.error("Error fetching suppliers:", err));
+  };
+
+  useEffect(() => {
+    fetchSuppliers();
+  }, []);
+
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  // Add or update supplier
   const handleSubmit = (e) => {
     e.preventDefault();
-
-    if (!form.name || !form.company || !form.phone) {
-      alert("Please fill in all required fields.");
+    if (!form.name) {
+      alert("Supplier name is required");
       return;
     }
 
     if (editingIndex !== null) {
-      const updated = [...suppliers];
-      updated[editingIndex] = form;
-      setSuppliers(updated);
-      setEditingIndex(null);
+      const supplierId = suppliers[editingIndex].id;
+      axios
+        .post(`${API_BASE}/suppliers/${supplierId}`, form, {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+        .then(() => {
+          fetchSuppliers();
+          setEditingIndex(null);
+          setForm({
+            name: "",
+            company: "",
+            phone: "",
+            email: "",
+            address: "",
+            notes: "",
+          });
+        })
+        .catch((err) => console.error("Error updating supplier:", err));
     } else {
-      setSuppliers([...suppliers, form]);
+      axios
+        .post(`${API_BASE}/suppliers`, form, {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+        .then(() => {
+          fetchSuppliers();
+          setForm({
+            name: "",
+            company: "",
+            phone: "",
+            email: "",
+            address: "",
+            notes: "",
+          });
+        })
+        .catch((err) => console.error("Error adding supplier:", err));
     }
-
-    setForm({
-      name: "",
-      company: "",
-      contact: "",
-      email: "",
-      phone: "",
-      address: "",
-      notes: "",
-      rating: 0,
-    });
   };
 
-  // Edit supplier
   const handleEdit = (index) => {
     setForm(suppliers[index]);
     setEditingIndex(index);
   };
 
-  // Delete supplier
   const handleDelete = (index) => {
-    if (window.confirm("Are you sure you want to delete this supplier?")) {
-      setSuppliers(suppliers.filter((_, i) => i !== index));
+    const supplierId = suppliers[index].id;
+    if (window.confirm("Are you sure to delete this supplier?")) {
+      axios
+        .delete(`${API_BASE}/suppliers/${supplierId}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+        .then(() => fetchSuppliers())
+        .catch((err) => console.error("Error deleting supplier:", err));
     }
   };
 
+  const handleSort = (key) => {
+    let direction = "asc";
+    if (sortConfig.key === key && sortConfig.direction === "asc") {
+      direction = "desc";
+    }
+    setSortConfig({ key, direction });
+  };
+
+  const sortedSuppliers = [...suppliers]
+    .filter((s) => s.name.toLowerCase().includes(searchTerm.toLowerCase()))
+    .sort((a, b) => {
+      if (a[sortConfig.key] < b[sortConfig.key]) return sortConfig.direction === "asc" ? -1 : 1;
+      if (a[sortConfig.key] > b[sortConfig.key]) return sortConfig.direction === "asc" ? 1 : -1;
+      return 0;
+    });
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-100 to-gray-200 p-8">
-      <div className="max-w-6xl mx-auto bg-white/80 backdrop-blur-md rounded-2xl shadow-lg p-8">
-        {/* HEADER */}
+    <div className="min-h-screen bg-gray-100 p-8">
+      <div className="max-w-6xl mx-auto bg-white p-8 rounded-xl shadow-lg">
         <div className="flex justify-between items-center mb-6 border-b pb-3">
           <h1 className="text-2xl font-semibold text-gray-800 flex items-center gap-2">
             <FaUserTie className="text-blue-600" /> Supplier Management
           </h1>
-          <span className="text-gray-500 text-sm">
-            {editingIndex !== null ? "Editing Supplier" : "Add New Supplier"}
-          </span>
         </div>
 
-        {/* FORM */}
-        <form
-          onSubmit={handleSubmit}
-          className="grid md:grid-cols-2 gap-4 mb-8"
-        >
+        {/* Form */}
+        <form onSubmit={handleSubmit} className="grid md:grid-cols-2 gap-4 mb-4">
           <div>
-            <label className="block font-medium mb-1">Supplier Name *</label>
+            <label className="block font-medium mb-1">Name *</label>
             <input
               type="text"
               name="name"
               value={form.name}
               onChange={handleChange}
-              placeholder="Enter supplier name"
               className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-400"
+              placeholder="Supplier name"
             />
           </div>
 
           <div>
-            <label className="block font-medium mb-1">Company *</label>
+            <label className="block font-medium mb-1">Company</label>
             <input
               type="text"
               name="company"
               value={form.company}
               onChange={handleChange}
-              placeholder="Enter company name"
               className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-400"
+              placeholder="Company name"
             />
           </div>
 
           <div>
-            <label className="block font-medium mb-1">Contact Person</label>
-            <input
-              type="text"
-              name="contact"
-              value={form.contact}
-              onChange={handleChange}
-              placeholder="Enter contact person"
-              className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-400"
-            />
-          </div>
-
-          <div>
-            <label className="block font-medium mb-1">Email</label>
-            <div className="flex items-center border rounded-lg p-2">
-              <FaEnvelope className="text-gray-400 mr-2" />
-              <input
-                type="email"
-                name="email"
-                value={form.email}
-                onChange={handleChange}
-                placeholder="example@email.com"
-                className="w-full outline-none"
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="block font-medium mb-1">Phone *</label>
+            <label className="block font-medium mb-1">Phone</label>
             <div className="flex items-center border rounded-lg p-2">
               <FaPhoneAlt className="text-gray-400 mr-2" />
               <input
@@ -165,6 +179,21 @@ function Suppliers() {
           </div>
 
           <div>
+            <label className="block font-medium mb-1">Email</label>
+            <div className="flex items-center border rounded-lg p-2">
+              <FaEnvelope className="text-gray-400 mr-2" />
+              <input
+                type="email"
+                name="email"
+                value={form.email}
+                onChange={handleChange}
+                placeholder="email@example.com"
+                className="w-full outline-none"
+              />
+            </div>
+          </div>
+
+          <div>
             <label className="block font-medium mb-1">Address</label>
             <div className="flex items-center border rounded-lg p-2">
               <FaMapMarkerAlt className="text-gray-400 mr-2" />
@@ -173,7 +202,7 @@ function Suppliers() {
                 name="address"
                 value={form.address}
                 onChange={handleChange}
-                placeholder="Enter address"
+                placeholder="Address"
                 className="w-full outline-none"
               />
             </div>
@@ -185,24 +214,9 @@ function Suppliers() {
               name="notes"
               value={form.notes}
               onChange={handleChange}
-              placeholder="Add any important notes"
+              placeholder="Important notes"
               className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-400"
             />
-          </div>
-
-          <div className="flex items-center gap-2 md:col-span-2">
-            <label className="font-medium">Rating:</label>
-            {[1, 2, 3, 4, 5].map((star) => (
-              <FaStar
-                key={star}
-                onClick={() => setForm({ ...form, rating: star })}
-                className={`cursor-pointer text-xl ${
-                  form.rating >= star
-                    ? "text-yellow-400"
-                    : "text-gray-300 hover:text-yellow-300"
-                }`}
-              />
-            ))}
           </div>
 
           <div className="md:col-span-2 flex justify-end gap-4 mt-4">
@@ -214,12 +228,10 @@ function Suppliers() {
                   setForm({
                     name: "",
                     company: "",
-                    contact: "",
-                    email: "",
                     phone: "",
+                    email: "",
                     address: "",
                     notes: "",
-                    rating: 0,
                   });
                 }}
                 className="bg-gray-200 hover:bg-gray-300 px-4 py-2 rounded-lg"
@@ -227,6 +239,7 @@ function Suppliers() {
                 Cancel
               </button>
             )}
+
             <button
               type="submit"
               className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center gap-2"
@@ -237,63 +250,78 @@ function Suppliers() {
                 </>
               ) : (
                 <>
-                  <FaPlus /> Add Supplier
+                  <FaPlus /> Add
                 </>
               )}
             </button>
           </div>
         </form>
 
-        {/* SUPPLIER TABLE */}
+        {/* Search */}
+        <div className="flex items-center mb-4 gap-2">
+          <FaSearch className="text-gray-400" />
+          <input
+            type="text"
+            placeholder="Search suppliers..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="border rounded-lg p-2 w-full focus:ring-2 focus:ring-blue-400"
+          />
+        </div>
+
+        {/* Supplier List */}
         <h2 className="text-xl font-semibold mb-4 text-gray-800 flex items-center gap-2">
-          <FaBuilding className="text-blue-600" /> Supplier List
+          <FaBuilding className="text-blue-600" /> Suppliers
         </h2>
 
-        {suppliers.length === 0 ? (
-          <p className="text-gray-500 text-center">No suppliers added yet.</p>
+        {sortedSuppliers.length === 0 ? (
+          <p className="text-gray-500 text-center">No suppliers found.</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full border-collapse">
               <thead className="bg-blue-100">
-                <tr>
-                  <th className="p-2 text-left">Name</th>
-                  <th className="p-2 text-left">Company</th>
-                  <th className="p-2">Phone</th>
-                  <th className="p-2">Email</th>
-                  <th className="p-2">Rating</th>
-                  <th className="p-2 text-center">Actions</th>
-                </tr>
+                {["name", "company", "phone", "email", "address", "notes"].map((key) => (
+                  <th
+                    key={key}
+                    onClick={() => handleSort(key)}
+                    className="p-2 text-left cursor-pointer select-none hover:text-blue-600"
+                  >
+                    {key.charAt(0).toUpperCase() + key.slice(1)}
+                    {sortConfig.key === key ? (sortConfig.direction === "asc" ? " ▲" : " ▼") : ""}
+                  </th>
+                ))}
+                <th className="p-2 text-left">Actions</th>
               </thead>
               <tbody>
-                {suppliers.map((s, i) => (
-                  <tr
-                    key={i}
-                    className="border-t hover:bg-gray-50 transition duration-150"
-                  >
+                {sortedSuppliers.map((s, i) => (
+                  <tr key={s.id} className="border-t hover:bg-gray-50 transition">
                     <td className="p-2">{s.name}</td>
                     <td className="p-2">{s.company}</td>
-                    <td className="p-2 text-center">{s.phone}</td>
-                    <td className="p-2 text-center">{s.email}</td>
-                    <td className="p-2 text-center">
-                      {Array.from({ length: s.rating }).map((_, i) => (
-                        <FaStar key={i} className="text-yellow-400 inline" />
-                      ))}
-                    </td>
-                    <td className="p-2 text-center">
-                      <div className="flex justify-center gap-3">
+                    <td className="p-2">{s.phone}</td>
+                    <td className="p-2">{s.email}</td>
+                    <td className="p-2">{s.address}</td>
+                    <td className="p-2">{s.notes}</td>
+                    <td className="p-2 flex gap-2">
+                      <button
+                        onClick={() => handleEdit(i)}
+                        className="text-blue-600 hover:text-blue-800 flex items-center gap-1"
+                      >
+                        <FaEdit /> Edit
+                      </button>
+                      {editingIndex === i && (
                         <button
-                          onClick={() => handleEdit(i)}
-                          className="text-blue-600 hover:text-blue-800"
+                          onClick={handleSubmit}
+                          className="text-green-600 hover:text-green-800 flex items-center gap-1"
                         >
-                          <FaEdit />
+                          <FaSave /> Update
                         </button>
-                        <button
-                          onClick={() => handleDelete(i)}
-                          className="text-red-600 hover:text-red-800"
-                        >
-                          <FaTrash />
-                        </button>
-                      </div>
+                      )}
+                      <button
+                        onClick={() => handleDelete(i)}
+                        className="text-red-600 hover:text-red-800 flex items-center gap-1"
+                      >
+                        <FaTrash /> Delete
+                      </button>
                     </td>
                   </tr>
                 ))}

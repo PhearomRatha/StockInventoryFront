@@ -5,6 +5,12 @@ import Dashboard from "./pages/Dashboard";
 import ProductPage from "./pages/ProductPage";
 import LoginPage from "./pages/Login";
 import ProtectedRoute from "./components/ProtectedRoute";
+import StockInPage from "./pages/StockInPage";
+import StockOutPage from "./pages/StockOutPage";
+import Suppliers from "./pages/Suppliers";
+ import CustomerCRMPage from "./pages/CustomerCRMPage";
+ import UserManagement from "./pages/UserManagement";
+ import Signup from "./pages/SignupPage";
 
 function App() {
   return (
@@ -12,6 +18,7 @@ function App() {
       <Routes>
         {/* Public Route */}
         <Route path="/login" element={<LoginPage />} />
+         <Route path="/signup" element={<Signup />} />
 
         {/* Protected Routes */}
         <Route
@@ -27,6 +34,14 @@ function App() {
                     <Routes>
                       <Route path="/" element={<Dashboard />} />
                       <Route path="/products" element={<ProductPage />} />
+                                    <Route path="/stock-in" element={<StockInPage/>}/>
+               <Route path="/stock-out" element={<StockOutPage/>}/>
+               <Route path="/suppliers" element={<Suppliers/>}/>
+              <Route path="/customers" element={<CustomerCRMPage/>}/>
+              <Route path="/users" element={<UserManagement/>}/>  
+                   
+       
+
                     </Routes>
                   </main>
                 </div>

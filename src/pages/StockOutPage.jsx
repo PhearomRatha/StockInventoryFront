@@ -1,84 +1,158 @@
 import React, { useState, useEffect } from "react";
-import {
-  FaMoneyBillWave,
-  FaCreditCard,
-  FaUniversity,
-  FaMobileAlt,
-  FaTrash,
-  FaPlus,
-  FaShoppingCart,
-} from "react-icons/fa";
+import { FaTrash, FaPlus, FaShoppingCart } from "react-icons/fa";
 
-/**
- * StockOutPage (Sales Form)
- * Beautiful React + Tailwind UI with clear structure
- */
 function StockOutPage() {
-  // Auto-generated invoice ID
   const [invoiceId] = useState(`INV-${Date.now()}`);
-
-  // Form data
   const [form, setForm] = useState({
-    customer: "",
-    product: "",
+    customer_id: "",
+    product_id: "",
     quantity: 1,
-    price: "",
-    discount: 0,
-    payment: "cash",
-    date: new Date().toISOString().slice(0, 10),
+    unit_price: "",
+    total_amount: "",
+    sold_date: new Date().toISOString().slice(0, 10),
+    sold_by: "",
+    remarks: "",
   });
 
-  // Sales history
-  const [sales, setSales] = useState([]);
+  const [products, setProducts] = useState([]);
+  const [customers, setCustomers] = useState([]);
+  const [users, setUsers] = useState([]);
+  const [stockOuts, setStockOuts] = useState([]);
+  const [loading, setLoading] = useState({
+    products: true,
+    customers: true,
+    users: true,
+    stockOuts: true,
+  });
 
-  // Product list (can later be fetched from backend)
-  const [products] = useState([
-    { name: "Laptop", price: 1200 },
-    { name: "Mouse", price: 25 },
-    { name: "Keyboard", price: 60 },
-    { name: "Monitor", price: 300 },
-  ]);
+  const token = localStorage.getItem("token");
+  const API_BASE = "http://localhost:8000/api";
 
-  // Handle input changes
+  // ---------------- Fetch Products ----------------
+  useEffect(() => {
+    fetch(`${API_BASE}/products`, { headers: { Authorization: `Bearer ${token}` } })
+      .then((res) => res.json())
+      .then((data) => setProducts(Array.isArray(data.data) ? data.data : []))
+      .catch(console.error)
+      .finally(() => setLoading((prev) => ({ ...prev, products: false })));
+  }, [token]);
+
+  // ---------------- Fetch Customers ----------------
+  useEffect(() => {
+    fetch(`${API_BASE}/customers`, { headers: { Authorization: `Bearer ${token}` } })
+      .then((res) => res.json())
+      .then((data) => setCustomers(Array.isArray(data.data) ? data.data : []))
+      .catch(console.error)
+      .finally(() => setLoading((prev) => ({ ...prev, customers: false })));
+  }, [token]);
+
+  // ---------------- Fetch Users ----------------
+  useEffect(() => {
+    fetch(`${API_BASE}/users`, { headers: { Authorization: `Bearer ${token}` } })
+      .then((res) => res.json())
+      .then((data) => setUsers(Array.isArray(data.data) ? data.data : []))
+      .catch(console.error)
+      .finally(() => setLoading((prev) => ({ ...prev, users: false })));
+  }, [token]);
+
+  // ---------------- Fetch Stock Outs ----------------
+  useEffect(() => {
+    fetch(`${API_BASE}/stock-outs`, { headers: { Authorization: `Bearer ${token}` } })
+      .then((res) => res.json())
+      .then((data) => setStockOuts(Array.isArray(data) ? data : []))
+      .catch(console.error)
+      .finally(() => setLoading((prev) => ({ ...prev, stockOuts: false })));
+  }, [token]);
+
+  // ---------------- Handle Form Changes ----------------
   const handleChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    let updatedForm = { ...form, [name]: value };
+
+    // Auto-fill unit_price when product changes
+    if (name === "product_id") {
+      const selectedProduct = products.find((p) => p.id === Number(value));
+      if (selectedProduct) {
+        updatedForm.unit_price = selectedProduct.price;
+      } else {
+        updatedForm.unit_price = "";
+      }
+    }
+
+    // Recalculate total
+    const qty = Number(updatedForm.quantity);
+    const price = Number(updatedForm.unit_price);
+    updatedForm.total_amount = !isNaN(qty * price) ? (qty * price).toFixed(2) : "";
+
+    setForm(updatedForm);
   };
 
-  // Add sale record
-  const handleAddSale = () => {
-    if (!form.customer || !form.product || !form.price) return alert("Please fill all fields!");
-    const total = form.quantity * form.price * (1 - form.discount / 100);
-    const newSale = { ...form, total };
-    setSales([...sales, newSale]);
-    setForm({ ...form, product: "", quantity: 1, price: "", discount: 0 });
+  // ---------------- Submit Stock Out ----------------
+  const handleSubmit = async () => {
+    if (!form.customer_id || !form.product_id || !form.unit_price || !form.sold_by) {
+      return alert("Please fill all required fields!");
+    }
+
+    try {
+      const response = await fetch(`${API_BASE}/stock-outs`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(form),
+      });
+
+      const result = await response.json();
+
+      if (response.ok) {
+        alert("Stock out recorded successfully!");
+        setStockOuts([...stockOuts, result]);
+        setForm({
+          customer_id: "",
+          product_id: "",
+          quantity: 1,
+          unit_price: "",
+          total_amount: "",
+          sold_date: new Date().toISOString().slice(0, 10),
+          sold_by: "",
+          remarks: "",
+        });
+      } else {
+        alert(result.message || "Failed to record stock out");
+      }
+    } catch (error) {
+      console.error(error);
+      alert("Error submitting stock out. Check CORS or backend.");
+    }
   };
 
-  // Delete a sale
-  const handleDelete = (index) => {
-    const updatedSales = sales.filter((_, i) => i !== index);
-    setSales(updatedSales);
+  // ---------------- Delete Stock Out ----------------
+  const handleDelete = async (id) => {
+    if (!window.confirm("Are you sure you want to delete this record?")) return;
+
+    try {
+      const response = await fetch(`${API_BASE}/stock-outs/${id}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (response.ok) {
+        setStockOuts(stockOuts.filter((s) => s.id !== id));
+      } else {
+        alert("Failed to delete stock out record");
+      }
+    } catch (err) {
+      console.error(err);
+    }
   };
-
-  // Total calculations
-  const subtotal = sales.reduce((sum, s) => sum + s.total, 0);
-  const tax = subtotal * 0.1;
-  const grandTotal = subtotal + tax;
-
-  // Payment options
-  const paymentMethods = [
-    { value: "cash", label: "Cash", icon: <FaMoneyBillWave className="text-green-600" /> },
-    { value: "card", label: "Credit Card", icon: <FaCreditCard className="text-blue-600" /> },
-    { value: "transfer", label: "Bank Transfer", icon: <FaUniversity className="text-indigo-600" /> },
-    { value: "digital", label: "Digital Payment", icon: <FaMobileAlt className="text-purple-600" /> },
-  ];
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-100 to-gray-200 p-8">
-      {/* SALES FORM */}
-      <div className="max-w-5xl mx-auto bg-white/70 backdrop-blur-md rounded-2xl shadow-lg p-8">
+      {/* Form */}
+      <div className="max-w-5xl mx-auto bg-white/70 backdrop-blur-md rounded-2xl shadow-lg p-8 mb-10">
         <div className="flex justify-between items-center mb-6 border-b pb-3">
           <h1 className="text-2xl font-semibold text-gray-800 flex items-center gap-2">
-            <FaShoppingCart className="text-blue-600" /> Sales Form
+            <FaShoppingCart className="text-blue-600" /> Stock Out Form
           </h1>
           <p className="text-sm text-gray-500">Invoice ID: {invoiceId}</p>
         </div>
@@ -86,139 +160,80 @@ function StockOutPage() {
         <div className="grid md:grid-cols-2 gap-4">
           {/* Customer */}
           <div>
-            <label className="block font-medium mb-1">Customer Name</label>
-            <input
-              type="text"
-              name="customer"
-              placeholder="Enter customer name"
-              value={form.customer}
-              onChange={handleChange}
-              className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-400"
-            />
+            <label className="block font-medium mb-1">Customer</label>
+            {loading.customers ? <p>Loading customers...</p> : (
+              <select name="customer_id" value={form.customer_id} onChange={handleChange} className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-400">
+                <option value="">Select Customer</option>
+                {customers.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
+            )}
           </div>
 
           {/* Product */}
           <div>
             <label className="block font-medium mb-1">Product</label>
-            <select
-              name="product"
-              value={form.product}
-              onChange={(e) => {
-                const selected = products.find((p) => p.name === e.target.value);
-                setForm({
-                  ...form,
-                  product: e.target.value,
-                  price: selected ? selected.price : "",
-                });
-              }}
-              className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-400"
-            >
-              <option value="">Select Product</option>
-              {products.map((p, i) => (
-                <option key={i} value={p.name}>
-                  {p.name} (${p.price})
-                </option>
-              ))}
-            </select>
+            {loading.products ? <p>Loading products...</p> : (
+              <select name="product_id" value={form.product_id} onChange={handleChange} className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-400">
+                <option value="">Select Product</option>
+                {products.map((p) => <option key={p.id} value={p.id}>{p.name} ({p.stock_quantity} in stock)</option>)}
+              </select>
+            )}
           </div>
 
           {/* Quantity */}
           <div>
             <label className="block font-medium mb-1">Quantity</label>
-            <input
-              type="number"
-              name="quantity"
-              min="1"
-              value={form.quantity}
-              onChange={handleChange}
-              className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-400"
-            />
+            <input type="number" min="1" name="quantity" value={form.quantity} onChange={handleChange} className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-400" />
           </div>
 
-          {/* Price */}
+          {/* Unit Price (auto-filled) */}
           <div>
-            <label className="block font-medium mb-1">Price</label>
-            <input
-              type="number"
-              name="price"
-              value={form.price}
-              onChange={handleChange}
-              className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-400"
-            />
+            <label className="block font-medium mb-1">Unit Price</label>
+            <input type="number" min="0" name="unit_price" value={form.unit_price} readOnly className="w-full border rounded-lg p-2 bg-gray-100" />
           </div>
 
-          {/* Discount */}
+          {/* Total */}
           <div>
-            <label className="block font-medium mb-1">Discount (%)</label>
-            <input
-              type="number"
-              name="discount"
-              value={form.discount}
-              onChange={handleChange}
-              className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-400"
-            />
+            <label className="block font-medium mb-1">Total</label>
+            <input type="number" name="total_amount" value={form.total_amount} readOnly className="w-full border rounded-lg p-2 bg-gray-100" />
           </div>
 
-          {/* Payment Method */}
+          {/* Sold By */}
           <div>
-            <label className="block font-medium mb-1">Payment Method</label>
-            <div className="flex flex-wrap gap-3">
-              {paymentMethods.map((m) => (
-                <button
-                  key={m.value}
-                  onClick={() => setForm({ ...form, payment: m.value })}
-                  className={`flex items-center gap-2 border rounded-lg px-3 py-2 text-sm ${
-                    form.payment === m.value
-                      ? "bg-blue-100 border-blue-500"
-                      : "hover:bg-gray-100"
-                  }`}
-                >
-                  {m.icon}
-                  {m.label}
-                </button>
-              ))}
-            </div>
+            <label className="block font-medium mb-1">Sold By</label>
+            {loading.users ? <p>Loading users...</p> : (
+              <select name="sold_by" value={form.sold_by} onChange={handleChange} className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-400">
+                <option value="">Select User</option>
+                {users.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
+              </select>
+            )}
           </div>
 
           {/* Date */}
           <div>
             <label className="block font-medium mb-1">Date</label>
-            <input
-              type="date"
-              name="date"
-              value={form.date}
-              onChange={handleChange}
-              className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-400"
-            />
+            <input type="date" name="sold_date" value={form.sold_date} onChange={handleChange} className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-400" />
+          </div>
+
+          {/* Remarks */}
+          <div>
+            <label className="block font-medium mb-1">Remarks</label>
+            <input type="text" name="remarks" value={form.remarks} onChange={handleChange} className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-400" />
           </div>
         </div>
 
-        {/* Buttons */}
-        <div className="flex justify-end gap-4 mt-6">
-          <button
-            onClick={() => window.print()}
-            className="bg-gray-200 hover:bg-gray-300 px-4 py-2 rounded-lg"
-          >
-            🖨️ Print / PDF
-          </button>
-          <button
-            onClick={handleAddSale}
-            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
-          >
-            <FaPlus className="inline-block mr-1" />
-            Add Sale
+        <div className="flex justify-end mt-6">
+          <button onClick={handleSubmit} className="bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center gap-2">
+            <FaPlus /> Record Stock Out
           </button>
         </div>
       </div>
 
-      {/* SALES HISTORY */}
-      <div className="max-w-5xl mx-auto mt-10 bg-white/80 backdrop-blur-md rounded-2xl shadow-lg p-8">
-        <h2 className="text-xl font-semibold mb-4 text-gray-800 flex items-center gap-2">
-          📊 Sales History
-        </h2>
-
-        {sales.length === 0 ? (
-          <p className="text-gray-500 text-center">No sales recorded yet.</p>
+      {/* Stock Out History */}
+      <div className="max-w-5xl mx-auto bg-white/80 backdrop-blur-md rounded-2xl shadow-lg p-8">
+        <h2 className="text-xl font-semibold mb-4 text-gray-800 flex items-center gap-2"> Stock Out History</h2>
+        {loading.stockOuts ? <p>Loading stock out records...</p> : stockOuts.length === 0 ? (
+          <p className="text-gray-500 text-center">No stock out records yet.</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full border-collapse">
@@ -226,59 +241,33 @@ function StockOutPage() {
                 <tr>
                   <th className="p-2 text-left">Customer</th>
                   <th className="p-2 text-left">Product</th>
-                  <th className="p-2">Qty</th>
-                  <th className="p-2">Price</th>
-                  <th className="p-2">Discount</th>
-                  <th className="p-2">Total</th>
-                  <th className="p-2">Date</th>
-                  <th className="p-2">Action</th>
+                  <th className="p-2 text-center">Qty</th>
+                  <th className="p-2 text-center">Unit Price</th>
+                  <th className="p-2 text-center">Total</th>
+                  <th className="p-2 text-center">Date</th>
+                  <th className="p-2 text-center">Sold By</th>
+                  <th className="p-2 text-center">Remarks</th>
+                  <th className="p-2 text-center">Action</th>
                 </tr>
               </thead>
               <tbody>
-                {sales.map((s, i) => (
-                  <tr
-                    key={i}
-                    className="border-t hover:bg-gray-50 transition duration-150"
-                  >
-                    <td className="p-2">{s.customer}</td>
-                    <td className="p-2">{s.product}</td>
+                {stockOuts.map((s) => (
+                  <tr key={s.id} className="border-t hover:bg-gray-50 transition duration-150">
+                    <td className="p-2">{s.customer_name}</td>
+                    <td className="p-2">{s.product_name}</td>
                     <td className="p-2 text-center">{s.quantity}</td>
-                    <td className="p-2 text-center">${s.price}</td>
-                    <td className="p-2 text-center">{s.discount}%</td>
-                    <td className="p-2 text-center font-semibold">
-                      ${s.total.toFixed(2)}
-                    </td>
-                    <td className="p-2 text-center">{s.date}</td>
+                    <td className="p-2 text-center">${s.unit_price}</td>
+                    <td className="p-2 text-center">${s.total_amount}</td>
+                    <td className="p-2 text-center">{s.sold_date}</td>
+                    <td className="p-2 text-center">{s.sold_by}</td>
+                    <td className="p-2 text-center">{s.remarks}</td>
                     <td className="p-2 text-center">
-                      <button
-                        onClick={() => handleDelete(i)}
-                        className="text-red-600 hover:text-red-800"
-                      >
-                        <FaTrash />
-                      </button>
+                      <button onClick={() => handleDelete(s.id)} className="text-red-600 hover:text-red-800"><FaTrash /></button>
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
-
-            {/* Totals */}
-            <div className="flex justify-end mt-6">
-              <div className="w-64 border-t pt-3 text-gray-700 space-y-1">
-                <div className="flex justify-between">
-                  <span>Subtotal:</span>
-                  <span>${subtotal.toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Tax (10%):</span>
-                  <span>${tax.toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between font-semibold text-lg">
-                  <span>Total:</span>
-                  <span>${grandTotal.toFixed(2)}</span>
-                </div>
-              </div>
-            </div>
           </div>
         )}
       </div>
