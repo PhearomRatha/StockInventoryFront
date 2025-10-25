@@ -1,37 +1,33 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
-import { FaEdit, FaTrash, FaSave } from "react-icons/fa";
+import { FaTrash, FaUserSlash, FaEdit, FaCheck, FaTimes } from "react-icons/fa";
 
 const API_BASE = "http://localhost:8000/api";
 const token = localStorage.getItem("token");
+const headers = { Authorization: `Bearer ${token}` };
 
 function UserManagement() {
   const [users, setUsers] = useState([]);
   const [roles, setRoles] = useState([]);
-  const [showForm, setShowForm] = useState(false);
+  const [filter, setFilter] = useState("active");
+  const [search, setSearch] = useState("");
   const [editingUser, setEditingUser] = useState(null);
-  const [form, setForm] = useState({
-    name: "",
-    email: "",
-    role_id: "",
-    status: 1,
-  });
-  const [showInactive, setShowInactive] = useState(false); // toggle
+  const [form, setForm] = useState({ name: "", email: "", status: 1, role_id: "" });
 
   // Fetch users
-  const fetchUsers = () => {
-    axios
-      .get(`${API_BASE}/users`, { headers: { Authorization: `Bearer ${token}` } })
-      .then((res) => setUsers(res.data.data))
-      .catch((err) => console.error(err));
+  const fetchUsers = async () => {
+    try {
+      const res = await axios.get(`${API_BASE}/users`, { headers });
+      setUsers(res.data.data);
+    } catch (err) { console.error(err); }
   };
 
   // Fetch roles
-  const fetchRoles = () => {
-    axios
-      .get(`${API_BASE}/roles`, { headers: { Authorization: `Bearer ${token}` } })
-      .then((res) => setRoles(res.data.data))
-      .catch((err) => console.error(err));
+  const fetchRoles = async () => {
+    try {
+      const res = await axios.get(`${API_BASE}/roles`, { headers });
+      setRoles(res.data.data);
+    } catch (err) { console.error(err); }
   };
 
   useEffect(() => {
@@ -39,180 +35,135 @@ function UserManagement() {
     fetchRoles();
   }, []);
 
-  const handleChange = (e) => {
+  // Update user info or status
+  const updateUser = async (id, data) => {
+    try {
+      await axios.put(`${API_BASE}/users/${id}`, data, { headers });
+      setEditingUser(null);
+      fetchUsers();
+    } catch (err) { console.error(err); alert("Failed to update user"); }
+  };
+
+  // Remove user permanently
+  const removeUser = async (id) => {
+    if (!window.confirm("Are you sure to remove this user?")) return;
+    try {
+      await axios.delete(`${API_BASE}/users/${id}`, { headers });
+      fetchUsers();
+    } catch (err) { console.error(err); }
+  };
+
+  const startEdit = (user) => {
+    setEditingUser(user.id);
+    setForm({ name: user.name, email: user.email, status: user.status, role_id: user.role_id });
+  };
+
+  const handleEditChange = (e) => {
     const { name, value } = e.target;
-    setForm({ ...form, [name]: value });
+    setForm(prev => ({ ...prev, [name]: name === "status" || name === "role_id" ? parseInt(value) : value }));
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    if (!form.name || !form.email || !form.role_id) return;
+  const filteredUsers = users
+    .filter(u => {
+      if (filter === "active") return u.status === 1;
+      if (filter === "pending") return u.status === 0;
+      if (filter === "inactive") return u.status === 2;
+      return true;
+    })
+    .filter(u => u.name.toLowerCase().includes(search.toLowerCase()));
 
-    if (editingUser) {
-      axios
-        .put(`${API_BASE}/users/${editingUser.id}`, form, { headers: { Authorization: `Bearer ${token}` } })
-        .then(() => {
-          fetchUsers();
-          setShowForm(false);
-          setEditingUser(null);
-          setForm({ name: "", email: "", role_id: "", status: 1 });
-        })
-        .catch((err) => console.error(err));
-    } else {
-      axios
-        .post(`${API_BASE}/users`, form, { headers: { Authorization: `Bearer ${token}` } })
-        .then(() => {
-          fetchUsers();
-          setShowForm(false);
-          setForm({ name: "", email: "", role_id: "", status: 1 });
-        })
-        .catch((err) => console.error(err));
-    }
-  };
-
-  const handleEdit = (user) => {
-    setEditingUser(user);
-    setForm({
-      name: user.name,
-      email: user.email,
-      role_id: user.role_id,
-      status: user.status,
-    });
-    setShowForm(true);
-  };
-
-  const handleDelete = (id) => {
-    if (!window.confirm("Are you sure to delete this user?")) return;
-    // Instead of deleting, we mark inactive
-    axios
-      .put(`${API_BASE}/users/${id}`, { status: 0 }, { headers: { Authorization: `Bearer ${token}` } })
-      .then(() => fetchUsers())
-      .catch((err) => console.error(err));
-  };
-
-  // Filter users based on status
-  const displayedUsers = users.filter(u => showInactive || u.status === 1);
+  const getStatusText = (status) => status === 0 ? "Pending" : status === 1 ? "Active" : "Inactive";
+  const getStatusClass = (status) => status === 1 ? "bg-green-100 text-green-800" : status === 0 ? "bg-yellow-100 text-yellow-800" : "bg-red-100 text-red-800";
 
   return (
     <div className="min-h-screen bg-gray-100 p-8">
-      <div className="max-w-6xl mx-auto bg-white p-8 rounded-xl shadow-lg">
-        <div className="flex justify-between items-center mb-6 border-b pb-3">
-          <h1 className="text-2xl font-semibold text-gray-800">User Management</h1>
-          <label className="flex items-center gap-2 text-gray-700">
-            <input
-              type="checkbox"
-              checked={showInactive}
-              onChange={() => setShowInactive(!showInactive)}
-            />
-            Show Inactive Users
-          </label>
+      <div className="max-w-7xl mx-auto">
+        <h1 className="text-2xl font-bold mb-4">User Management</h1>
+
+        {/* Filter & Search */}
+        <div className="flex gap-4 mb-6">
+          {["active","pending","inactive"].map(f => (
+            <button
+              key={f}
+              onClick={() => setFilter(f)}
+              className={`px-4 py-2 rounded-lg font-semibold ${filter===f ? "bg-blue-600 text-white" : "bg-gray-200"}`}
+            >
+              {f.charAt(0).toUpperCase() + f.slice(1)}
+            </button>
+          ))}
+          <input
+            type="text"
+            placeholder="Search by name"
+            className="border rounded-lg px-3 py-2 ml-auto"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+          />
         </div>
 
-        {showForm && (
-          <form onSubmit={handleSubmit} className="grid md:grid-cols-2 gap-4 mb-6">
-            <input
-              type="text"
-              name="name"
-              value={form.name}
-              onChange={handleChange}
-              placeholder="Name"
-              className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-400"
-            />
-            <input
-              type="email"
-              name="email"
-              value={form.email}
-              onChange={handleChange}
-              placeholder="Email"
-              className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-400"
-            />
-            <select
-              name="role_id"
-              value={form.role_id}
-              onChange={handleChange}
-              className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-400"
-            >
-              <option value="">Select Role</option>
-              {roles.map((r) => (
-                <option key={r.id} value={r.id}>{r.name}</option>
-              ))}
-            </select>
-            <select
-              name="status"
-              value={form.status}
-              onChange={handleChange}
-              className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-400"
-            >
-              <option value={1}>Active</option>
-              <option value={0}>Inactive</option>
-            </select>
+        {/* User Cards */}
+        <div className="grid md:grid-cols-3 gap-6">
+          {filteredUsers.map(u => (
+            <div key={u.id} className="bg-white p-6 rounded-xl shadow-lg flex flex-col justify-between">
+              <div>
+                <h2 className="text-lg font-semibold mb-1">{u.name}</h2>
+                <p className="text-gray-600 mb-1">{u.email}</p>
+                <p className="text-gray-600 mb-1">Role: {roles.find(r => r.id === u.role_id)?.name || u.role_id}</p>
+                <span className={`px-3 py-1 rounded-full text-sm font-semibold ${getStatusClass(u.status)}`}>
+                  {getStatusText(u.status)}
+                </span>
+              </div>
 
-            <div className="md:col-span-2 flex justify-end gap-4 mt-4">
-              <button
-                type="button"
-                onClick={() => setShowForm(false)}
-                className="bg-gray-200 hover:bg-gray-300 px-4 py-2 rounded-lg"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center gap-2"
-              >
-                <FaSave /> {editingUser ? "Update" : "Add"}
-              </button>
+              <div className="mt-4 flex justify-end gap-2 text-gray-700">
+                {u.status === 0 && (
+                  <>
+                    <button title="Approve" onClick={() => updateUser(u.id, { status: 1 })} className="hover:text-green-600"><FaCheck /></button>
+                    <button title="Reject" onClick={() => updateUser(u.id, { status: 2 })} className="hover:text-red-600"><FaTimes /></button>
+                  </>
+                )}
+                {u.status === 1 && (
+                  <>
+                    <button title="Edit" onClick={() => startEdit(u)} className="hover:text-blue-600"><FaEdit /></button>
+                    <button title="Deactivate" onClick={() => updateUser(u.id, { status: 2 })} className="hover:text-yellow-600"><FaUserSlash /></button>
+                    <button title="Remove" onClick={() => removeUser(u.id)} className="hover:text-red-600"><FaTrash /></button>
+                  </>
+                )}
+                {u.status === 2 && (
+                  <>
+                    <button title="Reactivate" onClick={() => updateUser(u.id, { status: 1 })} className="hover:text-green-600"><FaUserSlash /></button>
+                    <button title="Remove" onClick={() => removeUser(u.id)} className="hover:text-red-600"><FaTrash /></button>
+                  </>
+                )}
+              </div>
             </div>
-          </form>
-        )}
-
-        <div className="overflow-x-auto">
-          <table className="w-full border-collapse">
-            <thead className="bg-gray-100">
-              <tr>
-                <th className="p-2 text-left">Name</th>
-                <th className="p-2 text-left">Email</th>
-                <th className="p-2 text-left">Role</th>
-                <th className="p-2 text-left">Status</th>
-                <th className="p-2 text-left">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {displayedUsers.map((u) => (
-                <tr key={u.id} className="border-t hover:bg-gray-50 transition">
-                  <td className="p-2">{u.name}</td>
-                  <td className="p-2">{u.email}</td>
-                  <td className="p-2">{roles.find((r) => r.id === u.role_id)?.name || "N/A"}</td>
-                  <td className="p-2">
-                    <span
-                      className={`px-3 py-1 rounded-full text-sm font-semibold border ${
-                        u.status === 1
-                          ? "bg-green-100 text-green-800 border-green-200"
-                          : "bg-red-100 text-red-800 border-red-200"
-                      }`}
-                    >
-                      {u.status === 1 ? "Active" : "Inactive"}
-                    </span>
-                  </td>
-                  <td className="p-2 flex gap-2">
-                    <button
-                      onClick={() => handleEdit(u)}
-                      className="text-blue-600 hover:text-blue-800"
-                    >
-                      <FaEdit />
-                    </button>
-                    <button
-                      onClick={() => handleDelete(u.id)}
-                      className="text-red-600 hover:text-red-800"
-                    >
-                      <FaTrash />
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          ))}
         </div>
       </div>
+
+      {/* Edit Modal */}
+      {editingUser && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black/50 z-50">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-md">
+            <h2 className="text-xl font-bold mb-4">Edit User</h2>
+            <input type="text" name="name" value={form.name} onChange={handleEditChange} placeholder="Name" className="w-full mb-3 p-2 border rounded-lg" />
+            <input type="email" name="email" value={form.email} onChange={handleEditChange} placeholder="Email" className="w-full mb-3 p-2 border rounded-lg" />
+            
+            <select name="role_id" value={form.role_id} onChange={handleEditChange} className="w-full mb-3 p-2 border rounded-lg">
+              <option value="">Select Role</option>
+              {roles.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
+            </select>
+
+            <select name="status" value={form.status} onChange={handleEditChange} className="w-full mb-3 p-2 border rounded-lg">
+              <option value={1}>Active</option>
+              <option value={2}>Inactive</option>
+            </select>
+
+            <div className="flex justify-end gap-3 mt-3">
+              <button onClick={() => setEditingUser(null)} className="px-4 py-2 rounded-lg bg-gray-400 text-white">Cancel</button>
+              <button onClick={() => updateUser(editingUser, form)} className="px-4 py-2 rounded-lg bg-blue-600 text-white">Save</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

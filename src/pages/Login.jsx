@@ -25,7 +25,13 @@ function Login() {
         const user = res.data.data.user;
         const token = res.data.data.token;
 
-        // Store token and full user object with role
+        // Check if user is inactive
+        if (user.status === 0) {
+          alert("Your account is not approved yet. Please wait for admin approval.");
+          return;
+        }
+
+        // Store token and full user object
         localStorage.setItem("token", token);
         localStorage.setItem("user", JSON.stringify(user));
 

@@ -1,28 +1,15 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { FaUser, FaLock, FaEnvelope } from "react-icons/fa";
 import axios from "axios";
 
 const API_BASE = "http://127.0.0.1:8000/api";
 
 function Signup() {
-  const [roles, setRoles] = useState([]);
   const [formData, setFormData] = useState({
     name: "",
     email: "",
     password: "",
-    role_id: "",
   });
-
-  // Fetch roles from API
-  useEffect(() => {
-    axios
-      .get(`${API_BASE}/pubroles`)
-      .then((res) => {
-        const safeRoles = res.data.data.filter((r) => r.id !== 1); // Exclude Admin
-        setRoles(safeRoles);
-      })
-      .catch((err) => console.error(err));
-  }, []);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -31,27 +18,16 @@ function Signup() {
 
   const handleSignup = async (e) => {
     e.preventDefault();
-    if (!formData.name || !formData.email || !formData.password || !formData.role_id) {
+    if (!formData.name || !formData.email || !formData.password) {
       alert("Please fill in all fields");
       return;
     }
 
     try {
-      // Signup request
       const res = await axios.post(`${API_BASE}/signup`, formData);
       if (res.data.status === 201) {
-        const userResponse = res.data.data.user;
-
-        // Attach full role object from fetched roles
-        const selectedRole = roles.find(r => r.id === parseInt(formData.role_id));
-        const userWithRole = { ...userResponse, role: selectedRole };
-
-        // Store token and full user info
-        localStorage.setItem("token", res.data.data.token);
-        localStorage.setItem("user", JSON.stringify(userWithRole));
-
-        alert("Signup successful!");
-        window.location.href = "/";
+        alert("Signup successful! Waiting for admin approval.");
+        window.location.href = "/login";
       } else {
         alert("Signup failed");
       }
@@ -125,24 +101,6 @@ function Signup() {
               </div>
             </div>
 
-            {/* Role */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Role</label>
-              <select
-                name="role_id"
-                value={formData.role_id}
-                onChange={handleChange}
-                className="block w-full border rounded-xl p-3 focus:ring-2 focus:ring-blue-500 focus:outline-none"
-              >
-                <option value="">Select Role</option>
-                {roles.map((r) => (
-                  <option key={r.id} value={r.id}>
-                    {r.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
             <button
               type="submit"
               className="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl shadow-lg transition duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
@@ -153,7 +111,7 @@ function Signup() {
 
           <div className="mt-6 text-center">
             <p className="text-gray-600">
-              Already have an account?{' '}
+              Already have an account?{" "}
               <a href="/login" className="text-blue-600 hover:text-blue-500 font-semibold">
                 Sign in
               </a>

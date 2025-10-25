@@ -28,6 +28,7 @@ function Sidebar() {
     { path: "/products", label: "Product Management", icon: FiBox, roles: ["Admin","Manager","Staff"] },
     { path: "/stock-in", label: "Stock In", icon: FiDownload, roles: ["Admin","Manager","Staff"] },
     { path: "/stock-out", label: "Stock Out", icon: FiUpload, roles: ["Admin","Manager","Staff"] },
+    { path: "/customer", label: "customers", icon: FiUsers, roles: ["Admin","Manager","Staff"] },
     { path: "/suppliers", label: "Supplier Management", icon: FiTruck, roles: ["Admin","Manager"] },
     { path: "/users", label: "User Management", icon: FiUsers, roles: ["Admin"] },
 

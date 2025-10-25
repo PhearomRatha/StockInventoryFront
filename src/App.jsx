@@ -30,14 +30,14 @@ function App() {
                   <Sidebar />
                 </aside>
                 <div className="flex-1 ml-64 flex flex-col">
-                  <main className="flex-1 p-6 bg-gray-50 overflow-y-auto">
+                  <main className="flex-1 p-6 bg-gsray-50 overflow-y-auto">
                     <Routes>
                       <Route path="/" element={<Dashboard />} />
                       <Route path="/products" element={<ProductPage />} />
                                     <Route path="/stock-in" element={<StockInPage/>}/>
                <Route path="/stock-out" element={<StockOutPage/>}/>
                <Route path="/suppliers" element={<Suppliers/>}/>
-              <Route path="/customers" element={<CustomerCRMPage/>}/>
+              <Route path="/customer" element={<CustomerCRMPage/>}/>
               <Route path="/users" element={<UserManagement/>}/>  
                    
        
