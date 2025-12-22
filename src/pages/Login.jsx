@@ -6,10 +6,8 @@ const API_BASE = "http://127.0.0.1:8000/api";
 
 function Login() {
   const [showPassword, setShowPassword] = useState(false);
-  const [formData, setFormData] = useState({
-    email: '',
-    password: ''
-  });
+  const [formData, setFormData] = useState({ email: '', password: '' });
+  const [message, setMessage] = useState({ text: '', type: '' }); // ✅ new message state
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -18,6 +16,8 @@ function Login() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setMessage({ text: '', type: '' }); // clear old message
+
     try {
       const res = await axios.post(`${API_BASE}/login`, formData);
 
@@ -25,24 +25,31 @@ function Login() {
         const user = res.data.data.user;
         const token = res.data.data.token;
 
-        // Check if user is inactive
         if (user.status === 0) {
-          alert("Your account is not approved yet. Please wait for admin approval.");
+          setMessage({
+            text: "Your account is not approved yet. Please wait for admin approval.",
+            type: "warning"
+          });
           return;
         }
 
-        // Store token and full user object
         localStorage.setItem("token", token);
         localStorage.setItem("user", JSON.stringify(user));
 
-        alert("Login successful!");
-        window.location.href = "/"; // redirect to dashboard/home
+        setMessage({ text: "Login successful! loading....", type: "success" });
+
+        setTimeout(() => {
+          window.location.href = "/";
+        }, 1500);
       } else {
-        alert(res.data.message || "Login failed");
+        setMessage({ text: res.data.message || "Login failed", type: "error" });
       }
     } catch (err) {
       console.error("Login error:", err);
-      alert(err.response?.data?.message || "Something went wrong.");
+      setMessage({
+        text: err.response?.data?.message || "Something went wrong.",
+        type: "error"
+      });
     }
   };
 
@@ -54,6 +61,18 @@ function Login() {
             <h1 className="text-3xl font-bold text-gray-900 mb-2">Welcome Back</h1>
             <p className="text-gray-600">Please sign in to your account</p>
           </div>
+
+      
+          {message.text && (
+            <div
+              className={`mb-6 text-center py-3 px-4 rounded-xl font-medium 
+                ${message.type === "success" ? "bg-green-100 text-green-700 border border-green-300" : ""}
+                ${message.type === "error" ? "bg-red-100 text-red-700 border border-red-300" : ""}
+                ${message.type === "warning" ? "bg-yellow-100 text-yellow-700 border border-yellow-300" : ""}`}
+            >
+              {message.text}
+            </div>
+          )}
 
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Email */}
