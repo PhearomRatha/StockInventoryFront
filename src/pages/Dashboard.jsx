@@ -6,6 +6,9 @@ import {
   ArrowTrendingUpIcon,
 } from "@heroicons/react/24/solid";
 
+// ✅ Base API URL
+const API_BASE = `${import.meta.env.VITE_API_URL}/api/dashboard`;
+
 export default function Dashboard() {
   const [totals, setTotals] = useState({
     total_customers: 0,
@@ -25,39 +28,28 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const token = localStorage.getItem("token"); // if using auth
-        const headers = {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        };
+    const token = localStorage.getItem("token");
+    const headers = {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    };
 
-        const [
-          customersRes,
-          productsRes,
-          suppliersRes,
-          salesRes,
-          stockInRes,
-          stockOutRes,
-        ] = await Promise.all([
-          fetch("http://127.0.0.1:8000/api/dashboard/total-customers", {
-            headers,
-          }),
-          fetch("http://127.0.0.1:8000/api/dashboard/total-products", {
-            headers,
-          }),
-          fetch("http://127.0.0.1:8000/api/dashboard/total-suppliers", {
-            headers,
-          }),
-          fetch("http://127.0.0.1:8000/api/dashboard/total-sales", { headers }),
-          fetch("http://127.0.0.1:8000/api/dashboard/total-stockin", {
-            headers,
-          }),
-          fetch("http://127.0.0.1:8000/api/dashboard/total-stockout", {
-            headers,
-          }),
-        ]);
+    // 🔹 Dashboard endpoints
+    const endpoints = [
+      "total-customers",
+      "total-products",
+      "total-suppliers",
+      "total-sales",
+      "total-stockin",
+      "total-stockout",
+    ];
+
+    const fetchDashboardData = async () => {
+      try {
+        // 🔹 Fetch all endpoints in parallel
+        const requests = endpoints.map((endpoint) =>
+          fetch(`${API_BASE}/${endpoint}`, { headers }).then((res) => res.json())
+        );
 
         const [
           customers,
@@ -66,15 +58,9 @@ export default function Dashboard() {
           sales,
           stockin,
           stockout,
-        ] = await Promise.all([
-          customersRes.json(),
-          productsRes.json(),
-          suppliersRes.json(),
-          salesRes.json(),
-          stockInRes.json(),
-          stockOutRes.json(),
-        ]);
+        ] = await Promise.all(requests);
 
+        // 🔹 Set totals in state
         setTotals({
           total_customers: customers.total_this_month || 0,
           total_products: products.total_this_month || 0,
@@ -82,6 +68,7 @@ export default function Dashboard() {
           total_sales: sales.total_this_month || 0,
           stockin_this_month: stockin.total_this_month || 0,
           stockout_this_month: stockout.total_this_month || 0,
+
           percent_customers: customers.percent_change || 0,
           percent_products: products.percent_change || 0,
           percent_suppliers: suppliers.percent_change || 0,
@@ -89,15 +76,14 @@ export default function Dashboard() {
           percent_stockin: stockin.percent_change || 0,
           percent_stockout: stockout.percent_change || 0,
         });
-
-        setLoading(false);
       } catch (error) {
-        console.error("Error fetching dashboard data:", error);
+        console.error("Dashboard fetch error:", error);
+      } finally {
         setLoading(false);
       }
     };
 
-    fetchData();
+    fetchDashboardData();
   }, []);
 
   if (loading)
@@ -107,6 +93,7 @@ export default function Dashboard() {
       </div>
     );
 
+  // 🔹 Dashboard cards
   const cardData = [
     {
       title: "Total Customers",
@@ -162,30 +149,32 @@ export default function Dashboard() {
         {cardData.map((card, index) => (
           <div
             key={index}
-            className="bg-white rounded-2xl p-6 shadow-lg border border-gray-200 hover:shadow-xl transition-all duration-300"
+            className="bg-white rounded-2xl p-6 shadow-lg border hover:shadow-xl transition"
           >
-            <div className="flex items-center justify-between">
+            <div className="flex justify-between items-center">
               <div>
-                <p className="text-sm font-medium text-gray-600">{card.title}</p>
-                <p className="text-2xl font-bold text-gray-900 mt-1">{card.total}</p>
+                <p className="text-sm text-gray-600">{card.title}</p>
+                <p className="text-2xl font-bold text-gray-900">{card.total}</p>
+
                 <div className="flex items-center gap-1 mt-2">
                   <ArrowTrendingUpIcon
                     className={`w-4 h-4 ${
-                      parseFloat(card.percent) >= 0 ? "text-green-500" : "text-red-500"
+                      card.percent >= 0 ? "text-green-500" : "text-red-500"
                     }`}
                   />
                   <span
                     className={`text-sm font-medium ${
-                      parseFloat(card.percent) >= 0 ? "text-green-600" : "text-red-500"
+                      card.percent >= 0 ? "text-green-600" : "text-red-500"
                     }`}
                   >
-                    {parseFloat(card.percent) >= 0 ? `+${card.percent}%` : `${card.percent}%`}
+                    {card.percent >= 0 ? `+${card.percent}%` : `${card.percent}%`}
                   </span>
                   <span className="text-sm text-gray-500">from last month</span>
                 </div>
               </div>
+
               <div
-                className={`w-12 h-12 bg-gradient-to-br ${card.bg} rounded-xl flex items-center justify-center shadow-lg`}
+                className={`w-12 h-12 bg-gradient-to-br ${card.bg} rounded-xl flex items-center justify-center`}
               >
                 {card.icon}
               </div>

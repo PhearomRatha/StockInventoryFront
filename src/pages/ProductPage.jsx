@@ -10,6 +10,9 @@ import {
 } from "@heroicons/react/24/outline";
 import { useNavigate } from "react-router-dom";
 
+// ✅ ONE BASE API URL
+const API_BASE = `${import.meta.env.VITE_API_URL}/api`;
+
 function ProductPage() {
   const navigate = useNavigate();
   const [products, setProducts] = useState([]);
@@ -43,8 +46,9 @@ function ProductPage() {
     if (!token) return;
 
     setLoading(true);
+
     axios
-      .get("http://127.0.0.1:8000/api/products", {
+      .get(`${API_BASE}/products`, {
         headers: { Authorization: `Bearer ${token}` },
       })
       .then((res) => {
@@ -59,14 +63,14 @@ function ProductPage() {
       });
 
     axios
-      .get("http://127.0.0.1:8000/api/categories", {
+      .get(`${API_BASE}/categories`, {
         headers: { Authorization: `Bearer ${token}` },
       })
       .then((res) => setCategories(res.data.data || []))
       .catch((err) => console.error(err));
 
     axios
-      .get("http://127.0.0.1:8000/api/suppliers", {
+      .get(`${API_BASE}/suppliers`, {
         headers: { Authorization: `Bearer ${token}` },
       })
       .then((res) => setSuppliers(res.data.data || []))
@@ -83,7 +87,9 @@ function ProductPage() {
         p.name.toLowerCase().includes(search.toLowerCase()) ||
         p.sku.toLowerCase().includes(search.toLowerCase())
     )
-    .filter((p) => selectedCategory === "All" || p.category === selectedCategory)
+    .filter(
+      (p) => selectedCategory === "All" || p.category === selectedCategory
+    )
     .sort((a, b) => {
       const multiplier = sortOrder === "asc" ? 1 : -1;
       if (sortBy === "name") return multiplier * a.name.localeCompare(b.name);
@@ -99,63 +105,13 @@ function ProductPage() {
     currentPage * productsPerPage
   );
 
-  const getStatusColor = (status) => {
-    switch (status) {
-      case "In Stock":
-        return "bg-green-100 text-green-800 border border-green-200";
-      case "Low Stock":
-        return "bg-yellow-100 text-yellow-800 border border-yellow-200";
-      case "Out of Stock":
-        return "bg-red-100 text-red-800 border border-red-200";
-      default:
-        return "bg-gray-100 text-gray-800 border border-gray-200";
-    }
-  };
-
-  const handleSort = (field) => {
-    if (sortBy === field) setSortOrder(sortOrder === "asc" ? "desc" : "asc");
-    else {
-      setSortBy(field);
-      setSortOrder("asc");
-    }
-  };
-
-  const openAddModal = () => {
-    setCurrentProduct({
-      name: "",
-      sku: "",
-      barcode: "",
-      category_id: "",
-      supplier_id: "",
-      price: "",
-      cost: "",
-      stock_quantity: "",
-      reorder_level: "",
-      description: "",
-      image: null,
-    });
-    setIsEdit(false);
-    setShowModal(true);
-  };
-
-  const openEditModal = (product) => {
-    setCurrentProduct({
-      id: product.id,
-      name: product.name,
-      price: product.price,
-      cost: product.cost,
-      reorder_level: product.reorder_level,
-      image: null,
-    });
-    setIsEdit(true);
-    setShowModal(true);
-  };
-
   const handleDelete = (id) => {
     if (window.confirm("Are you sure you want to delete this product?")) {
       axios
-        .delete(`http://127.0.0.1:8000/api/products/${id}`, {
-          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+        .delete(`${API_BASE}/products/${id}`, {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
         })
         .then(() => {
           alert("Product deleted successfully!");
@@ -174,7 +130,6 @@ function ProductPage() {
     const formData = new FormData();
 
     if (isEdit) {
-      // only name, price, cost, reorder_level, image
       formData.append("name", currentProduct.name);
       formData.append("price", currentProduct.price);
       formData.append("reorder_level", currentProduct.reorder_level);
@@ -183,7 +138,7 @@ function ProductPage() {
 
       axios
         .post(
-          `http://127.0.0.1:8000/api/products/${currentProduct.id}`,
+          `${API_BASE}/products/${currentProduct.id}`,
           formData,
           {
             headers: {
@@ -202,7 +157,6 @@ function ProductPage() {
           alert("Failed to update product");
         });
     } else {
-      // add all fields
       for (let key in currentProduct) {
         if (currentProduct[key] !== null) {
           formData.append(key, currentProduct[key]);
@@ -210,7 +164,7 @@ function ProductPage() {
       }
 
       axios
-        .post("http://127.0.0.1:8000/api/products", formData, {
+        .post(`${API_BASE}/products`, formData, {
           headers: {
             Authorization: `Bearer ${token}`,
             "Content-Type": "multipart/form-data",
@@ -227,6 +181,8 @@ function ProductPage() {
         });
     }
   };
+
+
 
   if (loading)
     return (
