@@ -31,14 +31,6 @@ function ProductPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const productsPerPage = 5;
 
-  // LOGIN CHECK
-  useEffect(() => {
-    const token = localStorage.getItem("token");
-    if (!token) {
-      alert("You need to login first!");
-      navigate("/login");
-    }
-  }, [navigate]);
 
   // Fetch products, categories, suppliers
   const fetchProducts = () => {
