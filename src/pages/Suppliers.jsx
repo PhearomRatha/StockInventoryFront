@@ -280,17 +280,19 @@ function Suppliers() {
           <div className="overflow-x-auto">
             <table className="w-full border-collapse">
               <thead className="bg-blue-100">
-                {["name", "company", "phone", "email", "address", "notes"].map((key) => (
-                  <th
-                    key={key}
-                    onClick={() => handleSort(key)}
-                    className="p-2 text-left cursor-pointer select-none hover:text-blue-600"
-                  >
-                    {key.charAt(0).toUpperCase() + key.slice(1)}
-                    {sortConfig.key === key ? (sortConfig.direction === "asc" ? " ▲" : " ▼") : ""}
-                  </th>
-                ))}
-                <th className="p-2 text-left">Actions</th>
+                <tr>
+                  {["name", "company", "phone", "email", "address", "notes"].map((key) => (
+                    <th
+                      key={key}
+                      onClick={() => handleSort(key)}
+                      className="p-2 text-left cursor-pointer select-none hover:text-blue-600"
+                    >
+                      {key.charAt(0).toUpperCase() + key.slice(1)}
+                      {sortConfig.key === key ? (sortConfig.direction === "asc" ? " ▲" : " ▼") : ""}
+                    </th>
+                  ))}
+                  <th className="p-2 text-left">Actions</th>
+                </tr>
               </thead>
               <tbody>
                 {sortedSuppliers.map((s, i) => (

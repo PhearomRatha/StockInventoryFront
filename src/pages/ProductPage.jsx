@@ -81,6 +81,38 @@ function ProductPage() {
     fetchProducts();
   }, []);
 
+  const handleSort = (newSortBy) => {
+    if (sortBy === newSortBy) {
+      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortBy(newSortBy);
+      setSortOrder('asc');
+    }
+  };
+
+  const getStatusColor = (status) => {
+    switch (status) {
+      case 'active':
+        return 'bg-green-100 text-green-800';
+      case 'inactive':
+        return 'bg-red-100 text-red-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const openAddModal = () => {
+    setIsEdit(false);
+    setCurrentProduct({});
+    setShowModal(true);
+  };
+
+  const openEditModal = (product) => {
+    setIsEdit(true);
+    setCurrentProduct(product);
+    setShowModal(true);
+  };
+
   const filteredProducts = products
     .filter(
       (p) =>
