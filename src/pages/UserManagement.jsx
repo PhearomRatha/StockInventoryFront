@@ -18,6 +18,8 @@ function UserManagement() {
   const fetchUsers = async () => {
     try {
       const res = await axios.get(`${API_BASE}/users`, { headers });
+      console.log(res.data);
+      
       setUsers(res.data.data);
     } catch (err) { console.error(err); }
   };
@@ -62,6 +64,7 @@ function UserManagement() {
     const { name, value } = e.target;
     setForm(prev => ({ ...prev, [name]: name === "status" || name === "role_id" ? parseInt(value) : value }));
   };
+  //
 
   const filteredUsers = users
     .filter(u => {
@@ -72,6 +75,8 @@ function UserManagement() {
     })
     .filter(u => u.name.toLowerCase().includes(search.toLowerCase()));
 
+    console.log(filteredUsers);
+    
   const getStatusText = (status) => status === 0 ? "Pending" : status === 1 ? "Active" : "Inactive";
   const getStatusClass = (status) => status === 1 ? "bg-green-100 text-green-800" : status === 0 ? "bg-yellow-100 text-yellow-800" : "bg-red-100 text-red-800";
 

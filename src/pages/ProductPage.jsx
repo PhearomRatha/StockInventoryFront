@@ -85,16 +85,18 @@ function ProductPage() {
     }
   };
 
-  const getStatusColor = (status) => {
-    switch (status) {
-      case "active":
-        return "bg-emerald-50 text-emerald-700 border border-emerald-200";
-      case "inactive":
-        return "bg-rose-50 text-rose-700 border border-rose-200";
-      default:
-        return "bg-slate-100 text-slate-700 border border-slate-200";
-    }
-  };
+const getStatusColor = (status) => {
+  switch ((status || '').toLowerCase()) {
+    case "in stock":
+      return "bg-emerald-50 text-emerald-700 border border-emerald-200";
+    case "low stock":
+      return "bg-yellow-50 text-yellow-700 border border-yellow-200";
+    case "out of stock":
+      return "bg-rose-50 text-rose-700 border border-rose-200";
+    default:
+      return "bg-slate-100 text-slate-700 border border-slate-200";
+  }
+};
 
   const openAddModal = () => {
     setIsEdit(false);
@@ -124,7 +126,9 @@ function ProductPage() {
         p.name.toLowerCase().includes(search.toLowerCase()) ||
         p.sku.toLowerCase().includes(search.toLowerCase())
     )
-    .filter((p) => selectedCategory === "All" || p.category === selectedCategory)
+    .filter(
+      (p) => selectedCategory === "All" || p.category === selectedCategory
+    )
     .sort((a, b) => {
       const multiplier = sortOrder === "asc" ? 1 : -1;
       if (sortBy === "name") return multiplier * a.name.localeCompare(b.name);
@@ -132,7 +136,8 @@ function ProductPage() {
       if (sortBy === "stock_quantity")
         return multiplier * (a.stock_quantity - b.stock_quantity);
       if (sortBy === "id") return multiplier * (a.id - b.id);
-      if (sortBy === "created_at") return multiplier * new Date(a.created_at) - new Date(b.created_at);
+      if (sortBy === "created_at")
+        return multiplier * new Date(a.created_at) - new Date(b.created_at);
       return 0;
     });
 
@@ -170,7 +175,7 @@ function ProductPage() {
       ? `${API_BASE}/products/${currentProduct.id}`
       : `${API_BASE}/products`;
 
-    const method = isEdit ? 'patch' : 'post';
+    const method = isEdit ? "patch" : "post";
 
     axios[method](url, formData, {
       headers: {
@@ -187,11 +192,20 @@ function ProductPage() {
 
   // Statistics
   const totalProducts = products.length;
-  const totalStock = products.reduce((sum, p) => sum + parseInt(p.stock_quantity || 0), 0);
-  const lowStockProducts = products.filter(p => p.stock_quantity <= (p.reorder_level || 10)).length;
-  const averagePrice = products.length > 0
-    ? (products.reduce((sum, p) => sum + parseFloat(p.price || 0), 0) / products.length).toFixed(2)
-    : 0;
+  const totalStock = products.reduce(
+    (sum, p) => sum + parseInt(p.stock_quantity || 0),
+    0
+  );
+  const lowStockProducts = products.filter(
+    (p) => p.stock_quantity <= (p.reorder_level || 10)
+  ).length;
+  const averagePrice =
+    products.length > 0
+      ? (
+          products.reduce((sum, p) => sum + parseFloat(p.price || 0), 0) /
+          products.length
+        ).toFixed(2)
+      : 0;
 
   // 🔹 Skeleton Loader
   if (loading)
@@ -206,8 +220,11 @@ function ProductPage() {
             </div>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-            {[1, 2, 3].map(i => (
-              <div key={i} className="h-28 bg-white rounded-2xl shadow-sm"></div>
+            {[1, 2, 3].map((i) => (
+              <div
+                key={i}
+                className="h-28 bg-white rounded-2xl shadow-sm"
+              ></div>
             ))}
           </div>
           <div className="bg-white rounded-2xl shadow-sm p-6">
@@ -229,9 +246,12 @@ function ProductPage() {
             <CubeTransparentIcon className="w-7 h-7 text-white" />
           </div>
           <div>
-            <h1 className="text-3xl md:text-4xl font-bold text-gray-900">Products</h1>
+            <h1 className="text-3xl md:text-4xl font-bold text-gray-900">
+              Products
+            </h1>
             <p className="text-gray-600 mt-1 text-sm md:text-base">
-              Manage your inventory, track stock levels, and analyze product performance
+              Manage your inventory, track stock levels, and analyze product
+              performance
             </p>
           </div>
         </div>
@@ -248,8 +268,12 @@ function ProductPage() {
         <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-500 font-medium">Total Products</p>
-              <p className="text-3xl font-bold text-gray-900 mt-2">{totalProducts}</p>
+              <p className="text-sm text-gray-500 font-medium">
+                Total Products
+              </p>
+              <p className="text-3xl font-bold text-gray-900 mt-2">
+                {totalProducts}
+              </p>
             </div>
             <div className="w-12 h-12 bg-indigo-50 rounded-xl flex items-center justify-center">
               <CubeIcon className="w-6 h-6 text-indigo-600" />
@@ -260,8 +284,12 @@ function ProductPage() {
         <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-500 font-medium">Total In Stock</p>
-              <p className="text-3xl font-bold text-blue-600 mt-2">{totalStock}</p>
+              <p className="text-sm text-gray-500 font-medium">
+                Total In Stock
+              </p>
+              <p className="text-3xl font-bold text-blue-600 mt-2">
+                {totalStock}
+              </p>
             </div>
             <div className="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center">
               <CubeTransparentIcon className="w-6 h-6 text-blue-600" />
@@ -272,8 +300,10 @@ function ProductPage() {
         <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-500 font-medium">Low Stock</p>
-              <p className="text-3xl font-bold text-rose-600 mt-2">{lowStockProducts}</p>
+              <p className="text-sm text-red-500 font-medium">Low Stock</p>
+              <p className="text-3xl font-bold text-rose-600 mt-2">
+                {lowStockProducts}
+              </p>
             </div>
             <div className="w-12 h-12 bg-rose-50 rounded-xl flex items-center justify-center">
               <ChartBarIcon className="w-6 h-6 text-rose-600" />
@@ -285,7 +315,9 @@ function ProductPage() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-500 font-medium">Avg. Price</p>
-              <p className="text-3xl font-bold text-emerald-600 mt-2">${averagePrice}</p>
+              <p className="text-3xl font-bold text-emerald-600 mt-2">
+                ${averagePrice}
+              </p>
             </div>
             <div className="w-12 h-12 bg-emerald-50 rounded-xl flex items-center justify-center">
               <CurrencyDollarIcon className="w-6 h-6 text-emerald-600" />
@@ -307,7 +339,7 @@ function ProductPage() {
               className="w-full pl-12 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
             />
           </div>
-          
+
           <div className="flex flex-wrap gap-3 w-full lg:w-auto">
             <div className="relative">
               <FunnelIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
@@ -324,7 +356,7 @@ function ProductPage() {
                 ))}
               </select>
             </div>
-            
+
             <div className="relative">
               <ArrowsUpDownIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
               <select
@@ -349,16 +381,22 @@ function ProductPage() {
           <table className="w-full min-w-[1000px]">
             <thead className="bg-gradient-to-r from-gray-50 to-slate-50 border-b">
               <tr>
-                {["Product", "Category", "Supplier", "Price", "Stock", "Status", "Actions"].map(
-                  (h) => (
-                    <th
-                      key={h}
-                      className="py-4 px-6 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider"
-                    >
-                      {h}
-                    </th>
-                  )
-                )}
+                {[
+                  "Product",
+                  "Category",
+                  "Supplier",
+                  "Price",
+                  "Stock",
+                  "Status",
+                  "Actions",
+                ].map((h) => (
+                  <th
+                    key={h}
+                    className="py-4 px-6 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider"
+                  >
+                    {h}
+                  </th>
+                ))}
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -372,7 +410,10 @@ function ProductPage() {
                       <div className="flex items-center gap-4">
                         <div className="relative">
                           <img
-                            src={p.image || "https://via.placeholder.com/150x150/4f46e5/ffffff?text=No+Image"}
+                            src={
+                              p.image ||
+                              "https://via.placeholder.com/150x150/4f46e5/ffffff?text=No+Image"
+                            }
                             alt={p.name}
                             className="w-14 h-14 object-cover rounded-lg border border-gray-200"
                           />
@@ -401,28 +442,41 @@ function ProductPage() {
                     <td className="py-4 px-6">
                       <div className="font-bold text-gray-900">${p.price}</div>
                       {p.cost && (
-                        <div className="text-sm text-gray-500">Cost: ${p.cost}</div>
+                        <div className="text-sm text-gray-500">
+                          Cost: ${p.cost}
+                        </div>
                       )}
                     </td>
                     <td className="py-4 px-6">
-                      <div className="font-semibold text-gray-900">{p.stock_quantity}</div>
+                      <div className="font-semibold text-gray-900">
+                        {p.stock_quantity}
+                      </div>
                       {p.reorder_level && (
-                        <div className="text-sm text-gray-500">Reorder at {p.reorder_level}</div>
+                        <div className="text-sm text-gray-500">
+                          Reorder at {p.reorder_level}
+                        </div>
                       )}
                     </td>
-                    <td className="py-4 px-6">
-                      <span
-                        className={`inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium ${getStatusColor(
-                          p.status
-                        )}`}
-                      >
-                        <div className={`w-2 h-2 rounded-full mr-2 ${
-                          p.status === 'active' ? 'bg-emerald-500' : 
-                          p.status === 'inactive' ? 'bg-rose-500' : 'bg-gray-500'
-                        }`}></div>
-                        {p.status}
-                      </span>
-                    </td>
+                  <td className="py-4 px-6">
+  <span
+    className={`inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium ${getStatusColor(
+      p.status
+    )}`}
+  >
+    <div
+      className={`w-2 h-2 rounded-full mr-2 ${
+        (p.status || '').toLowerCase() === 'in stock'
+          ? 'bg-emerald-500'
+          : (p.status || '').toLowerCase() === 'low stock'
+          ? 'bg-yellow-500'
+          : (p.status || '').toLowerCase() === 'out of stock'
+          ? 'bg-rose-500'
+          : 'bg-gray-500'
+      }`}
+    ></div>
+    {p.status}
+  </span>
+</td>
                     <td className="py-4 px-6">
                       <div className="flex gap-2">
                         <button
@@ -448,8 +502,12 @@ function ProductPage() {
                   <td colSpan={7} className="py-20 text-center">
                     <div className="flex flex-col items-center justify-center">
                       <CubeIcon className="w-16 h-16 text-gray-300 mb-4" />
-                      <p className="text-gray-500 text-lg font-medium">No products found</p>
-                      <p className="text-gray-400 mt-1">Try adjusting your search or filters</p>
+                      <p className="text-gray-500 text-lg font-medium">
+                        No products found
+                      </p>
+                      <p className="text-gray-400 mt-1">
+                        Try adjusting your search or filters
+                      </p>
                       <button
                         onClick={openAddModal}
                         className="mt-4 px-4 py-2 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition"
@@ -470,8 +528,8 @@ function ProductPage() {
         <div className="flex justify-between items-center mt-6">
           <div className="text-sm text-gray-500">
             Showing {(currentPage - 1) * productsPerPage + 1} to{" "}
-            {Math.min(currentPage * productsPerPage, filteredProducts.length)} of{" "}
-            {filteredProducts.length} products
+            {Math.min(currentPage * productsPerPage, filteredProducts.length)}{" "}
+            of {filteredProducts.length} products
           </div>
           <div className="flex items-center gap-2">
             <button
@@ -510,7 +568,9 @@ function ProductPage() {
               })}
             </div>
             <button
-              onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+              onClick={() =>
+                setCurrentPage((prev) => Math.min(prev + 1, totalPages))
+              }
               disabled={currentPage === totalPages}
               className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition"
             >
@@ -532,7 +592,9 @@ function ProductPage() {
                   {isEdit ? "Edit Product" : "Add New Product"}
                 </h2>
                 <p className="text-gray-600 mt-1">
-                  {isEdit ? "Update product details" : "Fill in the product information"}
+                  {isEdit
+                    ? "Update product details"
+                    : "Fill in the product information"}
                 </p>
               </div>
               <button
@@ -556,7 +618,10 @@ function ProductPage() {
                       type="text"
                       value={currentProduct.name || ""}
                       onChange={(e) =>
-                        setCurrentProduct({ ...currentProduct, name: e.target.value })
+                        setCurrentProduct({
+                          ...currentProduct,
+                          name: e.target.value,
+                        })
                       }
                       className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition"
                       placeholder="Enter product name"
@@ -578,16 +643,20 @@ function ProductPage() {
                         min="0"
                         value={currentProduct.cost || ""}
                         onChange={(e) =>
-                          setCurrentProduct({ ...currentProduct, cost: e.target.value })
+                          setCurrentProduct({
+                            ...currentProduct,
+                            cost: e.target.value,
+                          })
                         }
                         className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition"
                         placeholder="0.00"
                         required
                       />
                     </div>
-                    <p className="text-xs text-gray-500 mt-1">Price will be auto-calculated as Cost × 1.2</p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Price will be auto-calculated as Cost × 1.2
+                    </p>
                   </div>
-
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -657,7 +726,10 @@ function ProductPage() {
                             type="button"
                             onClick={() => {
                               setImagePreview(null);
-                              setCurrentProduct({ ...currentProduct, image: null });
+                              setCurrentProduct({
+                                ...currentProduct,
+                                image: null,
+                              });
                             }}
                             className="absolute top-2 right-2 p-1 bg-white rounded-full shadow hover:bg-gray-100"
                           >
@@ -667,8 +739,12 @@ function ProductPage() {
                       ) : (
                         <div className="py-8">
                           <PhotoIcon className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                          <p className="text-gray-600 mb-2">Drag & drop or click to upload</p>
-                          <p className="text-sm text-gray-500 mb-4">PNG, JPG up to 5MB</p>
+                          <p className="text-gray-600 mb-2">
+                            Drag & drop or click to upload
+                          </p>
+                          <p className="text-sm text-gray-500 mb-4">
+                            PNG, JPG up to 5MB
+                          </p>
                           <label className="inline-block px-6 py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition cursor-pointer">
                             Choose File
                             <input
@@ -721,7 +797,6 @@ function ProductPage() {
                       placeholder="10"
                     />
                   </div>
-
                 </div>
               </div>
 
