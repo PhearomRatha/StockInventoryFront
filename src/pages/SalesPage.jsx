@@ -56,22 +56,25 @@ function SalesPage() {
     setLoading(true);
 
     axios.get(`${API_BASE}/sales`, { headers: { Authorization: `Bearer ${token}` } })
-      .then(res => {
-        if (res.data.status === 200) setSales(res.data.data);
-        setLoading(false);
-      })
-      .catch(() => setLoading(false));
+
+  .then(res => {
+    setSales(Array.isArray(res.data.data) ? res.data.data : []);
+    setLoading(false);
+  })
+  .catch(() => setLoading(false));
+
+     
 
     axios.get(`${API_BASE}/customers`, { headers: { Authorization: `Bearer ${token}` } })
-      .then(res => setCustomers(res.data.data || []))
+      .then(res => setCustomers(Array.isArray(res.data.data) ? res.data.data : []))
       .catch(console.error);
 
     axios.get(`${API_BASE}/users`, { headers: { Authorization: `Bearer ${token}` } })
-      .then(res => setUsers(res.data.data || []))
+      .then(res => setUsers(Array.isArray(res.data.data) ? res.data.data : []))
       .catch(console.error);
 
     axios.get(`${API_BASE}/products`, { headers: { Authorization: `Bearer ${token}` } })
-      .then(res => setProducts(res.data.data || []))
+      .then(res => setProducts(Array.isArray(res.data.data) ? res.data.data : []))
       .catch(console.error);
   };
 
