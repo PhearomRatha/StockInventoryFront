@@ -61,7 +61,7 @@ function ActivityLogPage() {
     axios
       .get(url, {
         headers: { Authorization: `Bearer ${token}` },
-        params
+        params,
       })
       .then((res) => {
         if (res.data.status === 200) setLogs(res.data.data);
@@ -103,15 +103,16 @@ function ActivityLogPage() {
   };
 
   const filteredLogs = logs
-    .filter(
-      (log) =>
-        (log.description || '').toLowerCase().includes(search.toLowerCase())
+    .filter((log) =>
+      (log.description || "").toLowerCase().includes(search.toLowerCase())
     )
     .sort((a, b) => {
       const multiplier = sortOrder === "asc" ? 1 : -1;
-      if (sortBy === "created_at") return multiplier * new Date(a.created_at) - new Date(b.created_at);
+      if (sortBy === "created_at")
+        return multiplier * new Date(a.created_at) - new Date(b.created_at);
       if (sortBy === "user") return multiplier * a.user.localeCompare(b.user);
-      if (sortBy === "action") return multiplier * a.action.localeCompare(b.action);
+      if (sortBy === "action")
+        return multiplier * a.action.localeCompare(b.action);
       return 0;
     });
 
@@ -141,7 +142,7 @@ function ActivityLogPage() {
       ? `${API_BASE}/activity-logs/${currentLog.id}`
       : `${API_BASE}/activity-logs`;
 
-    const method = isEdit ? 'patch' : 'post';
+    const method = isEdit ? "patch" : "post";
 
     axios[method](url, currentLog, {
       headers: {
@@ -158,8 +159,11 @@ function ActivityLogPage() {
 
   // Statistics
   const totalLogs = logs.length;
-  const todayLogs = logs.filter(log => new Date(log.created_at).toDateString() === new Date().toDateString()).length;
-  const uniqueUsers = new Set(logs.map(log => log.user)).size;
+  const todayLogs = logs.filter(
+    (log) =>
+      new Date(log.created_at).toDateString() === new Date().toDateString()
+  ).length;
+  const uniqueUsers = new Set(logs.map((log) => log.user)).size;
 
   // 🔹 Skeleton Loader
   if (loading)
@@ -174,8 +178,11 @@ function ActivityLogPage() {
             </div>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-            {[1, 2, 3].map(i => (
-              <div key={i} className="h-28 bg-white rounded-2xl shadow-sm"></div>
+            {[1, 2, 3].map((i) => (
+              <div
+                key={i}
+                className="h-28 bg-white rounded-2xl shadow-sm"
+              ></div>
             ))}
           </div>
           <div className="bg-white rounded-2xl shadow-sm p-6">
@@ -197,7 +204,9 @@ function ActivityLogPage() {
             <DocumentTextIcon className="w-7 h-7 text-white" />
           </div>
           <div>
-            <h1 className="text-3xl md:text-4xl font-bold text-gray-900">Activity Logs</h1>
+            <h1 className="text-3xl md:text-4xl font-bold text-gray-900">
+              Activity Logs
+            </h1>
             <p className="text-gray-600 mt-1 text-sm md:text-base">
               Monitor user activities and system events
             </p>
@@ -217,7 +226,9 @@ function ActivityLogPage() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-500 font-medium">Total Logs</p>
-              <p className="text-3xl font-bold text-gray-900 mt-2">{totalLogs}</p>
+              <p className="text-3xl font-bold text-gray-900 mt-2">
+                {totalLogs}
+              </p>
             </div>
             <div className="w-12 h-12 bg-indigo-50 rounded-xl flex items-center justify-center">
               <DocumentTextIcon className="w-6 h-6 text-indigo-600" />
@@ -229,7 +240,9 @@ function ActivityLogPage() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-500 font-medium">Today's Logs</p>
-              <p className="text-3xl font-bold text-emerald-600 mt-2">{todayLogs}</p>
+              <p className="text-3xl font-bold text-emerald-600 mt-2">
+                {todayLogs}
+              </p>
             </div>
             <div className="w-12 h-12 bg-emerald-50 rounded-xl flex items-center justify-center">
               <ChartBarIcon className="w-6 h-6 text-emerald-600" />
@@ -241,7 +254,9 @@ function ActivityLogPage() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-500 font-medium">Active Users</p>
-              <p className="text-3xl font-bold text-blue-600 mt-2">{uniqueUsers}</p>
+              <p className="text-3xl font-bold text-blue-600 mt-2">
+                {uniqueUsers}
+              </p>
             </div>
             <div className="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center">
               <UserIcon className="w-6 h-6 text-blue-600" />
@@ -254,23 +269,28 @@ function ActivityLogPage() {
       <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 mb-6">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">User</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              User
+            </label>
             <select
               value={selectedUser}
               onChange={(e) => setSelectedUser(e.target.value)}
               className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent appearance-none bg-white"
             >
               <option value="All">All Users</option>
-              {users.map((u) => (
-                <option key={u.id} value={u.id}>
-                  {u.name}
-                </option>
-              ))}
+              {Array.isArray(users) &&
+                users.map((u) => (
+                  <option key={u.id} value={u.id}>
+                    {u.name}
+                  </option>
+                ))}
             </select>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Module</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Module
+            </label>
             <select
               value={selectedModule}
               onChange={(e) => setSelectedModule(e.target.value)}
@@ -285,7 +305,9 @@ function ActivityLogPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Action</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Action
+            </label>
             <select
               value={selectedAction}
               onChange={(e) => setSelectedAction(e.target.value)}
@@ -299,7 +321,9 @@ function ActivityLogPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Date Range</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Date Range
+            </label>
             <div className="flex gap-2">
               <input
                 type="date"
@@ -338,16 +362,21 @@ function ActivityLogPage() {
           <table className="w-full min-w-[800px]">
             <thead className="bg-gradient-to-r from-gray-50 to-slate-50 border-b">
               <tr>
-                {["User", "Action", "Module", "Description", "Date", "Actions"].map(
-                  (h) => (
-                    <th
-                      key={h}
-                      className="py-4 px-6 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider"
-                    >
-                      {h}
-                    </th>
-                  )
-                )}
+                {[
+                  "User",
+                  "Action",
+                  "Module",
+                  "Description",
+                  "Date",
+                  "Actions",
+                ].map((h) => (
+                  <th
+                    key={h}
+                    className="py-4 px-6 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider"
+                  >
+                    {h}
+                  </th>
+                ))}
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -363,16 +392,22 @@ function ActivityLogPage() {
                           <UserIcon className="w-5 h-5 text-indigo-600" />
                         </div>
                         <div>
-                          <p className="font-medium text-gray-900">{log.user}</p>
+                          <p className="font-medium text-gray-900">
+                            {log.user}
+                          </p>
                         </div>
                       </div>
                     </td>
                     <td className="py-4 px-6">
-                      <span className={`inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium ${
-                        log.action === 'created' ? 'bg-emerald-50 text-emerald-700' :
-                        log.action === 'updated' ? 'bg-blue-50 text-blue-700' :
-                        'bg-rose-50 text-rose-700'
-                      }`}>
+                      <span
+                        className={`inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium ${
+                          log.action === "created"
+                            ? "bg-emerald-50 text-emerald-700"
+                            : log.action === "updated"
+                            ? "bg-blue-50 text-blue-700"
+                            : "bg-rose-50 text-rose-700"
+                        }`}
+                      >
                         {log.action}
                       </span>
                     </td>
@@ -383,10 +418,15 @@ function ActivityLogPage() {
                       </span>
                     </td>
                     <td className="py-4 px-6">
-                      <div className="text-gray-600">{log.description || `${log.user} performed ${log.action} on ${log.module}`}</div>
+                      <div className="text-gray-600">
+                        {log.description ||
+                          `${log.user} performed ${log.action} on ${log.module}`}
+                      </div>
                     </td>
                     <td className="py-4 px-6">
-                      <div className="text-sm text-gray-500">{new Date(log.created_at).toLocaleString()}</div>
+                      <div className="text-sm text-gray-500">
+                        {new Date(log.created_at).toLocaleString()}
+                      </div>
                     </td>
                     <td className="py-4 px-6">
                       <div className="flex gap-2">
@@ -413,8 +453,12 @@ function ActivityLogPage() {
                   <td colSpan={6} className="py-20 text-center">
                     <div className="flex flex-col items-center justify-center">
                       <DocumentTextIcon className="w-16 h-16 text-gray-300 mb-4" />
-                      <p className="text-gray-500 text-lg font-medium">No activity logs found</p>
-                      <p className="text-gray-400 mt-1">Try adjusting your filters</p>
+                      <p className="text-gray-500 text-lg font-medium">
+                        No activity logs found
+                      </p>
+                      <p className="text-gray-400 mt-1">
+                        Try adjusting your filters
+                      </p>
                       <button
                         onClick={openAddModal}
                         className="mt-4 px-4 py-2 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition"
@@ -475,7 +519,9 @@ function ActivityLogPage() {
               })}
             </div>
             <button
-              onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+              onClick={() =>
+                setCurrentPage((prev) => Math.min(prev + 1, totalPages))
+              }
               disabled={currentPage === totalPages}
               className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition"
             >
@@ -497,7 +543,9 @@ function ActivityLogPage() {
                   {isEdit ? "Edit Activity Log" : "Add New Activity Log"}
                 </h2>
                 <p className="text-gray-600 mt-1">
-                  {isEdit ? "Update log details" : "Fill in the log information"}
+                  {isEdit
+                    ? "Update log details"
+                    : "Fill in the log information"}
                 </p>
               </div>
               <button
@@ -579,7 +627,10 @@ function ActivityLogPage() {
                     type="number"
                     value={currentLog.record_id || ""}
                     onChange={(e) =>
-                      setCurrentLog({ ...currentLog, record_id: e.target.value })
+                      setCurrentLog({
+                        ...currentLog,
+                        record_id: e.target.value,
+                      })
                     }
                     className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition"
                     placeholder="Optional record ID"
