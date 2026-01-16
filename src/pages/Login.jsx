@@ -15,49 +15,66 @@ function Login() {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setMessage({ text: '', type: '' }); // clear old message
-    setLoading(true);
+const handleSubmit = async (e) => {
+  e.preventDefault();
+  setMessage({ text: '', type: '' });
+  setLoading(true);
 
-    try {
-      const res = await axios.post('https://inventory-management-backend-1.onrender.com/api/login', formData);
-
-      if (res.data.status === 200) {
-        const user = res.data.data.user;
-        const token = res.data.data.token;
-
-        if (user.status === 0) {
-          setMessage({
-            text: "Your account is not approved yet. Please wait for admin approval.",
-            type: "warning"
-          });
-          setLoading(false);
-          return;
-        }
-
-        localStorage.setItem("token", token);
-        localStorage.setItem("user", JSON.stringify(user));
-
-        setMessage({ text: "Login successful! loading....", type: "success" });
-        setLoading(false);
-
-        setTimeout(() => {
-          window.location.href = "/";
-        }, 1500);
-      } else {
-        setMessage({ text: res.data.message || "Login failed", type: "error" });
-        setLoading(false);
+  try {
+    // Use environment variable for backend
+    const res = await axios.post(`${API_BASE}/login`, formData, {
+      headers: {
+        'Content-Type': 'application/json'
       }
-    } catch (err) {
-      console.error("Login error:", err);
+    });
+
+    if (res.data.status === 200) {
+      const user = res.data.data.user;
+      const token = res.data.data.token;
+
+      if (user.status === 0) {
+        setMessage({
+          text: "Your account is not approved yet. Please wait for admin approval.",
+          type: "warning"
+        });
+        setLoading(false);
+        return;
+      }
+
+      localStorage.setItem("token", token);
+      localStorage.setItem("user", JSON.stringify(user));
+
+      setMessage({ text: "Login successful! loading....", type: "success" });
+      setLoading(false);
+
+      setTimeout(() => {
+        window.location.href = "/";
+      }, 1500);
+    } else {
+      setMessage({ text: res.data.message || "Login failed", type: "error" });
+      setLoading(false);
+    }
+
+  } catch (err) {
+    console.error("Login error:", err);
+
+    // Handle CORS / network issues
+    if (!err.response) {
+      setMessage({
+        text: "Cannot reach backend. Check CORS, HTTPS, or network.",
+        type: "error"
+      });
+    } else {
       setMessage({
         text: err.response?.data?.message || "Something went wrong.",
         type: "error"
       });
-      setLoading(false);
     }
-  };
+
+    setLoading(false);
+  }
+};
+
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
