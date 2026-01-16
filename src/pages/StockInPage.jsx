@@ -352,68 +352,102 @@ function StockInPage() {
             />
           </div>
 
-          {loading && <p className="text-center text-gray-500 mb-4">Loading...</p>}
+          {loading && (
+            <div className="overflow-x-auto">
+              <div className="animate-pulse">
+                <table className="w-full min-w-[800px]">
+                  <thead className="bg-gradient-to-r from-gray-50 to-slate-50 border-b">
+                    <tr>
+                      {["Stock In ID", "Product", "Supplier", "Quantity", "Unit Cost", "Received By", "Date"].map(
+                        (h) => (
+                          <th
+                            key={h}
+                            className="py-4 px-6 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider"
+                          >
+                            {h}
+                          </th>
+                        )
+                      )}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {Array.from({ length: 5 }).map((_, i) => (
+                      <tr key={i}>
+                        {Array.from({ length: 7 }).map((_, j) => (
+                          <td key={j} className="py-4 px-6">
+                            <div className="h-4 bg-gray-200 rounded"></div>
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
 
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[800px]">
-              <thead className="bg-gradient-to-r from-gray-50 to-slate-50 border-b">
-                <tr>
-                  {["Stock In ID", "Product", "Supplier", "Quantity", "Unit Cost", "Received By", "Date"].map(
-                    (h) => (
-                      <th
-                        key={h}
-                        className="py-4 px-6 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider"
+          {!loading && (
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[800px]">
+                <thead className="bg-gradient-to-r from-gray-50 to-slate-50 border-b">
+                  <tr>
+                    {["Stock In ID", "Product", "Supplier", "Quantity", "Unit Cost", "Received By", "Date"].map(
+                      (h) => (
+                        <th
+                          key={h}
+                          className="py-4 px-6 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider"
+                        >
+                          {h}
+                        </th>
+                      )
+                    )}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {filteredHistory.length > 0 ? (
+                    filteredHistory.map((r) => (
+                      <tr
+                        key={r.id}
+                        className="hover:bg-gray-50/80 transition-colors duration-200"
                       >
-                        {h}
-                      </th>
-                    )
-                  )}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {filteredHistory.length > 0 ? (
-                  filteredHistory.map((r) => (
-                    <tr
-                      key={r.id}
-                      className="hover:bg-gray-50/80 transition-colors duration-200"
-                    >
-                      <td className="py-4 px-6">
-                        <div className="font-medium text-gray-900">{r.stock_in_code || r.id}</div>
-                      </td>
-                      <td className="py-4 px-6">
-                        <div className="text-gray-900">{r.product_name || r.product}</div>
-                      </td>
-                      <td className="py-4 px-6">
-                        <div className="text-gray-900">{r.supplier_name || r.supplier}</div>
-                      </td>
-                      <td className="py-4 px-6">
-                        <div className="font-semibold text-gray-900">{r.quantity}</div>
-                      </td>
-                      <td className="py-4 px-6">
-                        <div className="font-semibold text-gray-900">${Number(r.unit_cost || 0).toFixed(2)}</div>
-                      </td>
-                      <td className="py-4 px-6">
-                        <div className="text-gray-600">{r.received_by_name || r.received_by}</div>
-                      </td>
-                      <td className="py-4 px-6">
-                        <div className="text-sm text-gray-500">{new Date(r.received_date).toLocaleDateString()}</div>
+                        <td className="py-4 px-6">
+                          <div className="font-medium text-gray-900">{r.stock_in_code || r.id}</div>
+                        </td>
+                        <td className="py-4 px-6">
+                          <div className="text-gray-900">{r.product_name || r.product}</div>
+                        </td>
+                        <td className="py-4 px-6">
+                          <div className="text-gray-900">{r.supplier_name || r.supplier}</div>
+                        </td>
+                        <td className="py-4 px-6">
+                          <div className="font-semibold text-gray-900">{r.quantity}</div>
+                        </td>
+                        <td className="py-4 px-6">
+                          <div className="font-semibold text-gray-900">${Number(r.unit_cost || 0).toFixed(2)}</div>
+                        </td>
+                        <td className="py-4 px-6">
+                          <div className="text-gray-600">{r.received_by_name || r.received_by}</div>
+                        </td>
+                        <td className="py-4 px-6">
+                          <div className="text-sm text-gray-500">{new Date(r.received_date).toLocaleDateString()}</div>
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan={7} className="py-20 text-center">
+                        <div className="flex flex-col items-center justify-center">
+                          <ClockIcon className="w-16 h-16 text-gray-300 mb-4" />
+                          <p className="text-gray-500 text-lg font-medium">No stock in records found</p>
+                          <p className="text-gray-400 mt-1">Try adjusting your search or filters</p>
+                        </div>
                       </td>
                     </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td colSpan={7} className="py-20 text-center">
-                      <div className="flex flex-col items-center justify-center">
-                        <ClockIcon className="w-16 h-16 text-gray-300 mb-4" />
-                        <p className="text-gray-500 text-lg font-medium">No stock in records found</p>
-                        <p className="text-gray-400 mt-1">Try adjusting your search or filters</p>
-                      </div>
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
 
           <div className="mt-4 text-right font-bold text-gray-700">
             Total Stock Value: ${totalValue.toFixed(2)}

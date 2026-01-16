@@ -7,7 +7,7 @@ const API_BASE =  `${import.meta.env.VITE_API_URL}/api`;
 function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({ email: '', password: '' });
-  const [message, setMessage] = useState({ text: '', type: '' }); // ✅ new message state
+  const [message, setMessage] = useState({ text: '', type: '' });
   const [loading, setLoading] = useState(false);
 
   const handleChange = (e) => {
@@ -21,7 +21,7 @@ function Login() {
     setLoading(true);
 
     try {
-      const res = await axios.post(`${API_BASE}/login`, formData);
+      const res = await axios.post('https://inventory-management-backend-1.onrender.com/api/login', formData);
 
       if (res.data.status === 200) {
         const user = res.data.data.user;

@@ -84,28 +84,36 @@ export default function Dashboard() {
 
   if (loading)
     return (
-      <div className="p-6 bg-gray-50 min-h-screen font-sans">
-        <div className="h-8 bg-gray-300 rounded w-1/3 mb-8 animate-pulse"></div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {Array.from({ length: 6 }).map((_, index) => (
-            <div
-              key={index}
-              className="bg-white rounded-2xl p-6 shadow-lg border animate-pulse"
-            >
-              <div className="flex justify-between items-center">
-                <div className="flex-1">
-                  <div className="h-4 bg-gray-300 rounded w-3/4 mb-2"></div>
-                  <div className="h-6 bg-gray-300 rounded w-1/2 mb-4"></div>
-                  <div className="flex items-center gap-1">
-                    <div className="w-4 h-4 bg-gray-300 rounded"></div>
-                    <div className="h-4 bg-gray-300 rounded w-12"></div>
-                    <div className="h-4 bg-gray-300 rounded w-20"></div>
-                  </div>
-                </div>
-                <div className="w-12 h-12 bg-gray-300 rounded-xl"></div>
-              </div>
+      <div className="p-6 min-h-screen bg-gradient-to-br from-gray-50 to-slate-100">
+        <div className="animate-pulse space-y-6">
+          <div className="flex items-center gap-4 mb-8">
+            <div className="w-14 h-14 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl"></div>
+            <div className="space-y-2">
+              <div className="h-8 w-64 bg-gray-300 rounded"></div>
+              <div className="h-4 w-96 bg-gray-200 rounded"></div>
             </div>
-          ))}
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {Array.from({ length: 6 }).map((_, index) => (
+              <div
+                key={index}
+                className="bg-white rounded-2xl p-6 shadow-lg border animate-pulse"
+              >
+                <div className="flex justify-between items-center">
+                  <div className="flex-1">
+                    <div className="h-4 bg-gray-300 rounded w-3/4 mb-2"></div>
+                    <div className="h-6 bg-gray-300 rounded w-1/2 mb-4"></div>
+                    <div className="flex items-center gap-1">
+                      <div className="w-4 h-4 bg-gray-300 rounded"></div>
+                      <div className="h-4 bg-gray-300 rounded w-12"></div>
+                      <div className="h-4 bg-gray-300 rounded w-20"></div>
+                    </div>
+                  </div>
+                  <div className="w-12 h-12 bg-gray-300 rounded-xl"></div>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     );
