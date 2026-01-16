@@ -48,7 +48,7 @@ function CustomerCrmPage() {
   const handleSubmit = async () => {
     if (!form.name) return alert("Name is required!");
     try {
-      const method = editingId ? "PUT" : "POST";
+      const method = editingId ? "PATCH" : "POST";
       const url = editingId
         ? `${API_BASE}/customers/${editingId}`
         : `${API_BASE}/customers`;

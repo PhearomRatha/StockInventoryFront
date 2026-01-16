@@ -8,13 +8,18 @@ import {
   FiUsers,
   FiDollarSign,
   FiBarChart2,
+  FiTag,
+  FiFileText,
   FiLogOut,
+  FiX,
+  FiChevronRight,
 } from "react-icons/fi";
 import { Link, useLocation } from "react-router-dom";
 
-function Sidebar() {
+function Sidebar({ onClose }) {
   const location = useLocation();
-  const user = JSON.parse(localStorage.getItem("user"));
+  const userData = localStorage.getItem("user");
+  const user = userData && userData !== "undefined" ? JSON.parse(userData) : null;
   const role = user?.role?.name; // "Admin", "Manager", "Staff"
 
   const isActive = (path) => {
@@ -22,26 +27,38 @@ function Sidebar() {
     return location.pathname.startsWith(path);
   };
 
-  // Menu items with roles
+  // Menu items with roles - ordered by user priority
   const menuItems = [
     { path: "/", label: "Dashboard", icon: FiHome, roles: ["Admin","Manager","Staff"] },
+    { path: "/sales", label: "Sales", icon: FiDollarSign, roles: ["Admin","Manager","Staff"] },
     { path: "/products", label: "Product Management", icon: FiBox, roles: ["Admin","Manager","Staff"] },
     { path: "/stock-in", label: "Stock In", icon: FiDownload, roles: ["Admin","Manager","Staff"] },
     { path: "/stock-out", label: "Stock Out", icon: FiUpload, roles: ["Admin","Manager","Staff"] },
-    { path: "/customer", label: "customers", icon: FiUsers, roles: ["Admin","Manager","Staff"] },
+    { path: "/categories", label: "Categories", icon: FiTag, roles: ["Admin","Manager"] },
     { path: "/suppliers", label: "Supplier Management", icon: FiTruck, roles: ["Admin","Manager"] },
+    { path: "/customer", label: "Customers", icon: FiUsers, roles: ["Admin","Manager","Staff"] },
+    { path: "/payments", label: "Payments", icon: FiDollarSign, roles: ["Admin","Manager"] },
+    { path: "/reports", label: "Reports", icon: FiBarChart2, roles: ["Admin","Manager"] },
+    { path: "/activity-logs", label: "Activity Logs", icon: FiFileText, roles: ["Admin","Manager"] },
     { path: "/users", label: "User Management", icon: FiUsers, roles: ["Admin"] },
-
   ];
 
   return (
     <div className="w-64 h-screen bg-gradient-to-br from-slate-800 via-slate-900 to-slate-950 text-white flex flex-col p-6 shadow-xl border-r border-slate-700">
       {/* Header */}
-      <div className="mb-10 pt-4">
-        <div className="flex items-center justify-center gap-3 mb-3">
-          <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
-            <FiBox className="text-white" size={24} />
+      <div className="mb-6 pt-4 flex-shrink-0">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center justify-center gap-3 flex-1">
+            <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
+              <FiBox className="text-white" size={24} />
+            </div>
           </div>
+          <button
+            onClick={onClose}
+            className="lg:hidden p-2 rounded-md text-gray-400 hover:text-white hover:bg-slate-700"
+          >
+            <FiX className="w-6 h-6" />
+          </button>
         </div>
         <h1 className="text-2xl font-bold text-center bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
           Inventory
@@ -50,8 +67,13 @@ function Sidebar() {
       </div>
 
       {/* Navigation */}
-      <nav className="flex flex-col gap-2 flex-1">
-        {menuItems.map((item) => 
+      <nav className="flex flex-col gap-2 flex-1 overflow-y-auto" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+        <style jsx="true">{`
+          nav::-webkit-scrollbar {
+            display: none;
+          }
+        `}</style>
+        {menuItems.map((item) =>
           item.roles.includes(role) && (
             <Link
               key={item.path}
@@ -69,7 +91,13 @@ function Sidebar() {
               >
                 <item.icon size={18} className="text-white" />
               </div>
-              <span className="font-medium">{item.label}</span>
+              <span className="font-medium flex-1">{item.label}</span>
+              <FiChevronRight
+                size={16}
+                className={`text-gray-400 transition-transform duration-300 ${
+                  isActive(item.path) ? "text-blue-300" : "group-hover:text-white"
+                }`}
+              />
             </Link>
           )
         )}

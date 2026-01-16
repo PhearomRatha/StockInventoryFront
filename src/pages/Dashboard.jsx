@@ -6,7 +6,6 @@ import {
   ArrowTrendingUpIcon,
 } from "@heroicons/react/24/solid";
 
-// ✅ Base API URL
 const API_BASE = `${import.meta.env.VITE_API_URL}/api/dashboard`;
 
 export default function Dashboard() {
@@ -34,7 +33,6 @@ export default function Dashboard() {
       Authorization: `Bearer ${token}`,
     };
 
-    // 🔹 Dashboard endpoints
     const endpoints = [
       "total-customers",
       "total-products",
@@ -46,7 +44,6 @@ export default function Dashboard() {
 
     const fetchDashboardData = async () => {
       try {
-        // 🔹 Fetch all endpoints in parallel
         const requests = endpoints.map((endpoint) =>
           fetch(`${API_BASE}/${endpoint}`, { headers }).then((res) => res.json())
         );
@@ -60,7 +57,7 @@ export default function Dashboard() {
           stockout,
         ] = await Promise.all(requests);
 
-        // 🔹 Set totals in state
+        // set totals
         setTotals({
           total_customers: customers.total_this_month || 0,
           total_products: products.total_this_month || 0,
@@ -68,7 +65,6 @@ export default function Dashboard() {
           total_sales: sales.total_this_month || 0,
           stockin_this_month: stockin.total_this_month || 0,
           stockout_this_month: stockout.total_this_month || 0,
-
           percent_customers: customers.percent_change || 0,
           percent_products: products.percent_change || 0,
           percent_suppliers: suppliers.percent_change || 0,
@@ -88,12 +84,32 @@ export default function Dashboard() {
 
   if (loading)
     return (
-      <div className="p-10 text-gray-600 text-lg font-medium">
-        ចាំតិចបេះដូងអូន❤️
+      <div className="p-6 bg-gray-50 min-h-screen font-sans">
+        <div className="h-8 bg-gray-300 rounded w-1/3 mb-8 animate-pulse"></div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          {Array.from({ length: 6 }).map((_, index) => (
+            <div
+              key={index}
+              className="bg-white rounded-2xl p-6 shadow-lg border animate-pulse"
+            >
+              <div className="flex justify-between items-center">
+                <div className="flex-1">
+                  <div className="h-4 bg-gray-300 rounded w-3/4 mb-2"></div>
+                  <div className="h-6 bg-gray-300 rounded w-1/2 mb-4"></div>
+                  <div className="flex items-center gap-1">
+                    <div className="w-4 h-4 bg-gray-300 rounded"></div>
+                    <div className="h-4 bg-gray-300 rounded w-12"></div>
+                    <div className="h-4 bg-gray-300 rounded w-20"></div>
+                  </div>
+                </div>
+                <div className="w-12 h-12 bg-gray-300 rounded-xl"></div>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     );
 
-  // 🔹 Dashboard cards
   const cardData = [
     {
       title: "Total Customers",
@@ -145,7 +161,7 @@ export default function Dashboard() {
         Dashboard Overview
       </h1>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
         {cardData.map((card, index) => (
           <div
             key={index}

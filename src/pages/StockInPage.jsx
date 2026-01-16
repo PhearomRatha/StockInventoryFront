@@ -4,6 +4,8 @@ import {
   CalendarIcon,
   MagnifyingGlassIcon,
   ClockIcon,
+  CheckCircleIcon,
+  XMarkIcon,
 } from "@heroicons/react/24/outline";
 
 function StockInPage() {
@@ -25,6 +27,9 @@ function StockInPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedSupplier, setSelectedSupplier] = useState("All");
   const [selectedDate, setSelectedDate] = useState("");
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [showErrorModal, setShowErrorModal] = useState(false);
+  const [modalMessage, setModalMessage] = useState("");
 
   const API_BASE = `${import.meta.env.VITE_API_URL}/api`;
 
@@ -113,7 +118,8 @@ function StockInPage() {
       !formData.unit_cost ||
       !formData.received_by
     ) {
-      alert("Please fill all required fields.");
+      setModalMessage("Please fill all required fields.");
+      setShowErrorModal(true);
       return;
     }
 
@@ -138,7 +144,8 @@ function StockInPage() {
       });
       const data = await res.json();
       if (data.status === 201) {
-        alert("✅ Stock In recorded successfully!");
+        setModalMessage("Stock In recorded successfully!");
+        setShowSuccessModal(true);
         setFormData({
           supplier_id: "",
           product_id: "",
@@ -151,10 +158,13 @@ function StockInPage() {
         fetchProducts();
       } else {
         console.error(data);
-        alert("❌ Failed to record Stock In.");
+        setModalMessage("Failed to record Stock In.");
+        setShowErrorModal(true);
       }
     } catch (err) {
       console.error(err);
+      setModalMessage("An error occurred while recording Stock In.");
+      setShowErrorModal(true);
     }
   };
 
@@ -178,15 +188,25 @@ function StockInPage() {
   );
 
   return (
-    <div className="p-6 bg-gray-50 min-h-screen font-sans">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Stock In Management</h1>
-        <p className="text-gray-600">Log new stock arrivals and update inventory automatically.</p>
+    <div className="p-4 md:p-6 lg:p-8 bg-gradient-to-br from-gray-50 to-slate-100 min-h-screen">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-8">
+        <div className="flex items-center gap-4">
+          <div className="w-14 h-14 bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl flex items-center justify-center shadow-lg">
+            <PlusIcon className="w-7 h-7 text-white" />
+          </div>
+          <div>
+            <h1 className="text-3xl md:text-4xl font-bold text-gray-900">Stock In</h1>
+            <p className="text-gray-600 mt-1 text-sm md:text-base">
+              Log new stock arrivals and update inventory automatically
+            </p>
+          </div>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Stock In Form (Smaller) */}
-        <div className="lg:col-span-1 bg-white rounded-2xl shadow-lg border border-gray-200 p-6">
+        {/* Stock In Form */}
+        <div className="lg:col-span-1 bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
           <div className="flex items-center gap-3 mb-6">
             <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl flex items-center justify-center">
               <PlusIcon className="w-6 h-6 text-white" />
@@ -202,7 +222,7 @@ function StockInPage() {
                 value={formData.supplier_id}
                 onChange={handleInputChange}
                 required
-                className="w-full border border-gray-300 rounded-xl px-3 py-2 focus:ring-2 focus:ring-green-500"
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent transition appearance-none bg-white"
               >
                 <option value="">Select Supplier</option>
                 {suppliers.map((s) => (
@@ -285,7 +305,7 @@ function StockInPage() {
 
             <button
               type="submit"
-              className="w-full bg-gradient-to-br from-green-500 to-emerald-600 text-white py-2 rounded-xl font-bold hover:shadow-lg transition-all"
+              className="w-full bg-gradient-to-r from-green-600 to-emerald-600 text-white px-6 py-3 rounded-xl hover:shadow-lg transition-all duration-300 font-medium shadow-md"
             >
               Record Stock In
             </button>
@@ -293,7 +313,7 @@ function StockInPage() {
         </div>
 
         {/* Stock In History Table */}
-        <div className="lg:col-span-2 bg-white rounded-2xl shadow-lg border border-gray-200 p-6">
+        <div className="lg:col-span-2 bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
           <div className="flex items-center gap-3 mb-4">
             <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-cyan-600 rounded-xl flex items-center justify-center">
               <ClockIcon className="w-6 h-6 text-white" />
@@ -335,30 +355,62 @@ function StockInPage() {
           {loading && <p className="text-center text-gray-500 mb-4">Loading...</p>}
 
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+            <table className="w-full min-w-[800px]">
+              <thead className="bg-gradient-to-r from-gray-50 to-slate-50 border-b">
                 <tr>
-                  <th className="py-2 px-3 text-left text-gray-500">Stock In ID</th>
-                  <th className="py-2 px-3 text-left text-gray-500">Product</th>
-                  <th className="py-2 px-3 text-left text-gray-500">Supplier</th>
-                  <th className="py-2 px-3 text-left text-gray-500">Quantity</th>
-                  <th className="py-2 px-3 text-left text-gray-500">Unit Cost</th>
-                  <th className="py-2 px-3 text-left text-gray-500">Received By</th>
-                  <th className="py-2 px-3 text-left text-gray-500">Date</th>
+                  {["Stock In ID", "Product", "Supplier", "Quantity", "Unit Cost", "Received By", "Date"].map(
+                    (h) => (
+                      <th
+                        key={h}
+                        className="py-4 px-6 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider"
+                      >
+                        {h}
+                      </th>
+                    )
+                  )}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-200">
-                {filteredHistory.map((r) => (
-                  <tr key={r.id} className="hover:bg-gray-50">
-                    <td className="py-2 px-3 text-blue-600 font-mono">{r.stock_in_code || r.id}</td>
-                    <td className="py-2 px-3">{r.product_name || r.product}</td>
-                    <td className="py-2 px-3">{r.supplier_name || r.supplier}</td>
-                    <td className="py-2 px-3">{r.quantity}</td>
-                    <td className="py-2 px-3">${Number(r.unit_cost || 0).toFixed(2)}</td>
-                    <td className="py-2 px-3">{r.received_by_name || r.received_by}</td>
-                    <td className="py-2 px-3">{r.received_date}</td>
+              <tbody className="divide-y divide-gray-100">
+                {filteredHistory.length > 0 ? (
+                  filteredHistory.map((r) => (
+                    <tr
+                      key={r.id}
+                      className="hover:bg-gray-50/80 transition-colors duration-200"
+                    >
+                      <td className="py-4 px-6">
+                        <div className="font-medium text-gray-900">{r.stock_in_code || r.id}</div>
+                      </td>
+                      <td className="py-4 px-6">
+                        <div className="text-gray-900">{r.product_name || r.product}</div>
+                      </td>
+                      <td className="py-4 px-6">
+                        <div className="text-gray-900">{r.supplier_name || r.supplier}</div>
+                      </td>
+                      <td className="py-4 px-6">
+                        <div className="font-semibold text-gray-900">{r.quantity}</div>
+                      </td>
+                      <td className="py-4 px-6">
+                        <div className="font-semibold text-gray-900">${Number(r.unit_cost || 0).toFixed(2)}</div>
+                      </td>
+                      <td className="py-4 px-6">
+                        <div className="text-gray-600">{r.received_by_name || r.received_by}</div>
+                      </td>
+                      <td className="py-4 px-6">
+                        <div className="text-sm text-gray-500">{new Date(r.received_date).toLocaleDateString()}</div>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={7} className="py-20 text-center">
+                      <div className="flex flex-col items-center justify-center">
+                        <ClockIcon className="w-16 h-16 text-gray-300 mb-4" />
+                        <p className="text-gray-500 text-lg font-medium">No stock in records found</p>
+                        <p className="text-gray-400 mt-1">Try adjusting your search or filters</p>
+                      </div>
+                    </td>
                   </tr>
-                ))}
+                )}
               </tbody>
             </table>
           </div>
@@ -368,6 +420,52 @@ function StockInPage() {
           </div>
         </div>
       </div>
+
+      {/* Success Modal */}
+      {showSuccessModal && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex justify-center items-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto animate-scaleIn">
+            <div className="p-6">
+              <div className="text-center">
+                <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <CheckCircleIcon className="w-8 h-8 text-green-600" />
+                </div>
+                <h2 className="text-2xl font-bold text-gray-900 mb-2">Success!</h2>
+                <p className="text-gray-600 mb-6">{modalMessage}</p>
+                <button
+                  onClick={() => setShowSuccessModal(false)}
+                  className="w-full px-6 py-3 bg-green-600 text-white font-medium rounded-xl hover:shadow-lg transition-all duration-300 shadow-md"
+                >
+                  Continue
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Error Modal */}
+      {showErrorModal && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex justify-center items-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto animate-scaleIn">
+            <div className="p-6">
+              <div className="text-center">
+                <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <XMarkIcon className="w-8 h-8 text-red-600" />
+                </div>
+                <h2 className="text-2xl font-bold text-gray-900 mb-2">Error!</h2>
+                <p className="text-gray-600 mb-6">{modalMessage}</p>
+                <button
+                  onClick={() => setShowErrorModal(false)}
+                  className="w-full px-6 py-3 bg-red-600 text-white font-medium rounded-xl hover:shadow-lg transition-all duration-300 shadow-md"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

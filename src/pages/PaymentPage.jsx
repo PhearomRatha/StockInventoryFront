@@ -22,58 +22,67 @@ import {
 // ✅ Base API
 const API_BASE = `${import.meta.env.VITE_API_URL}/api`;
 
-function ProductPage() {
-  const [products, setProducts] = useState([]);
-  const [categories, setCategories] = useState([]);
-  const [suppliers, setSuppliers] = useState([]);
+function PaymentPage() {
+  const [payments, setPayments] = useState([]);
+  const [sales, setSales] = useState([]);
+  const [stockIns, setStockIns] = useState([]);
+  const [dashboard, setDashboard] = useState({});
   const [search, setSearch] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState("All");
-  const [sortBy, setSortBy] = useState("id");
+  const [selectedType, setSelectedType] = useState("All");
+  const [sortBy, setSortBy] = useState("payment_date");
   const [sortOrder, setSortOrder] = useState("desc");
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [isEdit, setIsEdit] = useState(false);
-  const [currentProduct, setCurrentProduct] = useState({});
-  const [imagePreview, setImagePreview] = useState(null);
+  const [currentPayment, setCurrentPayment] = useState({});
 
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
-  const productsPerPage = 8;
+  const paymentsPerPage = 8;
 
-  // Fetch products, categories, suppliers
-  const fetchProducts = () => {
+  // Fetch payments, sales, stockIns, dashboard
+  const fetchPayments = () => {
     const token = localStorage.getItem("token");
     if (!token) return;
 
     setLoading(true);
 
     axios
-      .get(`${API_BASE}/products`, {
+      .get(`${API_BASE}/payments`, {
         headers: { Authorization: `Bearer ${token}` },
       })
       .then((res) => {
-        if (res.data.status === 200) setProducts(res.data.data);
-        setLoading(false);
+        if (res.data.status === 200) setPayments(res.data.data);
       })
       .catch(() => setLoading(false));
 
     axios
-      .get(`${API_BASE}/categories`, {
+      .get(`${API_BASE}/sales`, {
         headers: { Authorization: `Bearer ${token}` },
       })
-      .then((res) => setCategories(res.data.data || []))
+      .then((res) => setSales(res.data.data || []))
       .catch(console.error);
 
     axios
-      .get(`${API_BASE}/suppliers`, {
+      .get(`${API_BASE}/stock-ins`, {
         headers: { Authorization: `Bearer ${token}` },
       })
-      .then((res) => setSuppliers(res.data.data || []))
+      .then((res) => setStockIns(res.data.data || []))
       .catch(console.error);
+
+    axios
+      .get(`${API_BASE}/payments/dashboard`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      .then((res) => {
+        setDashboard(res.data);
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
   };
 
   useEffect(() => {
-    fetchProducts();
+    fetchPayments();
   }, []);
 
   const handleSort = (newSortBy) => {
@@ -87,9 +96,9 @@ function ProductPage() {
 
   const getStatusColor = (status) => {
     switch (status) {
-      case "active":
+      case "paid":
         return "bg-emerald-50 text-emerald-700 border border-emerald-200";
-      case "inactive":
+      case "pending":
         return "bg-rose-50 text-rose-700 border border-rose-200";
       default:
         return "bg-slate-100 text-slate-700 border border-slate-200";
@@ -98,58 +107,44 @@ function ProductPage() {
 
   const openAddModal = () => {
     setIsEdit(false);
-    setCurrentProduct({});
-    setImagePreview(null);
+    setCurrentPayment({});
     setShowModal(true);
   };
 
-  const openEditModal = (product) => {
+  const openEditModal = (payment) => {
     setIsEdit(true);
-    setCurrentProduct(product);
-    setImagePreview(product.image || null);
+    setCurrentPayment(payment);
     setShowModal(true);
   };
 
-  const handleImageChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      setCurrentProduct({ ...currentProduct, image: file });
-      setImagePreview(URL.createObjectURL(file));
-    }
-  };
-
-  const filteredProducts = products
+  const filteredPayments = payments
     .filter(
       (p) =>
-        p.name.toLowerCase().includes(search.toLowerCase()) ||
-        p.sku.toLowerCase().includes(search.toLowerCase())
+        p.paid_to_from?.toLowerCase().includes(search.toLowerCase()) ||
+        p.reference_id?.toString().includes(search.toLowerCase())
     )
-    .filter((p) => selectedCategory === "All" || p.category === selectedCategory)
+    .filter((p) => selectedType === "All" || p.payment_type === selectedType)
     .sort((a, b) => {
       const multiplier = sortOrder === "asc" ? 1 : -1;
-      if (sortBy === "name") return multiplier * a.name.localeCompare(b.name);
-      if (sortBy === "price") return multiplier * (a.price - b.price);
-      if (sortBy === "stock_quantity")
-        return multiplier * (a.stock_quantity - b.stock_quantity);
-      if (sortBy === "id") return multiplier * (a.id - b.id);
-      if (sortBy === "created_at") return multiplier * new Date(a.created_at) - new Date(b.created_at);
+      if (sortBy === "payment_date") return multiplier * new Date(a.payment_date) - new Date(b.payment_date);
+      if (sortBy === "amount") return multiplier * (a.amount - b.amount);
       return 0;
     });
 
-  const totalPages = Math.ceil(filteredProducts.length / productsPerPage);
-  const paginatedProducts = filteredProducts.slice(
-    (currentPage - 1) * productsPerPage,
-    currentPage * productsPerPage
+  const totalPages = Math.ceil(filteredPayments.length / paymentsPerPage);
+  const paginatedPayments = filteredPayments.slice(
+    (currentPage - 1) * paymentsPerPage,
+    currentPage * paymentsPerPage
   );
 
   const handleDelete = (id) => {
-    if (window.confirm("Are you sure you want to delete this product?")) {
+    if (window.confirm("Are you sure you want to delete this payment?")) {
       axios
-        .delete(`${API_BASE}/products/${id}`, {
+        .delete(`${API_BASE}/payments/${id}`, {
           headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
         })
         .then(() => {
-          fetchProducts();
+          fetchPayments();
         })
         .catch(console.error);
     }
@@ -158,40 +153,34 @@ function ProductPage() {
   const handleSubmit = (e) => {
     e.preventDefault();
     const token = localStorage.getItem("token");
-    const formData = new FormData();
+    const userData = localStorage.getItem("user");
+    const user = userData ? JSON.parse(userData) : {};
 
-    for (let key in currentProduct) {
-      if (currentProduct[key] !== null && currentProduct[key] !== undefined) {
-        formData.append(key, currentProduct[key]);
-      }
-    }
+    const payload = { ...currentPayment, recorded_by: user.id };
 
     const url = isEdit
-      ? `${API_BASE}/products/${currentProduct.id}`
-      : `${API_BASE}/products`;
+      ? `${API_BASE}/payments/${currentPayment.id}`
+      : `${API_BASE}/payments`;
 
     const method = isEdit ? 'patch' : 'post';
 
-    axios[method](url, formData, {
+    axios[method](url, payload, {
       headers: {
         Authorization: `Bearer ${token}`,
-        "Content-Type": "multipart/form-data",
+        "Content-Type": "application/json",
       },
     })
       .then(() => {
-        fetchProducts();
+        fetchPayments();
         setShowModal(false);
       })
       .catch(console.error);
   };
 
   // Statistics
-  const totalProducts = products.length;
-  const totalStock = products.reduce((sum, p) => sum + parseInt(p.stock_quantity || 0), 0);
-  const lowStockProducts = products.filter(p => p.stock_quantity <= (p.reorder_level || 10)).length;
-  const averagePrice = products.length > 0
-    ? (products.reduce((sum, p) => sum + parseFloat(p.price || 0), 0) / products.length).toFixed(2)
-    : 0;
+  const todayIncome = dashboard.today_income || 0;
+  const todayExpense = dashboard.today_expense || 0;
+  const netIncome = todayIncome - todayExpense;
 
   // 🔹 Skeleton Loader
   if (loading)
@@ -229,9 +218,9 @@ function ProductPage() {
             <CubeTransparentIcon className="w-7 h-7 text-white" />
           </div>
           <div>
-            <h1 className="text-3xl md:text-4xl font-bold text-gray-900">Products</h1>
+            <h1 className="text-3xl md:text-4xl font-bold text-gray-900">Payments</h1>
             <p className="text-gray-600 mt-1 text-sm md:text-base">
-              Manage your inventory, track stock levels, and analyze product performance
+              Manage your payment records and track transactions
             </p>
           </div>
         </div>
@@ -239,20 +228,20 @@ function ProductPage() {
           onClick={openAddModal}
           className="flex items-center gap-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-6 py-3.5 rounded-xl hover:shadow-lg transition-all duration-300 font-medium shadow-md"
         >
-          <PlusIcon className="w-5 h-5" /> Add New Product
+          <PlusIcon className="w-5 h-5" /> Add New Payment
         </button>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
         <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-500 font-medium">Total Products</p>
-              <p className="text-3xl font-bold text-gray-900 mt-2">{totalProducts}</p>
+              <p className="text-sm text-gray-500 font-medium">Today's Income</p>
+              <p className="text-3xl font-bold text-emerald-600 mt-2">${todayIncome.toFixed(2)}</p>
             </div>
-            <div className="w-12 h-12 bg-indigo-50 rounded-xl flex items-center justify-center">
-              <CubeIcon className="w-6 h-6 text-indigo-600" />
+            <div className="w-12 h-12 bg-emerald-50 rounded-xl flex items-center justify-center">
+              <CurrencyDollarIcon className="w-6 h-6 text-emerald-600" />
             </div>
           </div>
         </div>
@@ -260,20 +249,8 @@ function ProductPage() {
         <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-500 font-medium">Total In Stock</p>
-              <p className="text-3xl font-bold text-blue-600 mt-2">{totalStock}</p>
-            </div>
-            <div className="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center">
-              <CubeTransparentIcon className="w-6 h-6 text-blue-600" />
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-500 font-medium">Low Stock</p>
-              <p className="text-3xl font-bold text-rose-600 mt-2">{lowStockProducts}</p>
+              <p className="text-sm text-gray-500 font-medium">Today's Expense</p>
+              <p className="text-3xl font-bold text-rose-600 mt-2">${todayExpense.toFixed(2)}</p>
             </div>
             <div className="w-12 h-12 bg-rose-50 rounded-xl flex items-center justify-center">
               <ChartBarIcon className="w-6 h-6 text-rose-600" />
@@ -284,11 +261,11 @@ function ProductPage() {
         <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-500 font-medium">Avg. Price</p>
-              <p className="text-3xl font-bold text-emerald-600 mt-2">${averagePrice}</p>
+              <p className="text-sm text-gray-500 font-medium">Net Income</p>
+              <p className={`text-3xl font-bold mt-2 ${netIncome >= 0 ? 'text-green-600' : 'text-red-600'}`}>${netIncome.toFixed(2)}</p>
             </div>
-            <div className="w-12 h-12 bg-emerald-50 rounded-xl flex items-center justify-center">
-              <CurrencyDollarIcon className="w-6 h-6 text-emerald-600" />
+            <div className="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center">
+              <CubeIcon className="w-6 h-6 text-blue-600" />
             </div>
           </div>
         </div>
@@ -301,30 +278,27 @@ function ProductPage() {
             <MagnifyingGlassIcon className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
             <input
               type="text"
-              placeholder="Search products by name or SKU..."
+              placeholder="Search payments by reference or paid to/from..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="w-full pl-12 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
             />
           </div>
-          
+
           <div className="flex flex-wrap gap-3 w-full lg:w-auto">
             <div className="relative">
               <FunnelIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
               <select
-                value={selectedCategory}
-                onChange={(e) => setSelectedCategory(e.target.value)}
+                value={selectedType}
+                onChange={(e) => setSelectedType(e.target.value)}
                 className="pl-10 pr-8 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent appearance-none bg-white"
               >
-                <option value="All">All Categories</option>
-                {categories.map((c) => (
-                  <option key={c.id} value={c.name}>
-                    {c.name}
-                  </option>
-                ))}
+                <option value="All">All Types</option>
+                <option value="income">Income</option>
+                <option value="expense">Expense</option>
               </select>
             </div>
-            
+
             <div className="relative">
               <ArrowsUpDownIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
               <select
@@ -332,11 +306,8 @@ function ProductPage() {
                 onChange={(e) => handleSort(e.target.value)}
                 className="pl-10 pr-8 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent appearance-none bg-white"
               >
-                <option value="id">Sort by ID</option>
-                <option value="created_at">Sort by Date</option>
-                <option value="name">Sort by Name</option>
-                <option value="price">Sort by Price</option>
-                <option value="stock_quantity">Sort by Stock</option>
+                <option value="payment_date">Sort by Date</option>
+                <option value="amount">Sort by Amount</option>
               </select>
             </div>
           </div>
@@ -349,7 +320,7 @@ function ProductPage() {
           <table className="w-full min-w-[1000px]">
             <thead className="bg-gradient-to-r from-gray-50 to-slate-50 border-b">
               <tr>
-                {["Product", "Category", "Supplier", "Price", "Stock", "Status", "Actions"].map(
+                {["Reference", "Type", "Amount", "Method", "Paid To/From", "Date", "Status", "Actions"].map(
                   (h) => (
                     <th
                       key={h}
@@ -362,53 +333,38 @@ function ProductPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {paginatedProducts.length > 0 ? (
-                paginatedProducts.map((p) => (
+              {paginatedPayments.length > 0 ? (
+                paginatedPayments.map((p) => (
                   <tr
                     key={p.id}
                     className="hover:bg-gray-50/80 transition-colors duration-200"
                   >
                     <td className="py-4 px-6">
-                      <div className="flex items-center gap-4">
-                        <div className="relative">
-                          <img
-                            src={p.image || "https://via.placeholder.com/150x150/4f46e5/ffffff?text=No+Image"}
-                            alt={p.name}
-                            className="w-14 h-14 object-cover rounded-lg border border-gray-200"
-                          />
-                          {p.stock_quantity <= (p.reorder_level || 10) && (
-                            <div className="absolute -top-1 -right-1 w-5 h-5 bg-rose-500 rounded-full border-2 border-white"></div>
-                          )}
-                        </div>
-                        <div>
-                          <p className="font-medium text-gray-900">{p.name}</p>
-                          <p className="text-sm text-gray-500 mt-1">{p.sku}</p>
-                        </div>
+                      <div className="font-medium text-gray-900">
+                        {p.reference_type === 'sale' ? `Sale #${p.reference_id}` : `Purchase #${p.reference_id}`}
                       </div>
+                    </td>
+                    <td className="py-4 px-6">
+                      <span className={`inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium ${
+                        p.payment_type === 'income' ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'
+                      }`}>
+                        {p.payment_type}
+                      </span>
+                    </td>
+                    <td className="py-4 px-6">
+                      <div className="font-bold text-gray-900">${p.amount}</div>
                     </td>
                     <td className="py-4 px-6">
                       <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-indigo-50 text-indigo-700 text-sm font-medium">
                         <TagIcon className="w-3.5 h-3.5" />
-                        {p.category}
+                        {p.payment_method}
                       </span>
                     </td>
                     <td className="py-4 px-6">
-                      <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-blue-50 text-blue-700 text-sm font-medium">
-                        <BuildingStorefrontIcon className="w-3.5 h-3.5" />
-                        {p.supplier}
-                      </span>
+                      <div className="text-sm text-gray-500">{p.paid_to_from}</div>
                     </td>
                     <td className="py-4 px-6">
-                      <div className="font-bold text-gray-900">${p.price}</div>
-                      {p.cost && (
-                        <div className="text-sm text-gray-500">Cost: ${p.cost}</div>
-                      )}
-                    </td>
-                    <td className="py-4 px-6">
-                      <div className="font-semibold text-gray-900">{p.stock_quantity}</div>
-                      {p.reorder_level && (
-                        <div className="text-sm text-gray-500">Reorder at {p.reorder_level}</div>
-                      )}
+                      <div className="text-sm text-gray-500">{new Date(p.payment_date).toLocaleDateString()}</div>
                     </td>
                     <td className="py-4 px-6">
                       <span
@@ -417,8 +373,8 @@ function ProductPage() {
                         )}`}
                       >
                         <div className={`w-2 h-2 rounded-full mr-2 ${
-                          p.status === 'active' ? 'bg-emerald-500' : 
-                          p.status === 'inactive' ? 'bg-rose-500' : 'bg-gray-500'
+                          p.status === 'paid' ? 'bg-emerald-500' :
+                          p.status === 'pending' ? 'bg-rose-500' : 'bg-gray-500'
                         }`}></div>
                         {p.status}
                       </span>
@@ -445,16 +401,16 @@ function ProductPage() {
                 ))
               ) : (
                 <tr>
-                  <td colSpan={7} className="py-20 text-center">
+                  <td colSpan={8} className="py-20 text-center">
                     <div className="flex flex-col items-center justify-center">
                       <CubeIcon className="w-16 h-16 text-gray-300 mb-4" />
-                      <p className="text-gray-500 text-lg font-medium">No products found</p>
+                      <p className="text-gray-500 text-lg font-medium">No payments found</p>
                       <p className="text-gray-400 mt-1">Try adjusting your search or filters</p>
                       <button
                         onClick={openAddModal}
                         className="mt-4 px-4 py-2 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition"
                       >
-                        Add Your First Product
+                        Add Your First Payment
                       </button>
                     </div>
                   </td>
@@ -469,9 +425,9 @@ function ProductPage() {
       {totalPages > 1 && (
         <div className="flex justify-between items-center mt-6">
           <div className="text-sm text-gray-500">
-            Showing {(currentPage - 1) * productsPerPage + 1} to{" "}
-            {Math.min(currentPage * productsPerPage, filteredProducts.length)} of{" "}
-            {filteredProducts.length} products
+            Showing {(currentPage - 1) * paymentsPerPage + 1} to{" "}
+            {Math.min(currentPage * paymentsPerPage, filteredPayments.length)} of{" "}
+            {filteredPayments.length} payments
           </div>
           <div className="flex items-center gap-2">
             <button
@@ -529,10 +485,10 @@ function ProductPage() {
             <div className="sticky top-0 bg-white border-b border-gray-100 p-6 flex justify-between items-center rounded-t-2xl">
               <div>
                 <h2 className="text-2xl font-bold text-gray-900">
-                  {isEdit ? "Edit Product" : "Add New Product"}
+                  {isEdit ? "Edit Payment" : "Add New Payment"}
                 </h2>
                 <p className="text-gray-600 mt-1">
-                  {isEdit ? "Update product details" : "Fill in the product information"}
+                  {isEdit ? "Update payment details" : "Fill in the payment information"}
                 </p>
               </div>
               <button
@@ -550,198 +506,175 @@ function ProductPage() {
                 <div className="space-y-5">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Product Name *
+                      Reference Type *
                     </label>
-                    <input
-                      type="text"
-                      value={currentProduct.name || ""}
+                    <select
+                      value={currentPayment.reference_type || ""}
                       onChange={(e) =>
-                        setCurrentProduct({ ...currentProduct, name: e.target.value })
+                        setCurrentPayment({
+                          ...currentPayment,
+                          reference_type: e.target.value,
+                          reference_id: "",
+                        })
                       }
-                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition"
-                      placeholder="Enter product name"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition appearance-none bg-white"
                       required
-                      minLength="1"
-                      maxLength="255"
-                    />
+                    >
+                      <option value="">Select type</option>
+                      <option value="sale">Sale</option>
+                      <option value="purchase">Purchase</option>
+                    </select>
                   </div>
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Cost *
+                      Reference ID *
+                    </label>
+                    <select
+                      value={currentPayment.reference_id || ""}
+                      onChange={(e) =>
+                        setCurrentPayment({
+                          ...currentPayment,
+                          reference_id: e.target.value,
+                        })
+                      }
+                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition appearance-none bg-white"
+                      required
+                    >
+                      <option value="">Select reference</option>
+                      {currentPayment.reference_type === 'sale' &&
+                        sales.map((s) => (
+                          <option key={s.id} value={s.id}>
+                            Sale #{s.id} - {s.customer?.name || 'Unknown'}
+                          </option>
+                        ))}
+                      {currentPayment.reference_type === 'purchase' &&
+                        stockIns.map((si) => (
+                          <option key={si.id} value={si.id}>
+                            Purchase #{si.id} - {si.supplier?.name || 'Unknown'}
+                          </option>
+                        ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Amount *
                     </label>
                     <div className="relative">
                       <CurrencyDollarIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
                       <input
                         type="number"
                         step="0.01"
-                        min="0"
-                        value={currentProduct.cost || ""}
+                        value={currentPayment.amount || ""}
                         onChange={(e) =>
-                          setCurrentProduct({ ...currentProduct, cost: e.target.value })
+                          setCurrentPayment({ ...currentPayment, amount: e.target.value })
                         }
                         className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition"
                         placeholder="0.00"
                         required
                       />
                     </div>
-                    <p className="text-xs text-gray-500 mt-1">Price will be auto-calculated as Cost × 1.2</p>
                   </div>
-
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Category *
+                      Payment Type *
                     </label>
                     <select
-                      value={currentProduct.category_id || ""}
+                      value={currentPayment.payment_type || ""}
                       onChange={(e) =>
-                        setCurrentProduct({
-                          ...currentProduct,
-                          category_id: e.target.value,
+                        setCurrentPayment({
+                          ...currentPayment,
+                          payment_type: e.target.value,
                         })
                       }
                       className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition appearance-none bg-white"
                       required
                     >
-                      <option value="">Select a category</option>
-                      {categories.map((c) => (
-                        <option key={c.id} value={c.id}>
-                          {c.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Supplier *
-                    </label>
-                    <select
-                      value={currentProduct.supplier_id || ""}
-                      onChange={(e) =>
-                        setCurrentProduct({
-                          ...currentProduct,
-                          supplier_id: e.target.value,
-                        })
-                      }
-                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition appearance-none bg-white"
-                      required
-                    >
-                      <option value="">Select a supplier</option>
-                      {suppliers.map((s) => (
-                        <option key={s.id} value={s.id}>
-                          {s.name}
-                        </option>
-                      ))}
+                      <option value="">Select type</option>
+                      <option value="income">Income</option>
+                      <option value="expense">Expense</option>
                     </select>
                   </div>
                 </div>
 
                 {/* Right Column */}
                 <div className="space-y-5">
-                  {/* Image Upload */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Product Image
+                      Payment Method *
                     </label>
-                    <div className="border-2 border-dashed border-gray-300 rounded-2xl p-6 text-center hover:border-indigo-500 transition">
-                      {imagePreview ? (
-                        <div className="relative">
-                          <img
-                            src={imagePreview}
-                            alt="Preview"
-                            className="w-40 h-40 object-cover rounded-lg mx-auto"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setImagePreview(null);
-                              setCurrentProduct({ ...currentProduct, image: null });
-                            }}
-                            className="absolute top-2 right-2 p-1 bg-white rounded-full shadow hover:bg-gray-100"
-                          >
-                            <XMarkIcon className="w-4 h-4" />
-                          </button>
-                        </div>
-                      ) : (
-                        <div className="py-8">
-                          <PhotoIcon className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                          <p className="text-gray-600 mb-2">Drag & drop or click to upload</p>
-                          <p className="text-sm text-gray-500 mb-4">PNG, JPG up to 5MB</p>
-                          <label className="inline-block px-6 py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition cursor-pointer">
-                            Choose File
-                            <input
-                              type="file"
-                              accept="image/jpeg,image/png,image/jpg,image/gif"
-                              onChange={handleImageChange}
-                              className="hidden"
-                            />
-                          </label>
-                        </div>
-                      )}
-                    </div>
+                    <select
+                      value={currentPayment.payment_method || ""}
+                      onChange={(e) =>
+                        setCurrentPayment({
+                          ...currentPayment,
+                          payment_method: e.target.value,
+                        })
+                      }
+                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition appearance-none bg-white"
+                      required
+                    >
+                      <option value="">Select method</option>
+                      <option value="Cash">Cash</option>
+                      <option value="Bakong">Bakong</option>
+                    </select>
                   </div>
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Initial Stock
+                      Paid To/From *
                     </label>
                     <input
-                      type="number"
-                      min="0"
-                      value={currentProduct.stock_quantity || ""}
+                      type="text"
+                      value={currentPayment.paid_to_from || ""}
                       onChange={(e) =>
-                        setCurrentProduct({
-                          ...currentProduct,
-                          stock_quantity: e.target.value,
+                        setCurrentPayment({
+                          ...currentPayment,
+                          paid_to_from: e.target.value,
                         })
                       }
                       className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition"
-                      placeholder="0"
+                      placeholder="Enter paid to/from"
                       required
                     />
                   </div>
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Reorder Level *
+                      Payment Date *
                     </label>
                     <input
-                      type="number"
-                      min="0"
-                      value={currentProduct.reorder_level || ""}
+                      type="date"
+                      value={currentPayment.payment_date || ""}
                       onChange={(e) =>
-                        setCurrentProduct({
-                          ...currentProduct,
-                          reorder_level: e.target.value,
+                        setCurrentPayment({
+                          ...currentPayment,
+                          payment_date: e.target.value,
                         })
                       }
                       className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition"
-                      placeholder="10"
+                      required
                     />
                   </div>
 
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Status
+                    </label>
+                    <select
+                      value={currentPayment.status || "pending"}
+                      onChange={(e) =>
+                        setCurrentPayment({ ...currentPayment, status: e.target.value })
+                      }
+                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition appearance-none bg-white"
+                    >
+                      <option value="paid">Paid</option>
+                      <option value="pending">Pending</option>
+                    </select>
+                  </div>
                 </div>
-              </div>
-
-              {/* Description */}
-              <div className="mt-6">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Description
-                </label>
-                <textarea
-                  value={currentProduct.description || ""}
-                  onChange={(e) =>
-                    setCurrentProduct({
-                      ...currentProduct,
-                      description: e.target.value,
-                    })
-                  }
-                  rows="3"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition"
-                  placeholder="Enter product description..."
-                />
               </div>
 
               {/* Form Actions */}
@@ -757,7 +690,7 @@ function ProductPage() {
                   type="submit"
                   className="px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-medium rounded-xl hover:shadow-lg transition-all duration-300 shadow-md"
                 >
-                  {isEdit ? "Update Product" : "Create Product"}
+                  {isEdit ? "Update Payment" : "Create Payment"}
                 </button>
               </div>
             </form>
@@ -768,4 +701,4 @@ function ProductPage() {
   );
 }
 
-export default ProductPage;
+export default PaymentPage;
