@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { FaEye, FaEyeSlash, FaUser, FaLock } from 'react-icons/fa';
 import axios from 'axios';
 
-const API_BASE =  `${import.meta.env.VITE_API_URL}/api`;
+const API_BASE =  `https://stockinventory-1-vzya.onrender.com/api`;
 
 function Login() {
   const [showPassword, setShowPassword] = useState(false);
@@ -22,7 +22,7 @@ const handleSubmit = async (e) => {
 
   try {
     // Use environment variable for backend
-    const res = await axios.post(`${API_BASE}/login`, formData, {
+    const res = await axios.post(`https://stockinventory-1-vzya.onrender.com/api/login`, formData, {
       headers: {
         'Content-Type': 'application/json'
       }
