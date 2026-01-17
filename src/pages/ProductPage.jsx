@@ -35,6 +35,7 @@ function ProductPage() {
   const [isEdit, setIsEdit] = useState(false);
   const [currentProduct, setCurrentProduct] = useState({});
   const [imagePreview, setImagePreview] = useState(null);
+  const [submitting, setSubmitting] = useState(false);
 
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
@@ -162,6 +163,7 @@ const getStatusColor = (status) => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    setSubmitting(true);
     const token = localStorage.getItem("token");
     const formData = new FormData();
 
@@ -186,8 +188,12 @@ const getStatusColor = (status) => {
       .then(() => {
         fetchProducts();
         setShowModal(false);
+        setSubmitting(false);
       })
-      .catch(console.error);
+      .catch((error) => {
+        console.error(error);
+        setSubmitting(false);
+      });
   };
 
   // Statistics
@@ -830,9 +836,10 @@ const getStatusColor = (status) => {
                 </button>
                 <button
                   type="submit"
-                  className="px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-medium rounded-xl hover:shadow-lg transition-all duration-300 shadow-md"
+                  disabled={submitting}
+                  className="px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-medium rounded-xl hover:shadow-lg transition-all duration-300 shadow-md disabled:opacity-50"
                 >
-                  {isEdit ? "Update Product" : "Create Product"}
+                  {submitting ? "Processing..." : isEdit ? "Update Product" : "Create Product"}
                 </button>
               </div>
             </form>
