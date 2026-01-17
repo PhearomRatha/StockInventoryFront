@@ -22,6 +22,8 @@ import {
 } from "@heroicons/react/24/outline";
 
 const API_BASE = `${import.meta.env.VITE_API_URL}/api`;
+const token = localStorage.getItem("token");
+const user = JSON.parse(localStorage.getItem("user"));
 
 function SalesPage() {
   const [sales, setSales] = useState([]);
@@ -29,6 +31,7 @@ function SalesPage() {
   const [users, setUsers] = useState([]);
   const [products, setProducts] = useState([]);
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [selectedCustomer, setSelectedCustomer] = useState("All");
   const [sortBy, setSortBy] = useState("created_at");
   const [sortOrder, setSortOrder] = useState("desc");
@@ -39,6 +42,7 @@ function SalesPage() {
   const [cart, setCart] = useState([]);
 
   const [paymentError, setPaymentError] = useState(null);
+  const [message, setMessage] = useState({ text: "", type: "" });
  
   const [newItem, setNewItem] = useState({
     product_id: "",
@@ -49,6 +53,7 @@ function SalesPage() {
   const [qrCode, setQrCode] = useState(null);
   const [generatingQR, setGeneratingQR] = useState(false);
   const [verifying, setVerifying] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [currentSaleId, setCurrentSaleId] = useState(null);
   const [currentMd5, setCurrentMd5] = useState(null);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
@@ -57,59 +62,86 @@ function SalesPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const salesPerPage = 8;
 
-  const fetchSales = () => {
+  const clearCache = () => {
+    localStorage.removeItem('salesData');
+    localStorage.removeItem('salesDataTime');
+  };
+
+  const fetchSales = (force = false) => {
     const token = localStorage.getItem("token");
     if (!token) return;
 
     setLoading(true);
 
-    axios
-      .get(`${API_BASE}/sales`, {
-        headers: { Authorization: `Bearer ${token}` },
-      })
+    const cacheKey = 'salesData';
+    const cacheTimeKey = 'salesDataTime';
+    const cacheExpiry = 5 * 60 * 1000; // 5 minutes
 
-      .then((res) => {
-        setSales(Array.isArray(res.data.data) ? res.data.data : []);
+    const cachedData = localStorage.getItem(cacheKey);
+    const cachedTime = localStorage.getItem(cacheTimeKey);
+    const now = Date.now();
+
+    if (!force && cachedData && cachedTime && (now - cachedTime) < cacheExpiry) {
+      const data = JSON.parse(cachedData);
+      setSales(data.sales || []);
+      setCustomers(data.customers || []);
+      setUsers(data.users || []);
+      setProducts(data.products || []);
+      setLoading(false);
+      return;
+    }
+
+    // Fetch all data in parallel
+    const promises = [
+      axios.get(`${API_BASE}/sales`, { headers: { Authorization: `Bearer ${token}` } }),
+      axios.get(`${API_BASE}/customers`, { headers: { Authorization: `Bearer ${token}` } }),
+      axios.get(`${API_BASE}/products`, { headers: { Authorization: `Bearer ${token}` } }),
+    ];
+
+    if (user?.role?.name === 'Admin') {
+      promises.push(axios.get(`${API_BASE}/users`, { headers: { Authorization: `Bearer ${token}` } }));
+    }
+
+    Promise.all(promises)
+      .then((responses) => {
+        const salesRes = responses[0];
+        const customersRes = responses[1];
+        const productsRes = responses[2];
+        const usersRes = responses[3]; // only if admin
+
+        const sales = Array.isArray(salesRes.data.data) ? salesRes.data.data : [];
+        const customers = Array.isArray(customersRes.data.data) ? customersRes.data.data : [];
+        const products = Array.isArray(productsRes.data.data) ? productsRes.data.data : [];
+        const users = user?.role?.name === 'Admin' && usersRes ? (Array.isArray(usersRes.data.data.data) ? usersRes.data.data.data : []) : [];
+
+        setSales(sales);
+        setCustomers(customers);
+        setUsers(users);
+        setProducts(products);
+
+        // Cache the data
+        const dataToCache = { sales, customers, users, products };
+        localStorage.setItem(cacheKey, JSON.stringify(dataToCache));
+        localStorage.setItem(cacheTimeKey, now.toString());
+
         setLoading(false);
       })
-      .catch(() => setLoading(false));
-
-    axios
-      .get(`${API_BASE}/customers`, {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-      .then((res) =>
-        setCustomers(Array.isArray(res.data.data) ? res.data.data : [])
-      )
-      .catch(console.error);
-    axios
-      .get(`${API_BASE}/users`, {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-      .then((res) => {
-        console.log("API response:", res.data);
-
-        const userList = Array.isArray(res.data.data.data)
-          ? res.data.data.data
-          : [];
-
-        setUsers(userList);
-      })
-      .catch(console.error);
-
-    axios
-      .get(`${API_BASE}/products`, {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-      .then((res) =>
-        setProducts(Array.isArray(res.data.data) ? res.data.data : [])
-      )
-      .catch(console.error);
+      .catch((errors) => {
+        console.error('Error fetching data:', errors);
+        setLoading(false);
+      });
   };
 
   useEffect(() => {
     fetchSales();
   }, []);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [search]);
 
   const handleSort = (newSortBy) => {
     if (sortBy === newSortBy)
@@ -148,7 +180,8 @@ function SalesPage() {
 
   const addToCart = () => {
     if (!newItem.product_id) {
-      alert("Please select a product");
+      setMessage({ text: "Please select a product", type: "error" });
+      setTimeout(() => setMessage({ text: "", type: "" }), 3000);
       return;
     }
 
@@ -156,7 +189,8 @@ function SalesPage() {
     if (!product) return;
 
     if (newItem.quantity > product.stock_quantity) {
-      alert(`Cannot add more than available stock (${product.stock_quantity})`);
+      setMessage({ text: `Cannot add more than available stock (${product.stock_quantity})`, type: "error" });
+      setTimeout(() => setMessage({ text: "", type: "" }), 3000);
       return;
     }
 
@@ -188,6 +222,8 @@ function SalesPage() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    if (submitting) return; // Prevent multiple submissions
+    setSubmitting(true);
     const token = localStorage.getItem("token");
     let payload, url, method;
 
@@ -197,7 +233,9 @@ function SalesPage() {
       method = "patch";
     } else {
       if (cart.length === 0) {
-        alert("Please add items to the cart");
+        setMessage({ text: "Please add items to the cart", type: "error" });
+        setTimeout(() => setMessage({ text: "", type: "" }), 3000);
+        setSubmitting(false);
         return;
       }
 
@@ -208,7 +246,6 @@ function SalesPage() {
           quantity: Number(item.quantity),
           discount_percent: Number(item.discount_percent),
         })),
-        sold_by: Number(currentSale.sold_by),
         payment_method: currentSale.payment_method,
       };
 
@@ -223,6 +260,7 @@ function SalesPage() {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then((res) => {
+        setSubmitting(false);
         if (!isEdit && currentSale.payment_method === "Bakong") {
           setGeneratingQR(false);
           if (res.data.qr_string) {
@@ -231,11 +269,13 @@ function SalesPage() {
             setCurrentMd5(res.data.md5);
           }
         } else {
-          fetchSales();
+          clearCache();
+          fetchSales(true);
           setShowModal(false);
         }
       })
       .catch((err) => {
+        setSubmitting(false);
         setGeneratingQR(false);
         console.error(err);
       });
@@ -267,7 +307,9 @@ function SalesPage() {
       .then((res) => {
         if (res.data.status) {
           setSuccessMessage("Payment verified successfully!");
+          setShowSuccessModal(true);
           console.log("Verify Payment Success:", res.data);
+          setShowModal(false); // Close the main modal on success
         } else {
           setPaymentError(res.data.message || "Payment verification failed.");
           console.warn("Verify Payment Failed:", res.data);
@@ -278,7 +320,8 @@ function SalesPage() {
         setCurrentSaleId(null);
         setCurrentMd5(null);
 
-        fetchSales();
+        clearCache();
+        fetchSales(true);
       })
       .catch((err) => {
         let serverMessage = "Unknown error";
@@ -309,7 +352,10 @@ function SalesPage() {
       .delete(`${API_BASE}/sales/${id}`, {
         headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
       })
-      .then(() => fetchSales())
+      .then(() => {
+        clearCache();
+        fetchSales(true);
+      })
       .catch(console.error);
   };
 
@@ -327,10 +373,10 @@ function SalesPage() {
   const filteredSales = sales
     .filter((s) => {
       const matchesSearch =
-        search === "" ||
-        s.customer?.name?.toLowerCase().includes(search.toLowerCase()) ||
+        debouncedSearch === "" ||
+        s.customer?.name?.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
         s.items?.some((item) =>
-          item.product?.name?.toLowerCase().includes(search.toLowerCase())
+          item.product?.name?.toLowerCase().includes(debouncedSearch.toLowerCase())
         );
       const matchesCustomer =
         selectedCustomer === "All" || s.customer?.name === selectedCustomer;
@@ -409,6 +455,16 @@ function SalesPage() {
           <PlusIcon className="w-5 h-5" /> Add New Sale
         </button>
       </div>
+
+      {message.text && (
+        <div
+          className={`mb-6 text-center py-3 px-4 rounded-xl font-medium shadow-lg
+            ${message.type === "success" ? "bg-green-100 text-green-700 border border-green-300" : ""}
+            ${message.type === "error" ? "bg-red-100 text-red-700 border border-red-300" : ""}`}
+        >
+          {message.text}
+        </div>
+      )}
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
@@ -975,9 +1031,10 @@ function SalesPage() {
                 </button>
                 <button
                   type="submit"
-                  className="px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-medium rounded-xl hover:shadow-lg transition-all duration-300 shadow-md"
+                  disabled={submitting}
+                  className="px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-medium rounded-xl hover:shadow-lg transition-all duration-300 shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {isEdit ? "Update Sale" : "Create Sale"}
+                  {submitting ? "Processing..." : (isEdit ? "Update Sale" : "Create Sale")}
                 </button>
               </div>
             </form>

@@ -35,6 +35,21 @@ export default function Dashboard() {
     };
 
     const fetchDashboardData = async () => {
+      const cacheKey = 'dashboardData';
+      const cacheTimeKey = 'dashboardDataTime';
+      const cacheExpiry = 5 * 60 * 1000; // 5 minutes
+
+      const cachedData = localStorage.getItem(cacheKey);
+      const cachedTime = localStorage.getItem(cacheTimeKey);
+      const now = Date.now();
+
+      if (cachedData && cachedTime && (now - cachedTime) < cacheExpiry) {
+        const data = JSON.parse(cachedData);
+        setTotals(data);
+        setLoading(false);
+        return;
+      }
+
       try {
         const res = await fetch(API_BASE, { headers });
         const data = await res.json();
@@ -43,7 +58,7 @@ export default function Dashboard() {
         const stockInObj =
           data.totalStockIn || data["totalStockIn "] || { original: {} };
 
-        setTotals({
+        const totalsData = {
           total_customers: data.totalCustomer?.original?.total_this_month || 0,
           total_products: data.totalProduct?.original?.total_this_month || 0,
           total_suppliers: data.totalSupplier?.original?.total_this_month || 0,
@@ -59,7 +74,14 @@ export default function Dashboard() {
           percent_stockin: stockInObj.original?.percent_change || 0,
           percent_stockout:
             data.totalStockOut?.original?.percent_change || 0,
-        });
+        };
+
+        setTotals(totalsData);
+
+        // Cache the data
+        localStorage.setItem(cacheKey, JSON.stringify(totalsData));
+        localStorage.setItem(cacheTimeKey, now.toString());
+
       } catch (error) {
         console.error("Dashboard fetch error:", error);
       } finally {

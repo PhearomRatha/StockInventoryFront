@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { FaEye, FaEyeSlash, FaUser, FaLock } from 'react-icons/fa';
 import axios from 'axios';
 
@@ -6,9 +6,20 @@ import axios from 'axios';
 
 function Login() {
   const [showPassword, setShowPassword] = useState(false);
-  const [formData, setFormData] = useState({ email: '', password: '' });
+  const [formData, setFormData] = useState({
+    email: localStorage.getItem('signupEmail') || '',
+    password: localStorage.getItem('signupPassword') || ''
+  });
   const [message, setMessage] = useState({ text: '', type: '' });
   const [loading, setLoading] = useState(false);
+
+  // Clear the stored values after setting
+  useEffect(() => {
+    if (localStorage.getItem('signupEmail')) {
+      localStorage.removeItem('signupEmail');
+      localStorage.removeItem('signupPassword');
+    }
+  }, []);
 
   const handleChange = (e) => {
     const { name, value } = e.target;

@@ -1,22 +1,24 @@
-import React, { useState } from "react";
+import React, { useState, lazy, Suspense } from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Sidebar from "./components/Sidebar";
-import Dashboard from "./pages/Dashboard";
-import ProductPage from "./pages/ProductPage";
-import CategoryPage from "./pages/CategoryPage";
-import ActivityLogPage from "./pages/ActivityLogPage";
-import ReportsPage from "./pages/ReportsPage";
-import LoginPage from "./pages/Login";
 import ProtectedRoute from "./components/ProtectedRoute";
-import StockInPage from "./pages/StockInPage";
-import StockOutPage from "./pages/StockOutPage";
-import Suppliers from "./pages/Suppliers";
- import CustomerCRMPage from "./pages/CustomerCRMPage";
- import UserManagement from "./pages/UserManagement";
- import Signup from "./pages/SignupPage";
- import SalesPage from "./pages/SalesPage";
- import PaymentPage from "./pages/PaymentPage";
 import { Bars3Icon } from "@heroicons/react/24/outline";
+
+// Lazy load pages for code splitting
+const Dashboard = lazy(() => import("./pages/Dashboard"));
+const ProductPage = lazy(() => import("./pages/ProductPage"));
+const CategoryPage = lazy(() => import("./pages/CategoryPage"));
+const ActivityLogPage = lazy(() => import("./pages/ActivityLogPage"));
+const ReportsPage = lazy(() => import("./pages/ReportsPage"));
+const LoginPage = lazy(() => import("./pages/Login"));
+const StockInPage = lazy(() => import("./pages/StockInPage"));
+const StockOutPage = lazy(() => import("./pages/StockOutPage"));
+const Suppliers = lazy(() => import("./pages/Suppliers"));
+const CustomerCRMPage = lazy(() => import("./pages/CustomerCRMPage"));
+const UserManagement = lazy(() => import("./pages/UserManagement"));
+const Signup = lazy(() => import("./pages/SignupPage"));
+const SalesPage = lazy(() => import("./pages/SalesPage"));
+const PaymentPage = lazy(() => import("./pages/PaymentPage"));
 
 function App() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -58,26 +60,24 @@ function App() {
                     <h1 className="text-lg font-semibold text-gray-900">Inventory System</h1>
                     <div className="w-10"></div> {/* Spacer */}
                   </div>
-
-                  <main className="flex-1 p-4 md:p-6 bg-gray-50 overflow-y-auto">
-                    <Routes>
-                      <Route path="/" element={<Dashboard />} />
-                      <Route path="/products" element={<ProductPage />} />
-                      <Route path="/categories" element={<CategoryPage />} />
-                      <Route path="/activity-logs" element={<ActivityLogPage />} />
-                      <Route path="/reports" element={<ReportsPage />} />
-                                     <Route path="/stock-in" element={<StockInPage/>}/>
-                <Route path="/stock-out" element={<StockOutPage/>}/>
-                <Route path="/suppliers" element={<Suppliers/>}/>
-               <Route path="/customer" element={<CustomerCRMPage/>}/>
-               <Route path="/users" element={<UserManagement/>}/>
-               <Route path="/sales" element={<SalesPage/>}/>
-               <Route path="/payments" element={<PaymentPage/>}/>
-
-
-
-                    </Routes>
-                  </main>
+<main className="flex-1 p-4 md:p-6 bg-gray-50 overflow-y-auto">
+  <Suspense fallback={<div className="flex justify-center items-center h-full"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div></div>}>
+    <Routes>
+      <Route path="/" element={<Dashboard />} />
+      <Route path="/products" element={<ProductPage />} />
+      <Route path="/categories" element={<CategoryPage />} />
+      <Route path="/activity-logs" element={<ActivityLogPage />} />
+      <Route path="/reports" element={<ReportsPage />} />
+      <Route path="/stock-in" element={<StockInPage/>}/>
+      <Route path="/stock-out" element={<StockOutPage/>}/>
+      <Route path="/suppliers" element={<Suppliers/>}/>
+      <Route path="/customer" element={<CustomerCRMPage/>}/>
+      <Route path="/users" element={<UserManagement/>}/>
+      <Route path="/sales" element={<SalesPage/>}/>
+      <Route path="/payments" element={<PaymentPage/>}/>
+    </Routes>
+  </Suspense>
+</main>
                 </div>
               </div>
             </ProtectedRoute>
