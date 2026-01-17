@@ -44,7 +44,7 @@ function UserManagement() {
   // Update user info or status
   const updateUser = async (id, data) => {
     try {
-      await axios.put(`${API_BASE}/users/${id}`, data, { headers });
+      await axios.post(`${API_BASE}/users/${id}`, data, { headers });
       setEditingUser(null);
       fetchUsers();
       setMessage({ text: "User updated successfully", type: "success" });
