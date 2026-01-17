@@ -29,7 +29,7 @@ function Signup() {
     setMessage({ text: "Registering...", type: "info" });
 
     try {
-      const res = await axios.post(`${API_BASE}/signup`, formData);
+      const res = await axios.post(`${API_BASE}/signup`, { ...formData, status: 0 });
       if (res.data.status === 201) {
         setMessage({ text: "Signup successful! Waiting for admin approval.", type: "success" });
         setLoading(false);

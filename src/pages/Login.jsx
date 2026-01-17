@@ -43,7 +43,7 @@ const handleSubmit = async (e) => {
       const user = res.data.data.user;
       const token = res.data.data.token;
 
-      if (user.status === 0) {
+      if (user.status == 0) {
         setMessage({
           text: "Your account is not approved yet. Please wait for admin approval.",
           type: "warning"

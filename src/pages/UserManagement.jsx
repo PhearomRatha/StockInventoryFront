@@ -12,15 +12,15 @@ function UserManagement() {
   const [filter, setFilter] = useState("active");
   const [search, setSearch] = useState("");
   const [editingUser, setEditingUser] = useState(null);
-  const [form, setForm] = useState({ name: "", email: "", status: true, role_id: "" });
+  const [form, setForm] = useState({ name: "", email: "", status: 1, role_id: "" });
   const [message, setMessage] = useState({ text: "", type: "" });
 
   // Fetch users
   const fetchUsers = async () => {
     try {
       const res = await axios.get(`${API_BASE}/users`, { headers });
-      // The array of users is in res.data.data.data due to pagination
-      setUsers(res.data.data.data);
+      // The array of users is in res.data.data
+      setUsers(res.data.data);
     } catch (err) {
       console.error(err);
     }
@@ -75,7 +75,7 @@ function UserManagement() {
   const handleEditChange = (e) => {
     const { name, value } = e.target;
     if (name === "status") {
-      setForm((prev) => ({ ...prev, status: value === "1" ? true : false }));
+      setForm((prev) => ({ ...prev, status: Number(value) }));
     } else {
       setForm((prev) => ({ ...prev, [name]: value }));
     }
@@ -84,26 +84,27 @@ function UserManagement() {
   // Filter & search users
   const filteredUsers = users
     .filter((u) => {
-      if (filter === "active") return u.status === true;
-      if (filter === "inactive") return u.status === false;
-      if (filter === "pending") return u.status == 0; // allow string or number
+      if (filter === "active") return u.status == 1;
+      if (filter === "inactive") return u.status == 2;
+      if (filter === "pending") return u.status == 0;
       return true;
     })
     .filter((u) => u.name.toLowerCase().includes(search.toLowerCase()));
 
-  const getStatusText = (status) => (status === true ? "Active" : status === false ? "Inactive" : status == 0 ? "Pending" : "Unknown");
+  const getStatusText = (status) =>
+    status == 1 ? "Active" :
+    status == 0 ? "Pending" :
+    status == 2 ? "Inactive" :
+    "Unknown";
   const getStatusClass = (status) =>
-    status === true
-      ? "bg-green-100 text-green-800"
-      : status === false
-      ? "bg-red-100 text-red-800"
-      : status == 0
-      ? "bg-yellow-100 text-yellow-800"
-      : "bg-gray-100 text-gray-800";
+    status == 1 ? "bg-green-100 text-green-800" :
+    status == 0 ? "bg-yellow-100 text-yellow-800" :
+    status == 2 ? "bg-red-100 text-red-800" :
+    "bg-gray-100 text-gray-800";
   const getStatusIcon = (status) =>
-    status === true ? <FaCheck className="inline mr-1" /> :
-    status === false ? <FaTimes className="inline mr-1" /> :
-    status == 0 ? <FaClock className="inline mr-1" /> : null;
+    status == 1 ? <FaCheck className="inline mr-1" /> :
+    status == 0 ? <FaClock className="inline mr-1" /> :
+    status == 2 ? <FaTimes className="inline mr-1" /> : null;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-8">
@@ -155,22 +156,22 @@ function UserManagement() {
                 </span>
               </div>
               <div className="mt-4 flex justify-end gap-2 text-gray-700">
-                {u.status === 0 && (
+                {u.status == 0 && (
                   <>
-                    <button title="Approve" onClick={() => updateUser(u.id, { status: true })} className="hover:text-green-600">
+                    <button title="Approve" onClick={() => updateUser(u.id, { status: 1 })} className="hover:text-green-600">
                       <FaCheck />
                     </button>
-                    <button title="Reject" onClick={() => updateUser(u.id, { status: false })} className="hover:text-red-600">
+                    <button title="Reject" onClick={() => updateUser(u.id, { status: 2 })} className="hover:text-red-600">
                       <FaTimes />
                     </button>
                   </>
                 )}
-                {u.status === true && (
+                {u.status == 1 && (
                   <>
                     <button title="Edit" onClick={() => startEdit(u)} className="hover:text-blue-600">
                       <FaEdit />
                     </button>
-                    <button title="Deactivate" onClick={() => updateUser(u.id, { status: false })} className="hover:text-yellow-600">
+                    <button title="Deactivate" onClick={() => updateUser(u.id, { status: 2 })} className="hover:text-yellow-600">
                       <FaUserSlash />
                     </button>
                     <button title="Remove" onClick={() => removeUser(u.id)} className="hover:text-red-600">
@@ -178,9 +179,9 @@ function UserManagement() {
                     </button>
                   </>
                 )}
-                {u.status === false && (
+                {u.status == 2 && (
                   <>
-                    <button title="Reactivate" onClick={() => updateUser(u.id, { status: true })} className="hover:text-green-600">
+                    <button title="Reactivate" onClick={() => updateUser(u.id, { status: 1 })} className="hover:text-green-600">
                       <FaUserSlash />
                     </button>
                     <button title="Remove" onClick={() => removeUser(u.id)} className="hover:text-red-600">
@@ -218,12 +219,13 @@ function UserManagement() {
 
             <select
               name="status"
-              value={form.status ? 1 : 0}
+              value={form.status}
               onChange={handleEditChange}
               className="w-full mb-3 p-2 border rounded-lg"
             >
+              <option value={0}>Pending</option>
               <option value={1}>Active</option>
-              <option value={0}>Inactive</option>
+              <option value={2}>Inactive</option>
             </select>
 
             <label className="block text-sm font-medium text-gray-700 mb-1">Role</label>
