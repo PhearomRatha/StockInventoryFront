@@ -420,7 +420,7 @@ function ActivityLogPage() {
                     <td className="py-4 px-6">
                       <div className="text-gray-600">
                         {log.description ||
-                          `${log.user?.name || 'Unknown'} performed ${log.action} on ${log.module}`}
+                          `${log.user?.name || 'System'} performed ${log.action} on ${log.module}`}
                       </div>
                     </td>
                     <td className="py-4 px-6">

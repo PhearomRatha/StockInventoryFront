@@ -51,7 +51,7 @@ export default function Dashboard() {
       }
 
       try {
-        const res = await fetch(API_BASE, { headers });
+        const res = await fetch(API_BASE, { headers, credentials: 'include' });
         const data = await res.json();
 
         // Fix spacing issue in your API ("totalStockIn ")

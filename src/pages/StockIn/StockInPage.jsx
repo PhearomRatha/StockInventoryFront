@@ -5,9 +5,11 @@ import {
   CheckCircleIcon,
   XMarkIcon,
   MagnifyingGlassIcon,
+  TruckIcon,
 } from "@heroicons/react/24/outline";
 
 const API_BASE = `${import.meta.env.VITE_API_URL}/api`;
+const token = localStorage.getItem("token");
 
 function StockInPage() {
   const [formData, setFormData] = useState({
@@ -30,7 +32,6 @@ function StockInPage() {
   const [showErrorModal, setShowErrorModal] = useState(false);
   const [modalMessage, setModalMessage] = useState("");
 
-  const token = localStorage.getItem("token");
 
   // 🔥 Load everything in one call
   useEffect(() => {
@@ -40,6 +41,8 @@ function StockInPage() {
   const loadOverview = async () => {
     try {
       setLoading(true);
+  const token = localStorage.getItem("token");
+
       const res = await fetch(`${API_BASE}/stock-ins/overview`, {
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -134,83 +137,116 @@ function StockInPage() {
   return (
     <div className="p-4 md:p-6 lg:p-8 bg-gradient-to-br from-gray-50 to-slate-100 min-h-screen">
       {/* Header */}
-      <div className="flex items-center gap-4 mb-8">
-        <div className="w-14 h-14 bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl flex items-center justify-center shadow-lg">
-          <PlusIcon className="w-7 h-7 text-white" />
-        </div>
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Stock In</h1>
-          <p className="text-gray-600 mt-1 text-sm">Log new stock arrivals and update inventory automatically</p>
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-8">
+        <div className="flex items-center gap-4">
+          <div className="w-14 h-14 bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl flex items-center justify-center shadow-lg">
+            <TruckIcon className="w-7 h-7 text-white" />
+          </div>
+          <div>
+            <h1 className="text-3xl md:text-4xl font-bold text-gray-900">Stock In</h1>
+            <p className="text-gray-600 mt-1 text-sm md:text-base">Record inventory additions and track stock arrivals</p>
+          </div>
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Form */}
-        <div className="lg:col-span-1 bg-white rounded-2xl shadow-sm border p-6">
-          <h2 className="text-xl font-bold mb-4">New Stock In</h2>
+        <div className="lg:col-span-1 bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl flex items-center justify-center">
+              <PlusIcon className="w-6 h-6 text-white" />
+            </div>
+            <h2 className="text-xl font-bold text-gray-900">New Stock In</h2>
+          </div>
           <form onSubmit={handleSubmit} className="space-y-4">
-            <select name="supplier_id" value={formData.supplier_id} onChange={handleInputChange} required className="w-full border rounded-xl px-3 py-2">
-              <option value="">Select Supplier</option>
-              {suppliers.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-            </select>
-            <select name="product_id" value={formData.product_id} onChange={handleInputChange} required className="w-full border rounded-xl px-3 py-2">
-              <option value="">Select Product</option>
-              {products.map((p) => <option key={p.id} value={p.id}>{p.name} (Stock: {p.stock_quantity})</option>)}
-            </select>
-            <input type="number" name="quantity" value={formData.quantity} onChange={handleInputChange} min="1" placeholder="Quantity" className="w-full border rounded-xl px-3 py-2" required />
-            <input type="number" name="unit_cost" value={formData.unit_cost} onChange={handleInputChange} step="0.01" placeholder="Unit Cost" className="w-full border rounded-xl px-3 py-2" required />
-            <input type="date" name="date" value={formData.date} onChange={handleInputChange} className="w-full border rounded-xl px-3 py-2" required />
-            <select name="received_by" value={formData.received_by} onChange={handleInputChange} required className="w-full border rounded-xl px-3 py-2">
-              <option value="">Select User</option>
-              {users.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
-            </select>
-            <button type="submit" className="w-full bg-green-600 text-white px-6 py-3 rounded-xl font-medium">Record Stock In</button>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Supplier *</label>
+              <select name="supplier_id" value={formData.supplier_id} onChange={handleInputChange} required className="w-full px-4 py-3 border rounded-xl">
+                <option value="">Select Supplier</option>
+                {suppliers.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Product *</label>
+              <select name="product_id" value={formData.product_id} onChange={handleInputChange} required className="w-full px-4 py-3 border rounded-xl">
+                <option value="">Select Product</option>
+                {products.map((p) => <option key={p.id} value={p.id}>{p.name} ({p.stock_quantity} in stock)</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Quantity *</label>
+              <input type="number" name="quantity" value={formData.quantity} onChange={handleInputChange} min="1" className="w-full px-4 py-3 border rounded-xl" required />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Unit Cost *</label>
+              <input type="number" name="unit_cost" value={formData.unit_cost} onChange={handleInputChange} step="0.01" className="w-full px-4 py-3 border rounded-xl" required />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Date *</label>
+              <input type="date" name="date" value={formData.date} onChange={handleInputChange} className="w-full px-4 py-3 border rounded-xl" required />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Received By *</label>
+              <select name="received_by" value={formData.received_by} onChange={handleInputChange} required className="w-full px-4 py-3 border rounded-xl">
+                <option value="">Select User</option>
+                {users.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
+              </select>
+            </div>
+            <button type="submit" className="w-full bg-gradient-to-r from-green-600 to-emerald-600 text-white px-6 py-3 rounded-xl">Record Stock In</button>
           </form>
         </div>
 
         {/* Stock-In History Table */}
         <div className="lg:col-span-2 bg-white rounded-2xl shadow-sm border p-6">
-          <h2 className="text-xl font-bold mb-4">Stock In History</h2>
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-cyan-600 rounded-xl flex items-center justify-center">
+              <TruckIcon className="w-6 h-6 text-white" />
+            </div>
+            <h2 className="text-xl font-bold text-gray-900">Stock In History</h2>
+          </div>
           <div className="flex flex-col lg:flex-row gap-4 mb-4">
-            <input type="text" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} placeholder="Search..." className="flex-1 border rounded-xl px-3 py-2" />
-            <select value={selectedSupplier} onChange={(e) => setSelectedSupplier(e.target.value)} className="border rounded-xl px-3 py-2">
+            <input type="text" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} placeholder="Search..." className="flex-1 px-4 py-3 border rounded-xl" />
+            <select value={selectedSupplier} onChange={(e) => setSelectedSupplier(e.target.value)} className="px-4 py-3 border rounded-xl">
               <option value="All">All Suppliers</option>
               {suppliers.map((s) => <option key={s.id} value={s.name}>{s.name}</option>)}
             </select>
-            <input type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} className="border rounded-xl px-3 py-2" />
+            <input type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} className="px-4 py-3 border rounded-xl" />
           </div>
 
           {loading ? (
             <div>Loading...</div>
+          ) : filteredHistory.length === 0 ? (
+            <div className="py-20 text-center text-gray-500">
+              <TruckIcon className="w-16 h-16 mx-auto mb-4" />
+              <p>No stock in records yet.</p>
+            </div>
           ) : (
-            <table className="w-full border-collapse">
-              <thead>
-                <tr>
-                  {["ID", "Product", "Supplier", "Qty", "Unit Cost", "Received By", "Date"].map(h => (
-                    <th key={h} className="border px-3 py-2">{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {filteredHistory.length ? filteredHistory.map((r) => (
-                  <tr key={r.id}>
-                    <td className="border px-3 py-2">{r.stock_in_code}</td>
-                    <td className="border px-3 py-2">{r.product_name}</td>
-                    <td className="border px-3 py-2">{r.supplier_name}</td>
-                    <td className="border px-3 py-2">{r.quantity}</td>
-                    <td className="border px-3 py-2">${Number(r.unit_cost).toFixed(2)}</td>
-
-                    <td className="border px-3 py-2">{r.received_by_name}</td>
-                    <td className="border px-3 py-2">{new Date(r.received_date).toLocaleDateString()}</td>
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[800px]">
+                <thead className="bg-gray-50 border-b">
+                  <tr>
+                    {["Product","Supplier","Qty","Unit Cost","Received By","Date"].map(h => (
+                      <th key={h} className="py-4 px-6 text-left text-xs font-semibold text-gray-700">{h}</th>
+                    ))}
                   </tr>
-                )) : (
-                  <tr><td colSpan={7} className="text-center py-10">No records found</td></tr>
-                )}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {filteredHistory.map(r => (
+                    <tr key={r.id} className="hover:bg-gray-50 transition-colors">
+                      <td className="py-4 px-6">{r.product_name}</td>
+                      <td className="py-4 px-6">{r.supplier_name}</td>
+                      <td className="py-4 px-6 font-semibold">{r.quantity}</td>
+                      <td className="py-4 px-6 font-semibold">${Number(r.unit_cost).toFixed(2)}</td>
+                      <td className="py-4 px-6 text-gray-600">{r.received_by_name}</td>
+                      <td className="py-4 px-6 text-sm text-gray-500">{new Date(r.received_date).toLocaleDateString()}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
 
-          <div className="mt-4 text-right font-bold">Total Stock Value: ${totalValue.toFixed(2)}</div>
+          <div className="mt-4 py-4 px-6 bg-gray-50 rounded-lg text-right font-semibold text-gray-900">Total Stock Value: ${totalValue.toFixed(2)}</div>
         </div>
       </div>
 

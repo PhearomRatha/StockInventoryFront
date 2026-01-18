@@ -1,24 +1,13 @@
 import React, { useState, lazy, Suspense } from "react";
 import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
-import Sidebar from "./components/Sidebar";
-import ProtectedRoute from "./components/ProtectedRoute";
+import Sidebar from "./components/Layout/Sidebar";
+import ProtectedRoute from "./components/Layout/ProtectedRoute";
+import AppRoutes from "./routes/AppRoutes";
 import { Bars3Icon } from "@heroicons/react/24/outline";
 
-// Lazy load pages for code splitting
-const Dashboard = lazy(() => import("./pages/Dashboard"));
-const ProductPage = lazy(() => import("./pages/ProductPage"));
-const CategoryPage = lazy(() => import("./pages/CategoryPage"));
-const ActivityLogPage = lazy(() => import("./pages/ActivityLogPage"));
-const ReportsPage = lazy(() => import("./pages/ReportsPage"));
-const LoginPage = lazy(() => import("./pages/Login"));
-const StockInPage = lazy(() => import("./pages/StockInPage"));
-const StockOutPage = lazy(() => import("./pages/StockOutPage"));
-const Suppliers = lazy(() => import("./pages/Suppliers"));
-const CustomerCRMPage = lazy(() => import("./pages/CustomerCRMPage"));
-const UserManagement = lazy(() => import("./pages/UserManagement"));
-const Signup = lazy(() => import("./pages/SignupPage"));
-const SalesPage = lazy(() => import("./pages/SalesPage"));
-const PaymentPage = lazy(() => import("./pages/PaymentPage"));
+// Lazy load public pages
+const LoginPage = lazy(() => import("./pages/Auth/Login"));
+const Signup = lazy(() => import("./pages/Auth/SignupPage"));
 
 function App() {
   return (
@@ -74,22 +63,7 @@ function AppContent() {
                   </div>
                 )}
 <main className="flex-1 p-4 md:p-6 bg-gray-50 overflow-y-auto">
-  <Suspense fallback={<div className="flex justify-center items-center h-full"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div></div>}>
-    <Routes>
-      <Route path="/" element={<Dashboard />} />
-      <Route path="/products" element={<ProductPage />} />
-      <Route path="/categories" element={<CategoryPage />} />
-      <Route path="/activity-logs" element={<ActivityLogPage />} />
-      <Route path="/reports" element={<ReportsPage />} />
-      <Route path="/stock-in" element={<StockInPage/>}/>
-      <Route path="/stock-out" element={<StockOutPage/>}/>
-      <Route path="/suppliers" element={<Suppliers/>}/>
-      <Route path="/customer" element={<CustomerCRMPage/>}/>
-      <Route path="/users" element={<UserManagement/>}/>
-      <Route path="/sales" element={<SalesPage/>}/>
-      <Route path="/payments" element={<PaymentPage/>}/>
-    </Routes>
-  </Suspense>
+  <AppRoutes />
 </main>
               </div>
             </div>

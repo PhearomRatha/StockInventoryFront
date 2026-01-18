@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { FaEye, FaEyeSlash, FaUser, FaLock } from 'react-icons/fa';
 import axios from 'axios';
+import { useAuth } from '../../context/AuthContext';
 
  const API_BASE = `${import.meta.env.VITE_API_URL}/api`;
 
 function Login() {
+  const { login } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
     email: localStorage.getItem('signupEmail') || '',
@@ -32,7 +34,6 @@ const handleSubmit = async (e) => {
   setLoading(true);
 
   try {
-    // Use environment variable for backend
     const res = await axios.post(`${API_BASE}/login`, formData, {
       headers: {
         'Content-Type': 'application/json'
@@ -52,8 +53,8 @@ const handleSubmit = async (e) => {
         return;
       }
 
-      localStorage.setItem("token", token);
-      localStorage.setItem("user", JSON.stringify(user));
+      localStorage.setItem('token', token);
+      login(user);
 
       setMessage({ text: "Login successful! loading....", type: "success" });
       setLoading(false);

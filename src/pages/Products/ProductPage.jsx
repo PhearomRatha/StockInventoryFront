@@ -99,6 +99,12 @@ const getStatusColor = (status) => {
   }
 };
 
+const getProductStatus = (product) => {
+  if (product.stock_quantity === 0) return "out of stock";
+  if (product.stock_quantity <= (product.reorder_level || 10)) return "low stock";
+  return "in stock";
+};
+
   const openAddModal = () => {
     setIsEdit(false);
     setCurrentProduct({});
@@ -466,21 +472,21 @@ const getStatusColor = (status) => {
                   <td className="py-4 px-6">
   <span
     className={`inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium ${getStatusColor(
-      p.status
+      getProductStatus(p)
     )}`}
   >
     <div
       className={`w-2 h-2 rounded-full mr-2 ${
-        (p.status || '').toLowerCase() === 'in stock'
+        getProductStatus(p).toLowerCase() === 'in stock'
           ? 'bg-emerald-500'
-          : (p.status || '').toLowerCase() === 'low stock'
+          : getProductStatus(p).toLowerCase() === 'low stock'
           ? 'bg-yellow-500'
-          : (p.status || '').toLowerCase() === 'out of stock'
+          : getProductStatus(p).toLowerCase() === 'out of stock'
           ? 'bg-rose-500'
           : 'bg-gray-500'
       }`}
     ></div>
-    {p.status}
+    {getProductStatus(p)}
   </span>
 </td>
                     <td className="py-4 px-6">
@@ -530,13 +536,13 @@ const getStatusColor = (status) => {
       </div>
 
       {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="flex justify-between items-center mt-6">
-          <div className="text-sm text-gray-500">
-            Showing {(currentPage - 1) * productsPerPage + 1} to{" "}
-            {Math.min(currentPage * productsPerPage, filteredProducts.length)}{" "}
-            of {filteredProducts.length} products
-          </div>
+      <div className="flex justify-between items-center mt-6">
+        <div className="text-sm text-gray-500">
+          Showing {(currentPage - 1) * productsPerPage + 1} to{" "}
+          {Math.min(currentPage * productsPerPage, filteredProducts.length)}{" "}
+          of {filteredProducts.length} products
+        </div>
+        {totalPages > 1 && (
           <div className="flex items-center gap-2">
             <button
               onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
@@ -584,8 +590,8 @@ const getStatusColor = (status) => {
               <ChevronRightIcon className="w-4 h-4" />
             </button>
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
       {/* Modal */}
       {showModal && (

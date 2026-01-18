@@ -181,7 +181,106 @@ function ReportsPage() {
                   <p className="text-lg font-bold text-orange-900">{salesReport.best_selling_product || 'N/A'}</p>
                 </div>
               </div>
-              {/* Add more details like top customers, payment methods */}
+
+              {/* Top Products */}
+              {salesReport.product_sales && salesReport.product_sales.length > 0 && (
+                <div className="mb-6">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Top Selling Products</h3>
+                  <div className="overflow-x-auto">
+                    <table className="w-full min-w-[400px]">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="py-3 px-4 text-left text-sm font-medium text-gray-700">Product</th>
+                          <th className="py-3 px-4 text-left text-sm font-medium text-gray-700">Quantity Sold</th>
+                          <th className="py-3 px-4 text-left text-sm font-medium text-gray-700">Revenue</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-200">
+                        {salesReport.product_sales.slice(0, 5).map((product, index) => (
+                          <tr key={index} className="hover:bg-gray-50">
+                            <td className="py-3 px-4 text-sm text-gray-900">{product.product_name}</td>
+                            <td className="py-3 px-4 text-sm text-gray-600">{product.quantity_sold}</td>
+                            <td className="py-3 px-4 text-sm text-gray-600">${product.total_revenue}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+   
+                  {/* Income by Method */}
+                  {financialReport.income_by_method && Object.keys(financialReport.income_by_method).length > 0 && (
+                    <div className="mb-6">
+                      <h3 className="text-lg font-semibold text-gray-900 mb-4">Income by Payment Method</h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {Object.entries(financialReport.income_by_method).map(([method, amount]) => (
+                          <div key={method} className="bg-green-50 p-4 rounded-xl">
+                            <p className="text-sm text-green-600 font-medium capitalize">{method}</p>
+                            <p className="text-xl font-bold text-green-900">${amount}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+   
+                  {/* Expense by Method */}
+                  {financialReport.expense_by_method && Object.keys(financialReport.expense_by_method).length > 0 && (
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-900 mb-4">Expense by Payment Method</h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {Object.entries(financialReport.expense_by_method).map(([method, amount]) => (
+                          <div key={method} className="bg-red-50 p-4 rounded-xl">
+                            <p className="text-sm text-red-600 font-medium capitalize">{method}</p>
+                            <p className="text-xl font-bold text-red-900">${amount}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Top Customers */}
+              {salesReport.top_customers && salesReport.top_customers.length > 0 && (
+                <div className="mb-6">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Top Customers</h3>
+                  <div className="overflow-x-auto">
+                    <table className="w-full min-w-[400px]">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="py-3 px-4 text-left text-sm font-medium text-gray-700">Customer</th>
+                          <th className="py-3 px-4 text-left text-sm font-medium text-gray-700">Total Sales</th>
+                          <th className="py-3 px-4 text-left text-sm font-medium text-gray-700">Invoices</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-200">
+                        {salesReport.top_customers.slice(0, 5).map((customer, index) => (
+                          <tr key={index} className="hover:bg-gray-50">
+                            <td className="py-3 px-4 text-sm text-gray-900">{customer.customer}</td>
+                            <td className="py-3 px-4 text-sm text-gray-600">${customer.total_sales}</td>
+                            <td className="py-3 px-4 text-sm text-gray-600">{customer.invoice_count}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {/* Payment Methods */}
+              {salesReport.sales_by_payment_method && salesReport.sales_by_payment_method.length > 0 && (
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Sales by Payment Method</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {salesReport.sales_by_payment_method.map((method, index) => (
+                      <div key={index} className="bg-gray-50 p-4 rounded-xl">
+                        <p className="text-sm text-gray-600 font-medium capitalize">{method.payment_method}</p>
+                        <p className="text-xl font-bold text-gray-900">{method.count} transactions</p>
+                        <p className="text-sm text-gray-500">${method.total}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -212,6 +311,44 @@ function ReportsPage() {
                   <p className="text-sm text-blue-600 font-medium">Net Profit</p>
                   <p className="text-2xl font-bold text-blue-900">${financialReport.net_profit || 0}</p>
                 </div>
+
+                {/* Low Stock Products */}
+                {stockReport.low_stock_products && stockReport.low_stock_products.length > 0 && (
+                  <div className="mt-6">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Low Stock Alert</h3>
+                    <div className="overflow-x-auto">
+                      <table className="w-full min-w-[600px]">
+                        <thead className="bg-gradient-to-r from-gray-50 to-slate-50 border-b border-gray-100">
+                          <tr>
+                            <th className="py-4 px-6 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Product</th>
+                            <th className="py-4 px-6 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Current Stock</th>
+                            <th className="py-4 px-6 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Stock Value</th>
+                            <th className="py-4 px-6 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Status</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-100">
+                          {stockReport.low_stock_products.map((item, index) => (
+                            <tr key={index} className="hover:bg-gray-50/80 transition-colors duration-200">
+                              <td className="py-4 px-6 text-sm text-gray-900 font-medium">{item.product_name}</td>
+                              <td className="py-4 px-6 text-sm text-gray-600">{item.current_stock}</td>
+                              <td className="py-4 px-6 text-sm text-gray-600">${item.stock_value}</td>
+                              <td className="py-4 px-6">
+                                <span className={`inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium ${
+                                  item.message?.trim() === 'Out-of-Stock' ? 'bg-red-50 text-red-700' :
+                                  item.message?.trim() === 'Very Low Stock' ? 'bg-orange-50 text-orange-700' :
+                                  item.message?.trim() === 'Low Stock' ? 'bg-yellow-50 text-yellow-700' :
+                                  'bg-green-50 text-green-700'
+                                }`}>
+                                  {item.message}
+                                </span>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           )}

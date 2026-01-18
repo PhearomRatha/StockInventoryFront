@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from "react";
-import axios from "axios";
 import {
   FiHome,
   FiBox,
@@ -16,15 +15,16 @@ import {
   FiChevronRight,
 } from "react-icons/fi";
 import { Link, useLocation } from "react-router-dom";
+import { getStockReport } from "../../api/reportsApi";
+import { useAuth } from "../../context/AuthContext";
 
 function Sidebar({ onClose }) {
+  const { logout } = useAuth();
   const location = useLocation();
   const userData = localStorage.getItem("user");
   const user = userData && userData !== "undefined" ? JSON.parse(userData) : null;
   const role = user?.role?.name; // "Admin", "Manager", "Staff"
   const [lowStockAlert, setLowStockAlert] = useState(0);
-
-  const API_BASE = `${import.meta.env.VITE_API_URL}/api`;
 
   useEffect(() => {
     const fetchStockAlert = async () => {
@@ -40,10 +40,8 @@ function Sidebar({ onClose }) {
       }
 
       try {
-        const res = await axios.get(`${API_BASE}/reports/stock`, {
-          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
-        });
-        const totalLow = (res.data.total_low_stock || 0) + (res.data.total_out_of_stock || 0);
+        const data = await getStockReport();
+        const totalLow = (data.total_low_stock || 0) + (data.total_out_of_stock || 0);
         setLowStockAlert(totalLow);
         localStorage.setItem(cacheKey, totalLow.toString());
         localStorage.setItem(cacheTimeKey, now.toString());
@@ -95,6 +93,18 @@ function Sidebar({ onClose }) {
           Inventory
         </h1>
         <div className="w-16 h-1 bg-gradient-to-r from-blue-500 to-purple-500 mx-auto mt-2 rounded-full"></div>
+
+        {/* Stock Alert */}
+        {lowStockAlert > 0 && (
+          <div className="mt-4 p-3 bg-red-500/20 border border-red-500/30 rounded-lg">
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
+              <span className="text-red-300 text-sm font-medium">
+                {lowStockAlert} item{lowStockAlert > 1 ? 's' : ''} need attention
+              </span>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Navigation */}
@@ -123,7 +133,7 @@ function Sidebar({ onClose }) {
                 <item.icon size={18} className="text-white" />
               </div>
               <span className="font-medium flex-1">{item.label}</span>
-              {item.path === '/reports' && lowStockAlert > 0 && (
+              {((item.path === '/reports' || item.path === '/products' || item.path === '/' || item.path === '/stock-in' || item.path === '/stock-out') && lowStockAlert > 0) && (
                 <span className="bg-red-500 text-white text-xs rounded-full px-2 py-1">
                   {lowStockAlert}
                 </span>
@@ -142,9 +152,8 @@ function Sidebar({ onClose }) {
       {/* Footer with Logout */}
       <div className="mt-8 pt-6 border-t border-slate-700 flex flex-col items-center gap-3">
         <button
-          onClick={() => {
-            localStorage.removeItem("token");
-            localStorage.removeItem("user");
+          onClick={async () => {
+            await logout();
             window.location.href = "/login";
           }}
           className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition w-full justify-center"
