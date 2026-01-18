@@ -133,7 +133,7 @@ function Sidebar({ onClose }) {
                 <item.icon size={18} className="text-white" />
               </div>
               <span className="font-medium flex-1">{item.label}</span>
-              {((item.path === '/reports' || item.path === '/products' || item.path === '/' || item.path === '/stock-in' || item.path === '/stock-out') && lowStockAlert > 0) && (
+              {((item.path === '/reports' || item.path === '/products') && lowStockAlert > 0) && (
                 <span className="bg-red-500 text-white text-xs rounded-full px-2 py-1">
                   {lowStockAlert}
                 </span>
