@@ -58,6 +58,7 @@ function SalesPage() {
   const [currentMd5, setCurrentMd5] = useState(null);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
+  const [errors, setErrors] = useState({});
 
   const [currentPage, setCurrentPage] = useState(1);
   const salesPerPage = 8;
@@ -96,11 +97,8 @@ function SalesPage() {
       axios.get(`${API_BASE}/sales`, { headers: { Authorization: `Bearer ${token}` } }),
       axios.get(`${API_BASE}/customers`, { headers: { Authorization: `Bearer ${token}` } }),
       axios.get(`${API_BASE}/products`, { headers: { Authorization: `Bearer ${token}` } }),
+      axios.get(`${API_BASE}/users`, { headers: { Authorization: `Bearer ${token}` } }),
     ];
-
-    if (user?.role?.name === 'Admin') {
-      promises.push(axios.get(`${API_BASE}/users`, { headers: { Authorization: `Bearer ${token}` } }));
-    }
 
     Promise.all(promises)
       .then((responses) => {
@@ -112,7 +110,7 @@ function SalesPage() {
         const sales = Array.isArray(salesRes.data.data) ? salesRes.data.data : [];
         const customers = Array.isArray(customersRes.data.data) ? customersRes.data.data : [];
         const products = Array.isArray(productsRes.data.data) ? productsRes.data.data : [];
-        const users = user?.role?.name === 'Admin' && usersRes ? (Array.isArray(usersRes.data.data.data) ? usersRes.data.data.data : []) : [];
+        const users = Array.isArray(usersRes.data.data.data) ? usersRes.data.data.data : [];
 
         setSales(sales);
         setCustomers(customers);
@@ -154,8 +152,9 @@ function SalesPage() {
 
   const openAddModal = () => {
     setIsEdit(false);
-    setCurrentSale({ payment_method: "Cash" });
+    setCurrentSale({ payment_method: "Cash", sold_by: Number(user?.id) });
     setCart([]);
+    setErrors({});
     setShowModal(true);
   };
 
@@ -164,7 +163,7 @@ function SalesPage() {
     setCurrentSale({
       ...sale,
       customer_id: sale.customer?.id || "",
-      sold_by: sale.soldBy?.id || "",
+      sold_by: Number(sale.soldBy?.id || sale.sold_by) || "",
     });
     // Load cart items as numbers
     const loadedCart = (sale.items || []).map((item) => ({
@@ -175,13 +174,18 @@ function SalesPage() {
       name: item.product?.name || "",
     }));
     setCart(loadedCart);
+    setErrors({});
     setShowModal(true);
   };
 
   const addToCart = () => {
-    if (!newItem.product_id) {
-      setMessage({ text: "Please select a product", type: "error" });
-      setTimeout(() => setMessage({ text: "", type: "" }), 3000);
+    const newErrors = {};
+    if (!newItem.product_id) newErrors.product = "Please select a product";
+    if (newItem.quantity <= 0) newErrors.quantity = "Quantity must be greater than 0";
+    if (newItem.discount_percent < 0 || newItem.discount_percent > 100) newErrors.discount = "Discount must be between 0 and 100";
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors({ ...errors, ...newErrors });
       return;
     }
 
@@ -189,8 +193,7 @@ function SalesPage() {
     if (!product) return;
 
     if (newItem.quantity > product.stock_quantity) {
-      setMessage({ text: `Cannot add more than available stock (${product.stock_quantity})`, type: "error" });
-      setTimeout(() => setMessage({ text: "", type: "" }), 3000);
+      setErrors({ ...errors, quantity: `Cannot add more than available stock (${product.stock_quantity})` });
       return;
     }
 
@@ -203,6 +206,7 @@ function SalesPage() {
     };
 
     setCart([...cart, item]);
+    setErrors({ ...errors, cart: "", product: "", quantity: "", discount: "" });
     setNewItem({
       product_id: "",
       quantity: 1,
@@ -223,6 +227,33 @@ function SalesPage() {
   const handleSubmit = (e) => {
     e.preventDefault();
     if (submitting) return; // Prevent multiple submissions
+
+    // Custom validation
+    const newErrors = {};
+    if (!isEdit) {
+      if (!currentSale.customer_id) newErrors.customer = "Please select a customer";
+      if (cart.length === 0) newErrors.cart = "Please add items to the cart";
+      // Validate cart items
+      let cartError = "";
+      for (let item of cart) {
+        if (item.quantity <= 0) {
+          cartError = "Quantity must be greater than 0";
+          break;
+        }
+        if (item.discount_percent < 0 || item.discount_percent > 100) {
+          cartError = "Discount percent must be between 0 and 100";
+          break;
+        }
+      }
+      if (cartError) newErrors.cart = cartError;
+      if (!currentSale.payment_method) newErrors.payment_method = "Please select a payment method";
+    } else {
+      if (!currentSale.customer_id) newErrors.customer = "Please select a customer";
+      if (!currentSale.total_amount || Number(currentSale.total_amount) <= 0) newErrors.total_amount = "Please enter a valid total amount";
+    }
+    setErrors(newErrors);
+    if (Object.keys(newErrors).length > 0) return;
+
     setSubmitting(true);
     const token = localStorage.getItem("token");
     let payload, url, method;
@@ -232,15 +263,9 @@ function SalesPage() {
       url = `${API_BASE}/sales/${currentSale.id}`;
       method = "patch";
     } else {
-      if (cart.length === 0) {
-        setMessage({ text: "Please add items to the cart", type: "error" });
-        setTimeout(() => setMessage({ text: "", type: "" }), 3000);
-        setSubmitting(false);
-        return;
-      }
-
       payload = {
         customer_id: Number(currentSale.customer_id),
+        sold_by: Number(currentSale.sold_by),
         items: cart.map((item) => ({
           product_id: Number(item.product_id),
           quantity: Number(item.quantity),
@@ -305,11 +330,14 @@ function SalesPage() {
         }
       )
       .then((res) => {
-        if (res.data.status) {
+        if (res.data.state === 'paid' || (res.data.status && res.data.bakong && res.data.bakong.data && res.data.bakong.data.acknowledgedDateMs)) {
           setSuccessMessage("Payment verified successfully!");
           setShowSuccessModal(true);
           console.log("Verify Payment Success:", res.data);
           setShowModal(false); // Close the main modal on success
+        } else if (res.data.state === 'pending' || (res.data.bakong && res.data.bakong.responseCode === 1)) {
+          setPaymentError("Payment not yet scanned. Please wait and try again later.");
+          console.warn("Verify Payment Pending:", res.data);
         } else {
           setPaymentError(res.data.message || "Payment verification failed.");
           console.warn("Verify Payment Failed:", res.data);
@@ -539,8 +567,9 @@ function SalesPage() {
                     {c.name}
                   </option>
                 ))}
-              </select>
-            </div>
+               </select>
+               {errors.product && <p className="text-red-500 text-sm mt-1">{errors.product}</p>}
+             </div>
 
             <div className="relative">
               <ArrowsUpDownIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
@@ -625,7 +654,7 @@ function SalesPage() {
                     </td>
                     <td className="py-4 px-6">
                       <div className="text-sm text-gray-500">
-                        {s.soldBy?.name}
+                        {s.sold_by}
                       </div>
                     </td>
                     <td className="py-4 px-6">
@@ -772,14 +801,14 @@ function SalesPage() {
                     </label>
                     <select
                       value={currentSale.customer_id || ""}
-                      onChange={(e) =>
+                      onChange={(e) => {
                         setCurrentSale({
                           ...currentSale,
                           customer_id: e.target.value,
-                        })
-                      }
+                        });
+                        setErrors({ ...errors, customer: "" });
+                      }}
                       className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition appearance-none bg-white"
-                      required
                     >
                       <option value="">Select a customer</option>
                       {customers.map((c) => (
@@ -788,6 +817,7 @@ function SalesPage() {
                         </option>
                       ))}
                     </select>
+                    {errors.customer && <p className="text-red-500 text-sm mt-1">{errors.customer}</p>}
                   </div>
 
                   {isEdit && (
@@ -815,43 +845,21 @@ function SalesPage() {
                           type="number"
                           step="0.01"
                           value={currentSale.total_amount || ""}
-                          onChange={(e) =>
+                          onChange={(e) => {
                             setCurrentSale({
                               ...currentSale,
                               total_amount: e.target.value,
-                            })
-                          }
+                            });
+                            setErrors({ ...errors, total_amount: "" });
+                          }}
                           className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition"
                           placeholder="0.00"
-                          required
                         />
+                        {errors.total_amount && <p className="text-red-500 text-sm mt-1">{errors.total_amount}</p>}
                       </div>
                     </div>
                   )}
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Sold By *
-                    </label>
-                    <select
-                      value={currentSale.sold_by || ""}
-                      onChange={(e) =>
-                        setCurrentSale({
-                          ...currentSale,
-                          sold_by: e.target.value,
-                        })
-                      }
-                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition appearance-none bg-white"
-                      required
-                    >
-                      <option value="">Select a user</option>
-                      {users.map((u) => (
-                        <option key={u.id} value={u.id}>
-                          {u.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
                 </div>
 
                 {/* Right Column */}
@@ -880,6 +888,7 @@ function SalesPage() {
                             quantity: 1,
                             maxQuantity: selected?.stock_quantity || 1,
                           });
+                          setErrors({ ...errors, product: "" });
                         }}
                         className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition appearance-none bg-white"
                       >
@@ -907,8 +916,6 @@ function SalesPage() {
                       </label>
                       <input
                         type="number"
-                        min="1"
-                        max={newItem.maxQuantity || 1} // prevent exceeding stock
                         value={newItem.quantity}
                         onChange={(e) => {
                           let value = Number(e.target.value);
@@ -916,9 +923,11 @@ function SalesPage() {
                             value = newItem.maxQuantity;
                           if (value < 1) value = 1;
                           setNewItem({ ...newItem, quantity: value });
+                          setErrors({ ...errors, quantity: "" });
                         }}
                         className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition"
                       />
+                      {errors.quantity && <p className="text-red-500 text-sm mt-1">{errors.quantity}</p>}
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -927,17 +936,17 @@ function SalesPage() {
                       <input
                         type="number"
                         step="0.01"
-                        min="0"
-                        max="100"
                         value={newItem.discount_percent}
-                        onChange={(e) =>
+                        onChange={(e) => {
                           setNewItem({
                             ...newItem,
                             discount_percent: e.target.value,
-                          })
-                        }
+                          });
+                          setErrors({ ...errors, discount: "" });
+                        }}
                         className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition"
                       />
+                      {errors.discount && <p className="text-red-500 text-sm mt-1">{errors.discount}</p>}
                     </div>
                     <div className="flex items-end">
                       <button
@@ -1007,18 +1016,23 @@ function SalesPage() {
                       Payment Method *
                     </label>
                   <select
-  value={currentSale.payment_method}
-  onChange={(e) =>
-    setCurrentSale({ ...currentSale, payment_method: e.target.value })
-  }
->
-  <option value="Cash">Cash</option>
-  <option value="Bakong">Bakong</option>
-</select>
+                    value={currentSale.payment_method}
+                    onChange={(e) => {
+                      setCurrentSale({ ...currentSale, payment_method: e.target.value });
+                      setErrors({ ...errors, payment_method: "" });
+                    }}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition appearance-none bg-white"
+                  >
+                    <option value="Cash">Cash</option>
+                    <option value="Bakong">Bakong</option>
+                  </select>
+                  {errors.payment_method && <p className="text-red-500 text-sm mt-1">{errors.payment_method}</p>}
 
                   </div>
                 </div>
               )}
+
+              {errors.cart && <p className="text-red-500 text-sm mt-4">{errors.cart}</p>}
 
               {/* Form Actions */}
               <div className="flex justify-end gap-4 mt-8 pt-6 border-t border-gray-100">

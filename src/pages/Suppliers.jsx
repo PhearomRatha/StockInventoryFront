@@ -31,7 +31,9 @@ function Suppliers() {
 
   const [errors, setErrors] = useState({});
   const [searchTerm, setSearchTerm] = useState("");
-  const [sortConfig, setSortConfig] = useState({ key: "name", direction: "asc" });
+  const [sortConfig, setSortConfig] = useState({ key: "id", direction: "desc" });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [deletingId, setDeletingId] = useState(null);
 
   const validate = () => {
     let newErrors = {};
@@ -68,33 +70,31 @@ function Suppliers() {
     setErrors({ ...errors, [e.target.name]: "" }); // remove error as user types
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!validate()) return;
 
-    if (editingIndex !== null) {
-      const supplierId = suppliers[editingIndex].id;
+    setIsSubmitting(true);
 
-      axios
-        .patch(`${API_BASE}/suppliers/${supplierId}`, form, {
+    try {
+      if (editingIndex !== null) {
+        const supplierId = suppliers[editingIndex].id;
+
+        await axios.patch(`${API_BASE}/suppliers/${supplierId}`, form, {
           headers: { Authorization: `Bearer ${token}` },
-        })
-        .then(() => {
-          fetchSuppliers();
-          setEditingIndex(null);
-          resetForm();
-        })
-        .catch((err) => console.error("Error updating supplier:", err));
-    } else {
-      axios
-        .post(`${API_BASE}/suppliers`, form, {
+        });
+        setEditingIndex(null);
+      } else {
+        await axios.post(`${API_BASE}/suppliers`, form, {
           headers: { Authorization: `Bearer ${token}` },
-        })
-        .then(() => {
-          fetchSuppliers();
-          resetForm();
-        })
-        .catch((err) => console.error("Error adding supplier:", err));
+        });
+      }
+      fetchSuppliers();
+      resetForm();
+    } catch (err) {
+      console.error("Error saving supplier:", err);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -115,15 +115,20 @@ function Suppliers() {
     setEditingIndex(index);
   };
 
-  const handleDelete = (index) => {
+  const handleDelete = async (index) => {
     const supplierId = suppliers[index].id;
     if (window.confirm("Are you sure to delete this supplier?")) {
-      axios
-        .delete(`${API_BASE}/suppliers/${supplierId}`, {
+      setDeletingId(supplierId);
+      try {
+        await axios.delete(`${API_BASE}/suppliers/${supplierId}`, {
           headers: { Authorization: `Bearer ${token}` },
-        })
-        .then(() => fetchSuppliers())
-        .catch((err) => console.error("Error deleting supplier:", err));
+        });
+        fetchSuppliers();
+      } catch (err) {
+        console.error("Error deleting supplier:", err);
+      } finally {
+        setDeletingId(null);
+      }
     }
   };
 
@@ -281,9 +286,10 @@ function Suppliers() {
 
             <button
               type="submit"
-              className="px-5 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 flex items-center gap-2"
+              disabled={isSubmitting}
+              className="px-5 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:bg-gray-400 flex items-center gap-2"
             >
-              {editingIndex !== null ? <><FaSave /> Update</> : <><FaPlus /> Add</>}
+              {isSubmitting ? "Processing..." : editingIndex !== null ? <><FaSave /> Update</> : <><FaPlus /> Add</>}
             </button>
           </div>
         </form>
@@ -301,66 +307,78 @@ function Suppliers() {
         </div>
 
         {/* TABLE */}
-        <h2 className="text-xl font-semibold mb-3 flex items-center gap-2">
-          <FaBuilding className="text-blue-600" /> Suppliers List
-        </h2>
-
-        {sortedSuppliers.length === 0 ? (
-          <p className="text-gray-500 text-center py-4">No suppliers found.</p>
-        ) : (
-          <div className="overflow-x-auto border rounded-xl">
-            <table className="w-full border-collapse">
-              <thead className="bg-blue-100">
-                <tr>
-                  {["name", "company", "phone", "email", "address", "notes"].map((key) => (
-                    <th
-                      key={key}
-                      className="p-3 text-left cursor-pointer hover:text-blue-600 select-none"
-                      onClick={() => handleSort(key)}
-                    >
-                      {key.charAt(0).toUpperCase() + key.slice(1)}
-                      {sortConfig.key === key
-                        ? sortConfig.direction === "asc"
-                          ? " ▲"
-                          : " ▼"
-                        : ""}
-                    </th>
-                  ))}
-                  <th className="p-3 text-left">Actions</th>
-                </tr>
-              </thead>
-
-              <tbody>
-                {sortedSuppliers.map((s, i) => (
-                  <tr key={s.id} className="border-t hover:bg-gray-50">
-                    <td className="p-3">{s.name}</td>
-                    <td className="p-3">{s.company}</td>
-                    <td className="p-3">{s.phone}</td>
-                    <td className="p-3">{s.email}</td>
-                    <td className="p-3">{s.address}</td>
-                    <td className="p-3">{s.notes}</td>
-                    <td className="p-3 flex gap-3">
-                      <button
-                        onClick={() => handleEdit(i)}
-                        className="text-blue-600 hover:text-blue-800 flex items-center gap-1"
-                      >
-                        <FaEdit /> Edit
-                      </button>
-
-                      <button
-                        onClick={() => handleDelete(i)}
-                        className="text-red-600 hover:text-red-800 flex items-center gap-1"
-                      >
-                        <FaTrash /> Delete
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-
-            </table>
+        <div className="bg-white rounded-2xl shadow-lg overflow-hidden border border-gray-100">
+          <div className="p-6 border-b border-gray-100">
+            <h2 className="text-xl font-semibold text-gray-800 flex items-center gap-2">
+              <FaBuilding className="text-blue-600" /> Suppliers List
+            </h2>
           </div>
-        )}
+
+          {sortedSuppliers.length === 0 ? (
+            <div className="p-12 text-center">
+              <p className="text-gray-500">No suppliers found.</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[800px]">
+                <thead className="bg-gradient-to-r from-gray-50 to-slate-50 border-b border-gray-100">
+                  <tr>
+                    {["id", "name", "company", "phone", "email", "address", "notes"].map((key) => (
+                      <th
+                        key={key}
+                        className="py-4 px-6 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider cursor-pointer select-none hover:text-blue-600"
+                        onClick={() => handleSort(key)}
+                      >
+                        {key.charAt(0).toUpperCase() + key.slice(1)}
+                        {sortConfig.key === key
+                          ? sortConfig.direction === "asc"
+                            ? " ▲"
+                            : " ▼"
+                          : ""}
+                      </th>
+                    ))}
+                    <th className="py-4 px-6 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Actions</th>
+                  </tr>
+                </thead>
+
+                <tbody className="divide-y divide-gray-100">
+                  {sortedSuppliers.map((s, i) => (
+                    <tr key={s.id} className="hover:bg-gray-50/80 transition-colors duration-200">
+                      <td className="py-4 px-6 text-sm text-gray-900">{s.id}</td>
+                      <td className="py-4 px-6 text-sm text-gray-900 font-medium">{s.name}</td>
+                      <td className="py-4 px-6 text-sm text-gray-600">{s.company}</td>
+                      <td className="py-4 px-6 text-sm text-gray-600">{s.phone}</td>
+                      <td className="py-4 px-6 text-sm text-gray-600">{s.email}</td>
+                      <td className="py-4 px-6 text-sm text-gray-600">{s.address}</td>
+                      <td className="py-4 px-6 text-sm text-gray-600">{s.notes}</td>
+                      <td className="py-4 px-6">
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => handleEdit(i)}
+                            className="p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all duration-200"
+                            title="Edit"
+                          >
+                            <FaEdit className="w-4 h-4" />
+                          </button>
+
+                          <button
+                            onClick={() => handleDelete(i)}
+                            disabled={deletingId === s.id}
+                            className="p-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all duration-200 disabled:opacity-50"
+                            title="Delete"
+                          >
+                            {deletingId === s.id ? "Processing..." : <FaTrash className="w-4 h-4" />}
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+
+              </table>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

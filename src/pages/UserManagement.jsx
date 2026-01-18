@@ -44,7 +44,7 @@ function UserManagement() {
   // Update user info or status
   const updateUser = async (id, data) => {
     try {
-      await axios.post(`${API_BASE}/users/${id}`, data, { headers });
+      await axios.put(`${API_BASE}/users/${id}`, data, { headers });
       setEditingUser(null);
       fetchUsers();
       setMessage({ text: "User updated successfully", type: "success" });
@@ -56,12 +56,11 @@ function UserManagement() {
     }
   };
 
-  // Remove user permanently
-  const removeUser = async (id) => {
-    if (!window.confirm("Are you sure to remove this user?")) return;
+  // Disable user (set status to inactive)
+  const disableUser = async (id) => {
+    if (!window.confirm("Are you sure to disable this user?")) return;
     try {
-      await axios.delete(`${API_BASE}/users/${id}`, { headers });
-      fetchUsers();
+      await updateUser(id, { status: 2 });
     } catch (err) {
       console.error(err);
     }
@@ -79,6 +78,18 @@ function UserManagement() {
     } else {
       setForm((prev) => ({ ...prev, [name]: value }));
     }
+  };
+
+  const handleSave = () => {
+    const filteredData = {};
+    Object.keys(form).forEach(key => {
+      if (form[key] !== "" && form[key] !== null) {
+        filteredData[key] = form[key];
+      } else if (key === 'role_id' && form[key] === "") {
+        filteredData[key] = null;
+      }
+    });
+    updateUser(editingUser, filteredData);
   };
 
   // Filter & search users
@@ -174,7 +185,7 @@ function UserManagement() {
                     <button title="Deactivate" onClick={() => updateUser(u.id, { status: 2 })} className="hover:text-yellow-600">
                       <FaUserSlash />
                     </button>
-                    <button title="Remove" onClick={() => removeUser(u.id)} className="hover:text-red-600">
+                    <button title="Disable" onClick={() => disableUser(u.id)} className="hover:text-red-600">
                       <FaTrash />
                     </button>
                   </>
@@ -184,7 +195,7 @@ function UserManagement() {
                     <button title="Reactivate" onClick={() => updateUser(u.id, { status: 1 })} className="hover:text-green-600">
                       <FaUserSlash />
                     </button>
-                    <button title="Remove" onClick={() => removeUser(u.id)} className="hover:text-red-600">
+                    <button title="Disable" onClick={() => disableUser(u.id)} className="hover:text-red-600">
                       <FaTrash />
                     </button>
                   </>
@@ -247,7 +258,7 @@ function UserManagement() {
               <button onClick={() => setEditingUser(null)} className="px-4 py-2 rounded-lg bg-gray-400 text-white">
                 Cancel
               </button>
-              <button onClick={() => updateUser(editingUser, form)} className="px-4 py-2 rounded-lg bg-blue-600 text-white">
+              <button onClick={handleSave} className="px-4 py-2 rounded-lg bg-blue-600 text-white">
                 Save
               </button>
             </div>

@@ -1,5 +1,5 @@
 import React, { useState, lazy, Suspense } from "react";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import Sidebar from "./components/Sidebar";
 import ProtectedRoute from "./components/ProtectedRoute";
 import { Bars3Icon } from "@heroicons/react/24/outline";
@@ -21,35 +21,47 @@ const SalesPage = lazy(() => import("./pages/SalesPage"));
 const PaymentPage = lazy(() => import("./pages/PaymentPage"));
 
 function App() {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-
   return (
     <BrowserRouter>
-      <Routes>
-        {/* Public Route */}
-        <Route path="/login" element={<LoginPage />} />
-          <Route path="/signup" element={<Signup />} />
+      <AppContent />
+    </BrowserRouter>
+  );
+}
 
-        {/* Protected Routes */}
-        <Route
-          path="/*"
-          element={
-            <ProtectedRoute>
-              <div className="flex min-h-screen bg-gray-100">
-                {/* Mobile sidebar overlay */}
-                {sidebarOpen && (
-                  <div
-                    className="fixed inset-0 z-10 bg-black bg-opacity-50 lg:hidden"
-                    onClick={() => setSidebarOpen(false)}
-                  ></div>
-                )}
+function AppContent() {
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const location = useLocation();
+  const hideSidebar = location.pathname === '/payments';
 
+  return (
+    <Routes>
+      {/* Public Route */}
+      <Route path="/login" element={<LoginPage />} />
+        <Route path="/signup" element={<Signup />} />
+
+      {/* Protected Routes */}
+      <Route
+        path="/*"
+        element={
+          <ProtectedRoute>
+            <div className="flex min-h-screen bg-gray-100">
+              {/* Mobile sidebar overlay */}
+              {sidebarOpen && !hideSidebar && (
+                <div
+                  className="fixed inset-0 z-10 bg-black bg-opacity-50 lg:hidden"
+                  onClick={() => setSidebarOpen(false)}
+                ></div>
+              )}
+
+              {!hideSidebar && (
                 <aside className={`w-64 bg-white shadow-md fixed top-0 left-0 h-full z-20 transform transition-transform duration-300 ease-in-out lg:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
                   <Sidebar onClose={() => setSidebarOpen(false)} />
                 </aside>
+              )}
 
-                <div className="flex-1 lg:ml-64 flex flex-col">
-                  {/* Mobile header */}
+              <div className={`flex-1 ${hideSidebar ? '' : 'lg:ml-64'} flex flex-col`}>
+                {/* Mobile header */}
+                {!hideSidebar && (
                   <div className="lg:hidden flex items-center justify-between p-4 bg-white shadow-sm border-b">
                     <button
                       onClick={() => setSidebarOpen(true)}
@@ -60,6 +72,7 @@ function App() {
                     <h1 className="text-lg font-semibold text-gray-900">Inventory System</h1>
                     <div className="w-10"></div> {/* Spacer */}
                   </div>
+                )}
 <main className="flex-1 p-4 md:p-6 bg-gray-50 overflow-y-auto">
   <Suspense fallback={<div className="flex justify-center items-center h-full"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div></div>}>
     <Routes>
@@ -78,13 +91,12 @@ function App() {
     </Routes>
   </Suspense>
 </main>
-                </div>
               </div>
-            </ProtectedRoute>
-          }
-        />
-      </Routes>
-    </BrowserRouter>
+            </div>
+          </ProtectedRoute>
+        }
+      />
+    </Routes>
   );
 }
 

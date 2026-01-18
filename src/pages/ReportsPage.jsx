@@ -1,16 +1,7 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, Fragment } from "react";
 import axios from "axios";
 import {
-  PlusIcon,
-  PencilIcon,
-  TrashIcon,
   ChartBarIcon,
-  MagnifyingGlassIcon,
-  FunnelIcon,
-  ArrowsUpDownIcon,
-  XMarkIcon,
-  ChevronLeftIcon,
-  ChevronRightIcon,
   CurrencyDollarIcon,
   CubeIcon,
   DocumentTextIcon,
@@ -24,13 +15,12 @@ function ReportsPage() {
   const [salesReport, setSalesReport] = useState({});
   const [financialReport, setFinancialReport] = useState({});
   const [stockReport, setStockReport] = useState({});
-  const [activityReport, setActivityReport] = useState({});
   const [loading, setLoading] = useState(true);
+  const [expandedRows, setExpandedRows] = useState(new Set());
 
   // Filters
   const [salesFilters, setSalesFilters] = useState({ period: 'monthly', month: new Date().getMonth() + 1, year: new Date().getFullYear() });
   const [financialFilters, setFinancialFilters] = useState({ period: 'monthly', month: new Date().getMonth() + 1, year: new Date().getFullYear() });
-  const [activityFilters, setActivityFilters] = useState({});
 
   const fetchReports = () => {
     setLoading(true);
@@ -52,24 +42,27 @@ function ReportsPage() {
       headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
     }).then(res => setStockReport(res.data)).catch(console.error);
 
-    // Activity Report
-    axios.get(`${API_BASE}/reports/activity-logs`, {
-      headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-      params: activityFilters
-    }).then(res => setActivityReport(res.data)).catch(console.error);
-
     setLoading(false);
+  };
+
+  const toggleRowExpansion = (productId) => {
+    const newExpanded = new Set(expandedRows);
+    if (newExpanded.has(productId)) {
+      newExpanded.delete(productId);
+    } else {
+      newExpanded.add(productId);
+    }
+    setExpandedRows(newExpanded);
   };
 
   useEffect(() => {
     fetchReports();
-  }, [salesFilters, financialFilters, activityFilters]);
+  }, [salesFilters, financialFilters]);
 
   const tabs = [
     { id: 'sales', label: 'Sales Report', icon: CurrencyDollarIcon },
     { id: 'financial', label: 'Financial Report', icon: ChartBarIcon },
     { id: 'stock', label: 'Stock Report', icon: CubeIcon },
-    { id: 'activity', label: 'Activity Logs', icon: DocumentTextIcon },
   ];
 
   if (loading) {
@@ -225,87 +218,77 @@ function ReportsPage() {
 
           {activeTab === 'stock' && (
             <div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
                 <div className="bg-blue-50 p-4 rounded-xl">
                   <p className="text-sm text-blue-600 font-medium">Total Stock Value</p>
                   <p className="text-2xl font-bold text-blue-900">${stockReport.total_stock_value || 0}</p>
                 </div>
+                <div className="bg-green-50 p-4 rounded-xl">
+                  <p className="text-sm text-green-600 font-medium">In Stock</p>
+                  <p className="text-2xl font-bold text-green-900">{stockReport.total_in_stock || 0}</p>
+                </div>
+                <div className="bg-yellow-50 p-4 rounded-xl">
+                  <p className="text-sm text-yellow-600 font-medium">Low Stock</p>
+                  <p className="text-2xl font-bold text-yellow-900">{stockReport.total_low_stock || 0}</p>
+                </div>
                 <div className="bg-red-50 p-4 rounded-xl">
-                  <p className="text-sm text-red-600 font-medium">Low Stock Products</p>
-                  <p className="text-2xl font-bold text-red-900">{stockReport.low_stock_products?.length || 0}</p>
+                  <p className="text-sm text-red-600 font-medium">Out of Stock</p>
+                  <p className="text-2xl font-bold text-red-900">{stockReport.total_out_of_stock || 0}</p>
                 </div>
               </div>
               <div className="overflow-x-auto">
-                <table className="w-full border border-gray-200 rounded-xl">
-                  <thead className="bg-gray-50">
+                <table className="w-full min-w-[600px]">
+                  <thead className="bg-gradient-to-r from-gray-50 to-slate-50 border-b border-gray-100">
                     <tr>
-                      <th className="p-3 text-left">Product</th>
-                      <th className="p-3 text-left">Current Stock</th>
-                      <th className="p-3 text-left">Stock Value</th>
-                      <th className="p-3 text-left">Status</th>
+                      <th className="py-4 px-6 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Product</th>
+                      <th className="py-4 px-6 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Current Stock</th>
+                      <th className="py-4 px-6 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Stock Value</th>
+                      <th className="py-4 px-6 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Status</th>
+                      <th className="py-4 px-6 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Details</th>
                     </tr>
                   </thead>
-                  <tbody>
+                  <tbody className="divide-y divide-gray-100">
                     {stockReport.stock_details?.map((item, index) => (
-                      <tr key={index} className="border-t">
-                        <td className="p-3">{item.product_name}</td>
-                        <td className="p-3">{item.current_stock}</td>
-                        <td className="p-3">${item.stock_value}</td>
-                        <td className="p-3">
-                          <span className={`px-2 py-1 rounded ${item.low_stock ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}`}>
-                            {item.low_stock ? 'Low Stock' : 'In Stock'}
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
-
-          {activeTab === 'activity' && (
-            <div>
-              <div className="flex gap-4 mb-6">
-                <input
-                  type="date"
-                  value={activityFilters.date || ''}
-                  onChange={(e) => setActivityFilters({ ...activityFilters, date: e.target.value })}
-                  className="px-4 py-2 border border-gray-300 rounded-xl"
-                />
-                <select
-                  value={activityFilters.action || ''}
-                  onChange={(e) => setActivityFilters({ ...activityFilters, action: e.target.value })}
-                  className="px-4 py-2 border border-gray-300 rounded-xl"
-                >
-                  <option value="">All Actions</option>
-                  <option value="created">Created</option>
-                  <option value="updated">Updated</option>
-                  <option value="deleted">Deleted</option>
-                </select>
-              </div>
-              <div className="bg-blue-50 p-4 rounded-xl mb-6">
-                <p className="text-sm text-blue-600 font-medium">Total Logs</p>
-                <p className="text-2xl font-bold text-blue-900">{activityReport.total_logs || 0}</p>
-              </div>
-              <div className="overflow-x-auto">
-                <table className="w-full border border-gray-200 rounded-xl">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="p-3 text-left">User</th>
-                      <th className="p-3 text-left">Action</th>
-                      <th className="p-3 text-left">Module</th>
-                      <th className="p-3 text-left">Date</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {activityReport.logs?.map((log, index) => (
-                      <tr key={index} className="border-t">
-                        <td className="p-3">{log.user?.name || 'Unknown'}</td>
-                        <td className="p-3">{log.action}</td>
-                        <td className="p-3">{log.module}</td>
-                        <td className="p-3">{new Date(log.created_at).toLocaleString()}</td>
-                      </tr>
+                      <Fragment key={index}>
+                        <tr className="hover:bg-gray-50/80 transition-colors duration-200">
+                          <td className="py-4 px-6 text-sm text-gray-900 font-medium">{item.product_name}</td>
+                          <td className="py-4 px-6 text-sm text-gray-600">{item.current_stock}</td>
+                          <td className="py-4 px-6 text-sm text-gray-600">${item.stock_value}</td>
+                          <td className="py-4 px-6">
+                            <span className={`inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium ${
+                              item.message?.trim() === 'Out-of-Stock' ? 'bg-red-50 text-red-700' :
+                              item.message?.trim() === 'Very Low Stock' ? 'bg-orange-50 text-orange-700' :
+                              item.message?.trim() === 'Low Stock' ? 'bg-yellow-50 text-yellow-700' :
+                              'bg-green-50 text-green-700'
+                            }`}>
+                              {item.message}
+                            </span>
+                          </td>
+                          <td className="py-4 px-6">
+                            <button
+                              onClick={() => toggleRowExpansion(item.product_id)}
+                              className="p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all duration-200"
+                              title="Toggle Details"
+                            >
+                              {expandedRows.has(item.product_id) ? '▼' : '▶'}
+                            </button>
+                          </td>
+                        </tr>
+                        {expandedRows.has(item.product_id) && (
+                          <tr className="bg-gray-50/50">
+                            <td colSpan="5" className="py-4 px-6">
+                              <div className="text-sm text-gray-600 grid grid-cols-2 gap-4">
+                                <div>
+                                  <strong className="text-gray-900">Stock Ins:</strong> {item.stock_ins}
+                                </div>
+                                <div>
+                                  <strong className="text-gray-900">Stock Outs:</strong> {item.stock_outs}
+                                </div>
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                      </Fragment>
                     ))}
                   </tbody>
                 </table>

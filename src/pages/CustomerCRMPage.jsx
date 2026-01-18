@@ -13,7 +13,9 @@ function CustomerCrmPage() {
     notes: "",
   });
   const [editingId, setEditingId] = useState(null);
-  const [sortConfig, setSortConfig] = useState({ key: null, direction: "asc" });
+  const [sortConfig, setSortConfig] = useState({ key: "id", direction: "desc" });
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   const token = localStorage.getItem("token");
   const API_BASE = `${import.meta.env.VITE_API_URL}/api`;
@@ -123,6 +125,7 @@ function CustomerCrmPage() {
       direction = "desc";
     }
     setSortConfig({ key, direction });
+    setCurrentPage(1); // Reset to first page on sort change
   };
 
   const sortedCustomers = [...customers].sort((a, b) => {
@@ -133,6 +136,19 @@ function CustomerCrmPage() {
     if (aVal > bVal) return sortConfig.direction === "asc" ? 1 : -1;
     return 0;
   });
+
+  const totalPages = Math.ceil(sortedCustomers.length / itemsPerPage);
+  const paginatedCustomers = sortedCustomers.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
+  const formatName = (name) => {
+    const parts = name.trim().split(' ');
+    if (parts.length > 1) {
+      const first = parts[0];
+      const last = parts.slice(1).join(' ');
+      return `${last}, ${first}`;
+    }
+    return name;
+  };
 
   const renderSortIcon = (key) => {
     if (sortConfig.key !== key) return <FaSort className="inline ml-1 text-gray-400" />;
@@ -182,56 +198,89 @@ function CustomerCrmPage() {
       </div>
 
       {/* Customer Table */}
-      <div className="max-w-6xl mx-auto bg-white/80 backdrop-blur-md rounded-2xl shadow-lg p-8">
-        <h2 className="text-xl font-semibold mb-4 text-gray-800">Customer List</h2>
+      <div className="max-w-6xl mx-auto bg-white rounded-2xl shadow-lg overflow-hidden border border-gray-100">
+        <div className="p-6 border-b border-gray-100">
+          <h2 className="text-xl font-semibold text-gray-800">Customer List</h2>
+        </div>
 
         {customers.length === 0 && !loading ? (
-          <p className="text-gray-500 text-center">No customers yet.</p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full border-collapse">
-              <thead className="bg-blue-100">
-                <tr>
-                  <th onClick={() => handleSort("name")} className="p-2 text-left cursor-pointer select-none hover:text-blue-600">
-                    Name {renderSortIcon("name")}
-                  </th>
-                  <th onClick={() => handleSort("email")} className="p-2 text-left cursor-pointer select-none hover:text-blue-600">
-                    Email {renderSortIcon("email")}
-                  </th>
-                  <th onClick={() => handleSort("phone")} className="p-2 text-left cursor-pointer select-none hover:text-blue-600">
-                    Phone {renderSortIcon("phone")}
-                  </th>
-                  <th onClick={() => handleSort("address")} className="p-2 text-left cursor-pointer select-none hover:text-blue-600">
-                    Address {renderSortIcon("address")}
-                  </th>
-                  <th className="p-2 text-left">Preferences</th>
-                  <th className="p-2 text-left">Notes</th>
-                  <th className="p-2 text-center">Action</th>
-                </tr>
-              </thead>
-
-              <tbody>
-                {sortedCustomers.map((c) => (
-                  <tr key={c.id} className="border-t hover:bg-gray-50 transition duration-150">
-                    <td className="p-2">{c.name}</td>
-                    <td className="p-2">{c.email}</td>
-                    <td className="p-2">{c.phone}</td>
-                    <td className="p-2">{c.address}</td>
-                    <td className="p-2">{c.preferences}</td>
-                    <td className="p-2">{c.notes}</td>
-                    <td className="p-2 text-center flex justify-center gap-2">
-                      <button onClick={() => handleEdit(c)} className="text-blue-600 hover:text-blue-800">
-                        <FaEdit />
-                      </button>
-                      <button onClick={() => handleDelete(c.id)} className="text-red-600 hover:text-red-800">
-                        <FaTrash />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="p-12 text-center">
+            <p className="text-gray-500">No customers yet.</p>
           </div>
+        ) : (
+          <>
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[800px]">
+                <thead className="bg-gradient-to-r from-gray-50 to-slate-50 border-b border-gray-100">
+                  <tr>
+                    <th onClick={() => handleSort("id")} className="py-4 px-6 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider cursor-pointer select-none hover:text-blue-600">
+                      ID {renderSortIcon("id")}
+                    </th>
+                    <th onClick={() => handleSort("name")} className="py-4 px-6 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider cursor-pointer select-none hover:text-blue-600">
+                      Name {renderSortIcon("name")}
+                    </th>
+                    <th onClick={() => handleSort("email")} className="py-4 px-6 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider cursor-pointer select-none hover:text-blue-600">
+                      Email {renderSortIcon("email")}
+                    </th>
+                    <th onClick={() => handleSort("phone")} className="py-4 px-6 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider cursor-pointer select-none hover:text-blue-600">
+                      Phone {renderSortIcon("phone")}
+                    </th>
+                    <th onClick={() => handleSort("address")} className="py-4 px-6 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider cursor-pointer select-none hover:text-blue-600">
+                      Address {renderSortIcon("address")}
+                    </th>
+                    <th className="py-4 px-6 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Preferences</th>
+                    <th className="py-4 px-6 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Notes</th>
+                    <th className="py-4 px-6 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider">Actions</th>
+                  </tr>
+                </thead>
+
+                <tbody className="divide-y divide-gray-100">
+                  {paginatedCustomers.map((c) => (
+                    <tr key={c.id} className="hover:bg-gray-50/80 transition-colors duration-200">
+                      <td className="py-4 px-6 text-sm text-gray-900">{c.id}</td>
+                      <td className="py-4 px-6 text-sm text-gray-900 font-medium">{formatName(c.name)}</td>
+                      <td className="py-4 px-6 text-sm text-gray-600">{c.email}</td>
+                      <td className="py-4 px-6 text-sm text-gray-600">{c.phone}</td>
+                      <td className="py-4 px-6 text-sm text-gray-600">{c.address}</td>
+                      <td className="py-4 px-6 text-sm text-gray-600">{c.preferences}</td>
+                      <td className="py-4 px-6 text-sm text-gray-600">{c.notes}</td>
+                      <td className="py-4 px-6 text-center">
+                        <div className="flex justify-center gap-2">
+                          <button onClick={() => handleEdit(c)} className="p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all duration-200" title="Edit">
+                            <FaEdit className="w-4 h-4" />
+                          </button>
+                          <button onClick={() => handleDelete(c.id)} className="p-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all duration-200" title="Delete">
+                            <FaTrash className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="flex justify-between items-center mt-4">
+                <button
+                  onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                  disabled={currentPage === 1}
+                  className="px-4 py-2 bg-blue-600 text-white rounded disabled:bg-gray-400"
+                >
+                  Previous
+                </button>
+                <span>Page {currentPage} of {totalPages}</span>
+                <button
+                  onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+                  disabled={currentPage === totalPages}
+                  className="px-4 py-2 bg-blue-600 text-white rounded disabled:bg-gray-400"
+                >
+                  Next
+                </button>
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>

@@ -110,7 +110,7 @@ function ActivityLogPage() {
       const multiplier = sortOrder === "asc" ? 1 : -1;
       if (sortBy === "created_at")
         return multiplier * new Date(a.created_at) - new Date(b.created_at);
-      if (sortBy === "user") return multiplier * a.user.localeCompare(b.user);
+      if (sortBy === "user") return multiplier * (a.user?.name || '').localeCompare(b.user?.name || '');
       if (sortBy === "action")
         return multiplier * a.action.localeCompare(b.action);
       return 0;
@@ -163,7 +163,7 @@ function ActivityLogPage() {
     (log) =>
       new Date(log.created_at).toDateString() === new Date().toDateString()
   ).length;
-  const uniqueUsers = new Set(logs.map((log) => log.user)).size;
+  const uniqueUsers = new Set(logs.map((log) => log.user?.id)).size;
 
   // 🔹 Skeleton Loader
   if (loading)
@@ -393,7 +393,7 @@ function ActivityLogPage() {
                         </div>
                         <div>
                           <p className="font-medium text-gray-900">
-                            {log.user}
+                            {log.user?.name || 'Unknown'}
                           </p>
                         </div>
                       </div>
@@ -420,7 +420,7 @@ function ActivityLogPage() {
                     <td className="py-4 px-6">
                       <div className="text-gray-600">
                         {log.description ||
-                          `${log.user} performed ${log.action} on ${log.module}`}
+                          `${log.user?.name || 'Unknown'} performed ${log.action} on ${log.module}`}
                       </div>
                     </td>
                     <td className="py-4 px-6">

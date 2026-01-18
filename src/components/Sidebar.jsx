@@ -1,4 +1,5 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
+import axios from "axios";
 import {
   FiHome,
   FiBox,
@@ -21,6 +22,37 @@ function Sidebar({ onClose }) {
   const userData = localStorage.getItem("user");
   const user = userData && userData !== "undefined" ? JSON.parse(userData) : null;
   const role = user?.role?.name; // "Admin", "Manager", "Staff"
+  const [lowStockAlert, setLowStockAlert] = useState(0);
+
+  const API_BASE = `${import.meta.env.VITE_API_URL}/api`;
+
+  useEffect(() => {
+    const fetchStockAlert = async () => {
+      const cacheKey = 'stock_alert_cache';
+      const cacheTimeKey = 'stock_alert_time';
+      const now = Date.now();
+      const cacheTime = localStorage.getItem(cacheTimeKey);
+      const cachedData = localStorage.getItem(cacheKey);
+
+      if (cachedData && cacheTime && (now - cacheTime < 5 * 60 * 1000)) { // 5 minutes cache
+        setLowStockAlert(parseInt(cachedData));
+        return;
+      }
+
+      try {
+        const res = await axios.get(`${API_BASE}/reports/stock`, {
+          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
+        });
+        const totalLow = (res.data.total_low_stock || 0) + (res.data.total_out_of_stock || 0);
+        setLowStockAlert(totalLow);
+        localStorage.setItem(cacheKey, totalLow.toString());
+        localStorage.setItem(cacheTimeKey, now.toString());
+      } catch (err) {
+        console.error("Error fetching stock alert:", err);
+      }
+    };
+    fetchStockAlert();
+  }, []);
 
   const isActive = (path) => {
     if (path === "/") return location.pathname === "/";
@@ -37,7 +69,6 @@ function Sidebar({ onClose }) {
     { path: "/categories", label: "Categories", icon: FiTag, roles: ["Admin","Manager"] },
     { path: "/suppliers", label: "Supplier Management", icon: FiTruck, roles: ["Admin","Manager"] },
     { path: "/customer", label: "Customers", icon: FiUsers, roles: ["Admin","Manager","Staff"] },
-    { path: "/payments", label: "Payments", icon: FiDollarSign, roles: ["Admin","Manager"] },
     { path: "/reports", label: "Reports", icon: FiBarChart2, roles: ["Admin","Manager"] },
     { path: "/activity-logs", label: "Activity Logs", icon: FiFileText, roles: ["Admin","Manager"] },
     { path: "/users", label: "User Management", icon: FiUsers, roles: ["Admin"] },
@@ -92,6 +123,11 @@ function Sidebar({ onClose }) {
                 <item.icon size={18} className="text-white" />
               </div>
               <span className="font-medium flex-1">{item.label}</span>
+              {item.path === '/reports' && lowStockAlert > 0 && (
+                <span className="bg-red-500 text-white text-xs rounded-full px-2 py-1">
+                  {lowStockAlert}
+                </span>
+              )}
               <FiChevronRight
                 size={16}
                 className={`text-gray-400 transition-transform duration-300 ${
