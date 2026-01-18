@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { FaTrash, FaUserSlash, FaEdit, FaCheck, FaTimes, FaClock } from "react-icons/fa";
+import { ChevronLeftIcon, ChevronRightIcon } from "@heroicons/react/24/outline";
 
 const API_BASE = `${import.meta.env.VITE_API_URL}/api`;
 const token = localStorage.getItem("token");
@@ -11,16 +12,28 @@ function UserManagement() {
   const [roles, setRoles] = useState([]);
   const [filter, setFilter] = useState("active");
   const [search, setSearch] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
   const [editingUser, setEditingUser] = useState(null);
   const [form, setForm] = useState({ name: "", email: "", status: 1, role_id: "" });
   const [message, setMessage] = useState({ text: "", type: "" });
+  
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalUsers, setTotalUsers] = useState(0);
 
   // Fetch users
-  const fetchUsers = async () => {
+  const fetchUsers = async (page = 1, statusFilter = '', searchTerm = '') => {
     try {
-      const res = await axios.get(`${API_BASE}/users`, { headers });
-      // The array of users is in res.data.data
-      setUsers(res.data.data);
+      const params = new URLSearchParams();
+      params.append('page', page);
+      if (statusFilter) params.append('status', statusFilter === 'active' ? 1 : statusFilter === 'pending' ? 0 : 2);
+      if (searchTerm) params.append('search', searchTerm);
+      const res = await axios.get(`${API_BASE}/users?${params.toString()}`, { headers });
+      setUsers(res.data.data.data || []);
+      setCurrentPage(res.data.data.current_page || 1);
+      setTotalPages(res.data.data.last_page || 1);
+      setTotalUsers(res.data.total || 0);
     } catch (err) {
       console.error(err);
     }
@@ -37,7 +50,7 @@ function UserManagement() {
   };
 
   useEffect(() => {
-    fetchUsers();
+    fetchUsers(1, filter, search);
     fetchRoles();
   }, []);
 
@@ -92,15 +105,8 @@ function UserManagement() {
     updateUser(editingUser, filteredData);
   };
 
-  // Filter & search users
-  const filteredUsers = users
-    .filter((u) => {
-      if (filter === "active") return u.status == 1;
-      if (filter === "inactive") return u.status == 2;
-      if (filter === "pending") return u.status == 0;
-      return true;
-    })
-    .filter((u) => u.name.toLowerCase().includes(search.toLowerCase()));
+  // Filtered users (now handled by backend)
+  const filteredUsers = users;
 
   const getStatusText = (status) =>
     status == 1 ? "Active" :
@@ -137,7 +143,7 @@ function UserManagement() {
           {["active", "pending", "inactive"].map((f) => (
             <button
               key={f}
-              onClick={() => setFilter(f)}
+              onClick={() => { setFilter(f); fetchUsers(1, f, search); }}
               className={`px-4 py-2 rounded-lg font-semibold ${
                 filter === f ? "bg-blue-600 text-white" : "bg-gray-200"
               }`}
@@ -148,10 +154,16 @@ function UserManagement() {
           <input
             type="text"
             placeholder="Search by name"
-            className="border rounded-lg px-3 py-2 ml-auto"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            className="border rounded-lg px-3 py-2"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
           />
+          <button
+            onClick={() => { setSearch(searchQuery); fetchUsers(1, filter, searchQuery); }}
+            className="px-4 py-2 bg-blue-600 text-white rounded ml-2"
+          >
+            Search
+          </button>
         </div>
 
         {/* User Cards */}
@@ -201,9 +213,66 @@ function UserManagement() {
                   </>
                 )}
               </div>
+      
+      
             </div>
           ))}
         </div>
+                {/* Pagination */}
+              <div className="flex justify-between items-center mt-6">
+                <div className="text-sm text-gray-500">
+                  Showing {(currentPage - 1) * 8 + 1} to{" "}
+                  {Math.min(currentPage * 8, filteredUsers.length)}{" "}
+                  of {totalUsers} users
+                </div>
+                {totalPages > 1 && (
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => fetchUsers(Math.max(currentPage - 1, 1))}
+                      disabled={currentPage === 1}
+                      className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                    >
+                      <ChevronLeftIcon className="w-4 h-4" />
+                      Previous
+                    </button>
+                    <div className="flex gap-1">
+                      {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                        let pageNum;
+                        if (totalPages <= 5) {
+                          pageNum = i + 1;
+                        } else if (currentPage <= 3) {
+                          pageNum = i + 1;
+                        } else if (currentPage >= totalPages - 2) {
+                          pageNum = totalPages - 4 + i;
+                        } else {
+                          pageNum = currentPage - 2 + i;
+                        }
+                        return (
+                          <button
+                            key={pageNum}
+                            onClick={() => fetchUsers(pageNum)}
+                            className={`w-10 h-10 flex items-center justify-center rounded-lg text-sm font-medium transition ${
+                              currentPage === pageNum
+                                ? "bg-indigo-600 text-white shadow-sm"
+                                : "text-gray-700 hover:bg-gray-100"
+                            }`}
+                          >
+                            {pageNum}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <button
+                      onClick={() => fetchUsers(Math.min(currentPage + 1, totalPages))}
+                      disabled={currentPage === totalPages}
+                      className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                    >
+                      Next
+                      <ChevronRightIcon className="w-4 h-4" />
+                    </button>
+                  </div>
+                )}
+              </div>
       </div>
 
       {/* Edit Modal */}

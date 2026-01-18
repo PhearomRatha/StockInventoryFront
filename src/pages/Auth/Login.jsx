@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { FaEye, FaEyeSlash, FaUser, FaLock } from 'react-icons/fa';
 import axios from 'axios';
+import api from '../../plugin/axios';
 import { useAuth } from '../../context/AuthContext';
 
  const API_BASE = `${import.meta.env.VITE_API_URL}/api`;
@@ -34,11 +35,8 @@ const handleSubmit = async (e) => {
   setLoading(true);
 
   try {
-    const res = await axios.post(`${API_BASE}/login`, formData, {
-      headers: {
-        'Content-Type': 'application/json'
-      }
-    });
+    await axios.get('/sanctum/csrf-cookie')
+    const res = await api.post(`${API_BASE}/login`, formData);
 
     if (res.data.status === 200) {
       const user = res.data.data.user;
