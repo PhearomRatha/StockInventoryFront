@@ -110,9 +110,11 @@ function ActivityLogPage() {
       const multiplier = sortOrder === "asc" ? 1 : -1;
       if (sortBy === "created_at")
         return multiplier * new Date(a.created_at) - new Date(b.created_at);
-      if (sortBy === "user") return multiplier * (a.user?.name || '').localeCompare(b.user?.name || '');
-      if (sortBy === "action")
-        return multiplier * a.action.localeCompare(b.action);
+      if (sortBy === "user") return multiplier * (a.user || '').localeCompare(b.user || '');
+      if (sortBy === "id") return multiplier * (a.id - b.id);
+      if (sortBy === "action") return multiplier * (a.action || '').localeCompare(b.action || '');
+      if (sortBy === "module") return multiplier * (a.module || '').localeCompare(b.module || '');
+      if (sortBy === "record_id") return multiplier * (a.record_id - b.record_id);
       return 0;
     });
 
@@ -157,13 +159,19 @@ function ActivityLogPage() {
       .catch(console.error);
   };
 
+  // User map for displaying names
+  const userMap = users.reduce((acc, user) => {
+    acc[user.id] = user.name;
+    return acc;
+  }, {});
+
   // Statistics
   const totalLogs = logs.length;
   const todayLogs = logs.filter(
     (log) =>
       new Date(log.created_at).toDateString() === new Date().toDateString()
   ).length;
-  const uniqueUsers = new Set(logs.map((log) => log.user?.id)).size;
+  const uniqueUsers = new Set(logs.map((log) => log.user_id)).size;
 
   // 🔹 Skeleton Loader
   if (loading)
@@ -187,7 +195,7 @@ function ActivityLogPage() {
           </div>
           <div className="bg-white rounded-2xl shadow-sm p-6">
             <div className="h-10 w-48 bg-gray-300 rounded mb-6"></div>
-            {Array.from({ length: 5 }).map((_, i) => (
+            {Array.from({ length: 8 }).map((_, i) => (
               <div key={i} className="h-16 bg-gray-200 rounded-lg mb-4"></div>
             ))}
           </div>
@@ -299,8 +307,12 @@ function ActivityLogPage() {
               <option value="All">All Modules</option>
               <option value="products">Products</option>
               <option value="sales">Sales</option>
-              <option value="payments">Payments</option>
+              <option value="stock_ins">Stock Ins</option>
+              <option value="stock_outs">Stock Outs</option>
+              <option value="suppliers">Suppliers</option>
+              <option value="customers">Customers</option>
               <option value="users">Users</option>
+              <option value="sales_payment">Sales Payment</option>
             </select>
           </div>
 
@@ -363,20 +375,27 @@ function ActivityLogPage() {
             <thead className="bg-gradient-to-r from-gray-50 to-slate-50 border-b">
               <tr>
                 {[
+                  "ID",
                   "User",
                   "Action",
                   "Module",
+                  "Record ID",
                   "Description",
                   "Date",
                   "Actions",
-                ].map((h) => (
-                  <th
-                    key={h}
-                    className="py-4 px-6 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider"
-                  >
-                    {h}
-                  </th>
-                ))}
+                ].map((h) => {
+                  const sortKey = h === "Date" ? "created_at" : h === "ID" ? "id" : h === "Record ID" ? "record_id" : h.toLowerCase();
+                  const isSortable = !["Description", "Actions"].includes(h);
+                  return (
+                    <th
+                      key={h}
+                      className={`py-4 px-6 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider ${isSortable ? 'cursor-pointer hover:bg-gray-100' : ''}`}
+                      onClick={isSortable ? () => handleSort(sortKey) : undefined}
+                    >
+                      {h}
+                    </th>
+                  );
+                })}
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -387,34 +406,51 @@ function ActivityLogPage() {
                     className="hover:bg-gray-50/80 transition-colors duration-200"
                   >
                     <td className="py-4 px-6">
+                      <span className="text-sm text-gray-900 font-mono">
+                        {log.id}
+                      </span>
+                    </td>
+                    <td className="py-4 px-6">
                       <div className="flex items-center gap-4">
                         <div className="w-10 h-10 bg-indigo-50 rounded-xl flex items-center justify-center">
                           <UserIcon className="w-5 h-5 text-indigo-600" />
                         </div>
                         <div>
                           <p className="font-medium text-gray-900">
-                            {log.user?.name || 'Unknown'}
+                            {log.user || 'Unknown'}
                           </p>
                         </div>
                       </div>
                     </td>
                     <td className="py-4 px-6">
-                      <span
-                        className={`inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium ${
-                          log.action === "created"
-                            ? "bg-emerald-50 text-emerald-700"
-                            : log.action === "updated"
-                            ? "bg-blue-50 text-blue-700"
-                            : "bg-rose-50 text-rose-700"
-                        }`}
-                      >
+                      <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium capitalize ${
+                        log.action === 'created' ? 'bg-green-100 text-green-800' :
+                        log.action === 'updated' ? 'bg-blue-100 text-blue-800' :
+                        log.action === 'deleted' ? 'bg-red-100 text-red-800' :
+                        log.action === 'verified' ? 'bg-purple-100 text-purple-800' :
+                        'bg-gray-100 text-gray-800'
+                      }`}>
                         {log.action}
                       </span>
                     </td>
                     <td className="py-4 px-6">
-                      <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-indigo-50 text-indigo-700 text-sm font-medium">
-                        <CubeIcon className="w-3.5 h-3.5" />
-                        {log.module}
+                      <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium capitalize ${
+                        log.module === 'sales' ? 'bg-indigo-100 text-indigo-800' :
+                        log.module === 'products' ? 'bg-emerald-100 text-emerald-800' :
+                        log.module === 'users' ? 'bg-cyan-100 text-cyan-800' :
+                        log.module === 'customers' ? 'bg-orange-100 text-orange-800' :
+                        log.module === 'suppliers' ? 'bg-pink-100 text-pink-800' :
+                        log.module === 'stock_ins' ? 'bg-yellow-100 text-yellow-800' :
+                        log.module === 'stock_outs' ? 'bg-teal-100 text-teal-800' :
+                        log.module === 'sales_payment' ? 'bg-violet-100 text-violet-800' :
+                        'bg-gray-100 text-gray-800'
+                      }`}>
+                        {log.module.replace('_', ' ')}
+                      </span>
+                    </td>
+                    <td className="py-4 px-6">
+                      <span className="text-sm text-gray-900 font-mono">
+                        {log.record_id}
                       </span>
                     </td>
                     <td className="py-4 px-6">
@@ -450,7 +486,7 @@ function ActivityLogPage() {
                 ))
               ) : (
                 <tr>
-                  <td colSpan={6} className="py-20 text-center">
+                  <td colSpan={8} className="py-20 text-center">
                     <div className="flex flex-col items-center justify-center">
                       <DocumentTextIcon className="w-16 h-16 text-gray-300 mb-4" />
                       <p className="text-gray-500 text-lg font-medium">

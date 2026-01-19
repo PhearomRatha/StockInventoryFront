@@ -10,7 +10,7 @@ const headers = { Authorization: `Bearer ${token}` };
 function UserManagement() {
   const [users, setUsers] = useState([]);
   const [roles, setRoles] = useState([]);
-  const [filter, setFilter] = useState("active");
+  const [filter, setFilter] = useState("all");
   const [search, setSearch] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [editingUser, setEditingUser] = useState(null);
@@ -23,14 +23,15 @@ function UserManagement() {
   const [totalUsers, setTotalUsers] = useState(0);
 
   // Fetch users
-  const fetchUsers = async (page = 1, statusFilter = '', searchTerm = '') => {
+  const fetchUsers = async (page = 1, searchTerm = '') => {
     try {
       const params = new URLSearchParams();
       params.append('page', page);
-      if (statusFilter) params.append('status', statusFilter === 'active' ? 1 : statusFilter === 'pending' ? 0 : 2);
       if (searchTerm) params.append('search', searchTerm);
       const res = await axios.get(`${API_BASE}/users?${params.toString()}`, { headers });
-      setUsers(res.data.data.data || []);
+      console.log(res.data.data);
+
+      setUsers(res.data.data || []);
       setCurrentPage(res.data.data.current_page || 1);
       setTotalPages(res.data.data.last_page || 1);
       setTotalUsers(res.data.total || 0);
@@ -50,7 +51,7 @@ function UserManagement() {
   };
 
   useEffect(() => {
-    fetchUsers(1, filter, search);
+    fetchUsers(1, search);
     fetchRoles();
   }, []);
 
@@ -105,23 +106,29 @@ function UserManagement() {
     updateUser(editingUser, filteredData);
   };
 
-  // Filtered users (now handled by backend)
-  const filteredUsers = users;
+  const getUserStatus = (user) => {
+    if (user.status === true) return "Active";
+    if (user.status === false && user.id > 267) return "Pending";
+    return "Inactive";
+  };
 
-  const getStatusText = (status) =>
-    status == 1 ? "Active" :
-    status == 0 ? "Pending" :
-    status == 2 ? "Inactive" :
-    "Unknown";
+  // Filtered users (now handled by frontend)
+  const filteredUsers = users.filter(u => {
+    const status = getUserStatus(u);
+    if (filter === "all") return true;
+    return status.toLowerCase() === filter;
+  });
+
   const getStatusClass = (status) =>
-    status == 1 ? "bg-green-100 text-green-800" :
-    status == 0 ? "bg-yellow-100 text-yellow-800" :
-    status == 2 ? "bg-red-100 text-red-800" :
+    status === "Active" ? "bg-green-100 text-green-800" :
+    status === "Inactive" ? "bg-red-100 text-gray-800" :
+    status === "Pending" ? "bg-yellow-100 text-yellow-800" :
     "bg-gray-100 text-gray-800";
+
   const getStatusIcon = (status) =>
-    status == 1 ? <FaCheck className="inline mr-1" /> :
-    status == 0 ? <FaClock className="inline mr-1" /> :
-    status == 2 ? <FaTimes className="inline mr-1" /> : null;
+    status === "Active" ? <FaCheck className="inline mr-1" /> :
+    status === "Inactive" ? <FaTimes className="inline mr-1" /> :
+    status === "Pending" ? <FaClock className="inline mr-1" /> : null;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-8">
@@ -140,10 +147,10 @@ function UserManagement() {
 
         {/* Filter & Search */}
         <div className="flex gap-4 mb-6">
-          {["active", "pending", "inactive"].map((f) => (
+          {["all", "active", "inactive", "pending"].map((f) => (
             <button
               key={f}
-              onClick={() => { setFilter(f); fetchUsers(1, f, search); }}
+              onClick={() => { setFilter(f); }}
               className={`px-4 py-2 rounded-lg font-semibold ${
                 filter === f ? "bg-blue-600 text-white" : "bg-gray-200"
               }`}
@@ -159,7 +166,7 @@ function UserManagement() {
             onChange={(e) => setSearchQuery(e.target.value)}
           />
           <button
-            onClick={() => { setSearch(searchQuery); fetchUsers(1, filter, searchQuery); }}
+            onClick={() => { setSearch(searchQuery); fetchUsers(1, searchQuery); }}
             className="px-4 py-2 bg-blue-600 text-white rounded ml-2"
           >
             Search
@@ -174,44 +181,53 @@ function UserManagement() {
                 <h2 className="text-lg font-semibold mb-1">{u.name}</h2>
                 <p className="text-gray-600 mb-1">{u.email}</p>
                 <p className="text-gray-600 mb-1">Role: {u.role?.name || "No role"}</p>
-                <span className={`px-3 py-1 rounded-full text-sm font-semibold ${getStatusClass(u.status)}`}>
-                  {getStatusIcon(u.status)}{getStatusText(u.status)}
-                </span>
+                {(() => {
+                  const status = getUserStatus(u);
+                  return (
+                    <span className={`px-3 py-1 rounded-full text-sm font-semibold ${getStatusClass(status)}`}>
+                      {getStatusIcon(status)}{status}
+                    </span>
+                  );
+                })()}
               </div>
               <div className="mt-4 flex justify-end gap-2 text-gray-700">
-                {u.status == 0 && (
-                  <>
-                    <button title="Approve" onClick={() => updateUser(u.id, { status: 1 })} className="hover:text-green-600">
-                      <FaCheck />
-                    </button>
-                    <button title="Reject" onClick={() => updateUser(u.id, { status: 2 })} className="hover:text-red-600">
-                      <FaTimes />
-                    </button>
-                  </>
-                )}
-                {u.status == 1 && (
-                  <>
-                    <button title="Edit" onClick={() => startEdit(u)} className="hover:text-blue-600">
-                      <FaEdit />
-                    </button>
-                    <button title="Deactivate" onClick={() => updateUser(u.id, { status: 2 })} className="hover:text-yellow-600">
-                      <FaUserSlash />
-                    </button>
-                    <button title="Disable" onClick={() => disableUser(u.id)} className="hover:text-red-600">
-                      <FaTrash />
-                    </button>
-                  </>
-                )}
-                {u.status == 2 && (
-                  <>
-                    <button title="Reactivate" onClick={() => updateUser(u.id, { status: 1 })} className="hover:text-green-600">
-                      <FaUserSlash />
-                    </button>
-                    <button title="Disable" onClick={() => disableUser(u.id)} className="hover:text-red-600">
-                      <FaTrash />
-                    </button>
-                  </>
-                )}
+                {(() => {
+                  const status = getUserStatus(u);
+                  return (
+                    <>
+                      {status === "Pending" && (
+                        <>
+                          <button title="Approve" onClick={() => updateUser(u.id, { status: 1 })} className="hover:text-green-600">
+                            <FaCheck />
+                          </button>
+                          <button title="Reject" onClick={() => updateUser(u.id, { status: 2 })} className="hover:text-red-600">
+                            <FaTimes />
+                          </button>
+                        </>
+                      )}
+                      {status === "Active" && (
+                        <>
+                          <button title="Edit" onClick={() => startEdit(u)} className="hover:text-blue-600">
+                            <FaEdit />
+                          </button>
+                          <button title="Deactivate" onClick={() => updateUser(u.id, { status: 2 })} className="hover:text-yellow-600">
+                            <FaUserSlash />
+                          </button>
+                          <button title="Disable" onClick={() => disableUser(u.id)} className="hover:text-red-600">
+                            <FaTrash />
+                          </button>
+                        </>
+                      )}
+                      {status === "Inactive" && (
+                        <>
+                          <button title="Reactivate" onClick={() => updateUser(u.id, { status: 1 })} className="hover:text-green-600">
+                            <FaUserSlash />
+                          </button>
+                        </>
+                      )}
+                    </>
+                  );
+                })()}
               </div>
       
       
@@ -223,12 +239,12 @@ function UserManagement() {
                 <div className="text-sm text-gray-500">
                   Showing {(currentPage - 1) * 8 + 1} to{" "}
                   {Math.min(currentPage * 8, filteredUsers.length)}{" "}
-                  of {totalUsers} users
+                  of {filteredUsers.length} users
                 </div>
                 {totalPages > 1 && (
                   <div className="flex items-center gap-2">
                     <button
-                      onClick={() => fetchUsers(Math.max(currentPage - 1, 1))}
+                      onClick={() => fetchUsers(Math.max(currentPage - 1, 1), search)}
                       disabled={currentPage === 1}
                       className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition"
                     >
@@ -250,7 +266,7 @@ function UserManagement() {
                         return (
                           <button
                             key={pageNum}
-                            onClick={() => fetchUsers(pageNum)}
+                            onClick={() => fetchUsers(pageNum, search)}
                             className={`w-10 h-10 flex items-center justify-center rounded-lg text-sm font-medium transition ${
                               currentPage === pageNum
                                 ? "bg-indigo-600 text-white shadow-sm"
@@ -263,7 +279,7 @@ function UserManagement() {
                       })}
                     </div>
                     <button
-                      onClick={() => fetchUsers(Math.min(currentPage + 1, totalPages))}
+                      onClick={() => fetchUsers(Math.min(currentPage + 1, totalPages), search)}
                       disabled={currentPage === totalPages}
                       className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition"
                     >
