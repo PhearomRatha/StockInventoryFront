@@ -1,169 +1,357 @@
-import React, { useState } from "react";
-import { FaUser, FaLock, FaEnvelope } from "react-icons/fa";
-import axios from "axios";
+import React, { useState } from 'react';
+import { ElMessage } from 'element-plus';
+import {
+  User,
+  Lock,
+  Message,
+  ArrowRight,
+  Timer
+} from '@element-plus/icons-vue';
+import { register, verifyOtp, resendOtp } from '../../api/authApi';
+import OtpInput from './components/OtpInput';
+import ApprovalStatus from './components/ApprovalStatus';
 
-const API_BASE =`${import.meta.env.VITE_API_URL}/api`;
-
-function Signup() {
+const SignupPage = () => {
+  const [currentStep, setCurrentStep] = useState('register');
   const [formData, setFormData] = useState({
-    name: "",
-    email: "",
-    password: "",
+    name: '',
+    email: '',
+    password: '',
+    password_confirmation: ''
   });
-  const [message, setMessage] = useState({ text: '', type: '' });
   const [loading, setLoading] = useState(false);
+  const [resendingOtp, setResendingOtp] = useState(false);
+  const [otpEmail, setOtpEmail] = useState('');
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+  const handleInputChange = (field, value) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleSignup = async (e) => {
-    e.preventDefault();
+  const validateForm = () => {
     if (!formData.name || !formData.email || !formData.password) {
-      setMessage({ text: "Please fill in all fields", type: "error" });
-      return;
+      ElMessage.error('Please fill in all required fields');
+      return false;
     }
+    if (formData.password !== formData.password_confirmation) {
+      ElMessage.error('Passwords do not match');
+      return false;
+    }
+    if (formData.password.length < 6) {
+      ElMessage.error('Password must be at least 6 characters');
+      return false;
+    }
+    return true;
+  };
+
+  const handleRegister = async () => {
+    if (!validateForm()) return;
 
     setLoading(true);
-    setMessage({ text: "Registering...", type: "info" });
-
     try {
-      const res = await axios.post(`${API_BASE}/signup`, { ...formData, status: 0 });
-      if (res.data.status === 201) {
-        setMessage({ text: "Signup successful! Waiting for admin approval.", type: "success" });
-        setLoading(false);
-        // Store email and password for pre-filling login
-        localStorage.setItem("signupEmail", formData.email);
-        localStorage.setItem("signupPassword", formData.password);
-        setTimeout(() => {
-          window.location.href = "/login";
-        }, 1500);
+      const response = await register({
+        name: formData.name,
+        email: formData.email,
+        password: formData.password,
+        password_confirmation: formData.password_confirmation
+      });
+
+      if (response.status === 201 || response.status === 200) {
+        ElMessage.success('Registration successful! Please verify your OTP.');
+        setOtpEmail(formData.email);
+        setCurrentStep('otp');
+        localStorage.setItem('otpEmail', formData.email);
       } else {
-        setMessage({ text: "Signup failed", type: "error" });
-        setLoading(false);
+        ElMessage.error(response.message || 'Registration failed');
       }
-    } catch (err) {
-      console.error("Signup error:", err);
-      setMessage({ text: err.response?.data?.message || "Something went wrong.", type: "error" });
+    } catch (error) {
+      console.error('Registration error:', error);
+      ElMessage.error(error.message || 'Registration failed. Please try again.');
+    } finally {
       setLoading(false);
     }
   };
 
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
-      <div className="max-w-md w-full">
-        <div className="bg-white rounded-3xl shadow-2xl p-8">
-          <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">Create Account</h1>
-            <p className="text-gray-600">Fill in your details to sign up</p>
+  const handleOtpVerify = async (otp) => {
+    setLoading(true);
+    try {
+      const response = await verifyOtp(otpEmail, otp);
+      
+      if (response.status === 200) {
+        ElMessage.success('OTP verified successfully! Waiting for admin approval.');
+        setCurrentStep('approved');
+        localStorage.setItem('verifiedEmail', otpEmail);
+      } else {
+        ElMessage.error(response.message || 'OTP verification failed');
+      }
+    } catch (error) {
+      console.error('OTP verification error:', error);
+      ElMessage.error(error.message || 'Invalid OTP. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResendOtp = async () => {
+    setResendingOtp(true);
+    try {
+      const response = await resendOtp(otpEmail);
+      ElMessage.success('OTP sent successfully!');
+    } catch (error) {
+      console.error('Resend OTP error:', error);
+      ElMessage.error(error.message || 'Failed to resend OTP');
+    } finally {
+      setResendingOtp(false);
+    }
+  };
+
+  if (currentStep === 'register') {
+    return (
+      <div className="signup-container">
+        <div className="signup-card">
+          <div className="signup-header">
+            <h1>Create Account</h1>
+            <p>Fill in your details to sign up</p>
           </div>
 
-          {message.text && (
-            <div
-              className={`mb-6 text-center py-3 px-4 rounded-xl font-medium
-                ${message.type === "success" ? "bg-green-100 text-green-700 border border-green-300" : ""}
-                ${message.type === "error" ? "bg-red-100 text-red-700 border border-red-300" : ""}
-                ${message.type === "info" ? "bg-blue-100 text-blue-700 border border-blue-300" : ""}`}
-            >
-              {message.text}
-            </div>
-          )}
-
-          {loading ? (
-            <div className="space-y-6 animate-pulse">
-              <div>
-                <div className="h-4 bg-gray-300 rounded w-1/4 mb-2"></div>
-                <div className="h-12 bg-gray-300 rounded-xl"></div>
-              </div>
-              <div>
-                <div className="h-4 bg-gray-300 rounded w-1/4 mb-2"></div>
-                <div className="h-12 bg-gray-300 rounded-xl"></div>
-              </div>
-              <div>
-                <div className="h-4 bg-gray-300 rounded w-1/4 mb-2"></div>
-                <div className="h-12 bg-gray-300 rounded-xl"></div>
-              </div>
-              <div className="h-12 bg-blue-300 rounded-xl"></div>
-            </div>
-          ) : (
-            <form onSubmit={handleSignup} className="space-y-6">
-            {/* Name */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Name</label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <FaUser className="text-gray-400" />
-                </div>
-                <input
-                  type="text"
-                  name="name"
-                  value={formData.name}
-                  onChange={handleChange}
-                  placeholder="Enter your name"
-                  className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              </div>
+          <div className="signup-form">
+            <div className="form-item">
+              <label>Full Name</label>
+              <input
+                type="text"
+                className="el-input__inner"
+                placeholder="Enter your full name"
+                value={formData.name}
+                onChange={(e) => handleInputChange('name', e.target.value)}
+              />
             </div>
 
-            {/* Email */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <FaEnvelope className="text-gray-400" />
-                </div>
-                <input
-                  type="email"
-                  name="email"
-                  value={formData.email}
-                  onChange={handleChange}
-                  placeholder="Enter your email"
-                  className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              </div>
+            <div className="form-item">
+              <label>Email Address</label>
+              <input
+                type="email"
+                className="el-input__inner"
+                placeholder="Enter your email"
+                value={formData.email}
+                onChange={(e) => handleInputChange('email', e.target.value)}
+              />
             </div>
 
-            {/* Password */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Password</label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <FaLock className="text-gray-400" />
-                </div>
-                <input
-                  type="password"
-                  name="password"
-                  value={formData.password}
-                  onChange={handleChange}
-                  placeholder="Enter your password"
-                  className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              </div>
+            <div className="form-item">
+              <label>Password</label>
+              <input
+                type="password"
+                className="el-input__inner"
+                placeholder="Create a password"
+                value={formData.password}
+                onChange={(e) => handleInputChange('password', e.target.value)}
+              />
+            </div>
+
+            <div className="form-item">
+              <label>Confirm Password</label>
+              <input
+                type="password"
+                className="el-input__inner"
+                placeholder="Confirm your password"
+                value={formData.password_confirmation}
+                onChange={(e) => handleInputChange('password_confirmation', e.target.value)}
+              />
             </div>
 
             <button
-              type="submit"
+              type="button"
+              className="el-button el-button--primary el-button--large submit-btn"
+              onClick={handleRegister}
               disabled={loading}
-              className="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl shadow-lg transition duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50"
             >
-              Sign Up
+              {loading ? 'Creating Account...' : (
+                <>
+                  Create Account <ArrowRight style={{ marginLeft: '8px' }} />
+                </>
+              )}
             </button>
-          </form>
-          )}
+          </div>
 
-          <div className="mt-6 text-center">
-            <p className="text-gray-600">
-              Already have an account?{" "}
-              <a href="/login" className="text-blue-600 hover:text-blue-500 font-semibold">
-                Sign in
-              </a>
-            </p>
+          <div className="signup-footer">
+            <p>Already have an account? <a href="/login">Sign in</a></p>
           </div>
         </div>
-      </div>
-    </div>
-  );
-}
 
-export default Signup;
+        <style>{`
+          .signup-container {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+          }
+          .signup-card {
+            background: white;
+            border-radius: 16px;
+            padding: 40px;
+            width: 100%;
+            max-width: 420px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+          }
+          .signup-header {
+            text-align: center;
+            margin-bottom: 32px;
+          }
+          .signup-header h1 {
+            font-size: 28px;
+            font-weight: 700;
+            color: #1a1a2e;
+            margin-bottom: 8px;
+          }
+          .signup-header p {
+            color: #6b7280;
+            font-size: 14px;
+          }
+          .form-item {
+            margin-bottom: 20px;
+          }
+          .form-item label {
+            display: block;
+            font-size: 14px;
+            font-weight: 500;
+            color: #374151;
+            margin-bottom: 8px;
+          }
+          .el-input__inner {
+            width: 100%;
+            padding: 12px 16px;
+            border: 1px solid #dcdfe6;
+            border-radius: 8px;
+            font-size: 14px;
+            outline: none;
+            transition: border-color 0.2s;
+          }
+          .el-input__inner:focus {
+            border-color: #667eea;
+          }
+          .submit-btn {
+            width: 100%;
+            height: 48px;
+            font-size: 16px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+          }
+          .submit-btn:hover {
+            background: linear-gradient(135deg, #5a6fd6 0%, #6a4190 100%);
+          }
+          .signup-footer {
+            text-align: center;
+            margin-top: 24px;
+            padding-top: 24px;
+            border-top: 1px solid #e5e7eb;
+          }
+          .signup-footer p {
+            color: #6b7280;
+            font-size: 14px;
+          }
+          .signup-footer a {
+            color: #667eea;
+            font-weight: 600;
+            text-decoration: none;
+          }
+          .signup-footer a:hover {
+            text-decoration: underline;
+          }
+        `}</style>
+      </div>
+    );
+  }
+
+  if (currentStep === 'otp') {
+    return (
+      <div className="otp-container">
+        <div className="otp-card">
+          <div className="otp-header">
+            <h1>Verify Your Email</h1>
+            <p>Enter the 6-digit code sent to <strong>{otpEmail}</strong></p>
+          </div>
+
+          <OtpInput onComplete={handleOtpVerify} loading={loading} />
+
+          <div className="otp-actions">
+            <button
+              type="button"
+              className="el-button el-button--text"
+              onClick={handleResendOtp}
+              disabled={resendingOtp}
+            >
+              <Timer style={{ marginRight: '8px' }} />
+              {resendingOtp ? 'Sending...' : 'Resend OTP'}
+            </button>
+          </div>
+
+          <div className="otp-footer">
+            <p>Wrong email? <a href="/signup">Go back</a></p>
+          </div>
+        </div>
+
+        <style>{`
+          .otp-container {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+          }
+          .otp-card {
+            background: white;
+            border-radius: 16px;
+            padding: 40px;
+            width: 100%;
+            max-width: 420px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+          }
+          .otp-header {
+            text-align: center;
+            margin-bottom: 32px;
+          }
+          .otp-header h1 {
+            font-size: 24px;
+            font-weight: 700;
+            color: #1a1a2e;
+            margin-bottom: 8px;
+          }
+          .otp-header p {
+            color: #6b7280;
+            font-size: 14px;
+          }
+          .otp-actions {
+            display: flex;
+            justify-content: center;
+            margin-top: 24px;
+          }
+          .otp-footer {
+            text-align: center;
+            margin-top: 24px;
+            padding-top: 24px;
+            border-top: 1px solid #e5e7eb;
+          }
+          .otp-footer p {
+            color: #6b7280;
+            font-size: 14px;
+          }
+          .otp-footer a {
+            color: #667eea;
+            font-weight: 600;
+            text-decoration: none;
+          }
+        `}</style>
+      </div>
+    );
+  }
+
+  return <ApprovalStatus email={otpEmail} />;
+};
+
+export default SignupPage;
