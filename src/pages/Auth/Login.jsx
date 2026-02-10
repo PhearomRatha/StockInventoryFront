@@ -1,15 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { ElMessage } from 'element-plus';
-import {
-  User,
-  Lock,
-  Eye,
-  EyeOff
-} from '@element-plus/icons-vue';
+import { UserIcon, LockClosedIcon, EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
 import api from '../../plugin/axios';
 import { useAuth } from '../../context/AuthContext';
+import { CookieUtils } from '../../api/authApi';
 
-const API_BASE = `${import.meta.env.VITE_API_URL}/api`;
+const API_BASE = `${import.meta.env.VITE_API_URL}/api/auth`;
 
 const Login = () => {
   const { login } = useAuth();
@@ -22,7 +18,6 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    // Clear stored signup values after use
     if (localStorage.getItem('signupEmail')) {
       localStorage.removeItem('signupEmail');
       localStorage.removeItem('signupPassword');
@@ -40,7 +35,6 @@ const Login = () => {
     setLoading(true);
 
     try {
-      // Get CSRF cookie for Sanctum
       await api.get('/sanctum/csrf-cookie');
       
       const res = await api.post(`${API_BASE}/login`, formData);
@@ -49,7 +43,6 @@ const Login = () => {
         const user = res.data.data.user;
         const token = res.data.data.token;
 
-        // Check user status
         if (user.status === 0) {
           setMessage({
             text: "Your account is not approved yet. Please wait for admin approval.",
@@ -77,8 +70,15 @@ const Login = () => {
           return;
         }
 
-        // Store token and login
+        // Store token in cookies (primary) and localStorage (fallback)
+        CookieUtils.set('auth_token', token, 7);
+        CookieUtils.set('auth_user', JSON.stringify(user), 7);
         localStorage.setItem('token', token);
+        localStorage.setItem('user', JSON.stringify(user));
+        
+        // Set Authorization header
+        api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+        
         await login(user, token);
 
         ElMessage.success('Login successful! Redirecting...');
@@ -138,7 +138,7 @@ const Login = () => {
             <div className="form-item">
               <label>Email Address</label>
               <div className="input-wrapper">
-                <span className="input-icon"><User /></span>
+                <span className="input-icon"><UserIcon /></span>
                 <input
                   type="email"
                   name="email"
@@ -153,7 +153,7 @@ const Login = () => {
             <div className="form-item">
               <label>Password</label>
               <div className="input-wrapper">
-                <span className="input-icon"><Lock /></span>
+                <span className="input-icon"><LockClosedIcon /></span>
                 <input
                   type={showPassword ? "text" : "password"}
                   name="password"
@@ -167,7 +167,7 @@ const Login = () => {
                   className="toggle-password"
                   onClick={() => setShowPassword(!showPassword)}
                 >
-                  {showPassword ? <EyeOff /> : <Eye />}
+                  {showPassword ? <EyeSlashIcon /> : <EyeIcon />}
                 </button>
               </div>
             </div>
@@ -225,49 +225,30 @@ const Login = () => {
         .message-box {
           display: flex;
           align-items: center;
-          gap: 12px;
+          gap: 10px;
           padding: 12px 16px;
           border-radius: 8px;
-          margin-bottom: 24px;
+          margin-bottom: 20px;
           font-size: 14px;
         }
         .message-box.success {
-          background: #d1fae5;
-          color: #065f46;
+          background: #dcfce7;
+          color: #166534;
+          border: 1px solid #bbf7d0;
         }
         .message-box.error {
-          background: #fee2e2;
-          color: #991b1b;
+          background: #fef2f2;
+          color: #dc2626;
+          border: 1px solid #fecaca;
         }
         .message-box.warning {
-          background: #fef3c7;
-          color: #92400e;
+          background: #fefce8;
+          color: #ca8a04;
+          border: 1px solid #fef08a;
         }
         .message-icon {
           font-size: 16px;
-        }
-        .loading-skeleton {
-          display: flex;
-          flex-direction: column;
-          gap: 20px;
-        }
-        .skeleton-input {
-          height: 48px;
-          background: linear-gradient(90deg, #f3f4f6 25%, #e5e7eb 50%, #f3f4f6 75%);
-          background-size: 200% 100%;
-          animation: shimmer 1.5s infinite;
-          border-radius: 8px;
-        }
-        .skeleton-btn {
-          height: 48px;
-          background: linear-gradient(90deg, #667eea 25%, #764ba2 50%, #667eea 75%);
-          background-size: 200% 100%;
-          animation: shimmer 1.5s infinite;
-          border-radius: 8px;
-        }
-        @keyframes shimmer {
-          0% { background-position: 200% 0; }
-          100% { background-position: -200% 0; }
+          font-weight: bold;
         }
         .form-item {
           margin-bottom: 20px;
@@ -286,14 +267,14 @@ const Login = () => {
         }
         .input-icon {
           position: absolute;
-          left: 16px;
+          left: 14px;
           color: #9ca3af;
           display: flex;
           align-items: center;
         }
         .input-wrapper input {
           width: 100%;
-          padding: 12px 16px 12px 44px;
+          padding: 12px 16px 12px 40px;
           border: 1px solid #dcdfe6;
           border-radius: 8px;
           font-size: 14px;
@@ -306,20 +287,21 @@ const Login = () => {
         }
         .toggle-password {
           position: absolute;
-          right: 16px;
+          right: 12px;
           background: none;
           border: none;
           color: #9ca3af;
           cursor: pointer;
           display: flex;
           align-items: center;
+          padding: 4px;
         }
         .toggle-password:hover {
           color: #6b7280;
         }
         .forgot-password {
           text-align: right;
-          margin-bottom: 24px;
+          margin-bottom: 20px;
         }
         .forgot-password a {
           color: #667eea;
@@ -331,24 +313,23 @@ const Login = () => {
         }
         .login-btn {
           width: 100%;
-          padding: 14px;
-          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-          color: white;
-          border: none;
-          border-radius: 8px;
+          height: 48px;
           font-size: 16px;
           font-weight: 600;
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          border: none;
+          border-radius: 8px;
+          color: white;
           cursor: pointer;
           transition: all 0.2s;
         }
-        .login-btn:hover {
+        .login-btn:hover:not(:disabled) {
           transform: translateY(-2px);
           box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
         }
         .login-btn:disabled {
-          opacity: 0.7;
+          opacity: 0.6;
           cursor: not-allowed;
-          transform: none;
         }
         .login-footer {
           text-align: center;
@@ -367,6 +348,24 @@ const Login = () => {
         }
         .login-footer a:hover {
           text-decoration: underline;
+        }
+        .loading-skeleton {
+          animation: pulse 1.5s infinite;
+        }
+        .skeleton-input {
+          height: 48px;
+          background: #e5e7eb;
+          border-radius: 8px;
+          margin-bottom: 20px;
+        }
+        .skeleton-btn {
+          height: 48px;
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          border-radius: 8px;
+        }
+        @keyframes pulse {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.7; }
         }
       `}</style>
     </div>

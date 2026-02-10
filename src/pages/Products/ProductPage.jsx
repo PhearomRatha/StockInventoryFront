@@ -7,11 +7,11 @@ import {
   BuildingStorefrontIcon,
   PhotoIcon,
   XMarkIcon,
+  CheckCircleIcon,
 } from "@heroicons/react/24/outline";
 
 // Reusable UI components
 import {
-  SkeletonPage,
   PageHeader,
   TotalProductsCard,
   TotalStockCard,
@@ -25,10 +25,45 @@ import {
   ModalFooter,
   ActionButtons,
   AddButton,
-} from "../components/UI";
+} from "../../components/UI";
 
-// ✅ Base API
+// Skeleton loader
+import { SkeletonPage } from "../../components/Skeleton";
+
 const API_BASE = `${import.meta.env.VITE_API_URL}/api`;
+
+// Simplified validation
+const validateProduct = (formData) => {
+  const errors = {};
+
+  if (!formData.name?.trim()) {
+    errors.name = "Product name is required";
+  } else if (formData.name.trim().length < 2) {
+    errors.name = "Product name must be at least 2 characters";
+  }
+
+  if (!formData.category_id) {
+    errors.category_id = "Please select a category";
+  }
+
+  if (!formData.supplier_id) {
+    errors.supplier_id = "Please select a supplier";
+  }
+
+  if (!formData.cost && formData.cost !== "0") {
+    errors.cost = "Cost is required";
+  } else if (parseFloat(formData.cost) < 0) {
+    errors.cost = "Cost cannot be negative";
+  }
+
+  if (!formData.stock_quantity && formData.stock_quantity !== "0") {
+    errors.stock_quantity = "Stock quantity is required";
+  } else if (parseInt(formData.stock_quantity) < 0) {
+    errors.stock_quantity = "Stock cannot be negative";
+  }
+
+  return errors;
+};
 
 function ProductPage() {
   const [products, setProducts] = useState([]);
@@ -41,8 +76,17 @@ function ProductPage() {
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [isEdit, setIsEdit] = useState(false);
-  const [currentProduct, setCurrentProduct] = useState({});
+  const [formData, setFormData] = useState({
+    name: "",
+    category_id: "",
+    supplier_id: "",
+    cost: "",
+    stock_quantity: "",
+    image: null,
+  });
   const [imagePreview, setImagePreview] = useState(null);
+  const [errors, setErrors] = useState({});
+  const [touched, setTouched] = useState({});
   const [submitting, setSubmitting] = useState(false);
 
   // Pagination
@@ -117,38 +161,130 @@ function ProductPage() {
 
   const getProductStatus = (product) => {
     if (product.stock_quantity === 0) return "out of stock";
-    if (product.stock_quantity <= (product.reorder_level || 10))
-      return "low stock";
+    if (product.stock_quantity <= 10) return "low stock";
     return "in stock";
   };
 
   const openAddModal = () => {
     setIsEdit(false);
-    setCurrentProduct({});
+    setFormData({
+      name: "",
+      category_id: "",
+      supplier_id: "",
+      cost: "",
+      stock_quantity: "",
+      image: null,
+    });
     setImagePreview(null);
+    setErrors({});
+    setTouched({});
     setShowModal(true);
   };
 
   const openEditModal = (product) => {
     setIsEdit(true);
-    setCurrentProduct(product);
+    setFormData({
+      id: product.id,
+      name: product.name,
+      category_id: product.category_id || "",
+      supplier_id: product.supplier_id || "",
+      cost: product.cost || "",
+      stock_quantity: product.stock_quantity || "",
+      image: product.image || null,
+    });
     setImagePreview(product.image || null);
+    setErrors({});
+    setTouched({});
     setShowModal(true);
   };
 
   const handleImageChange = (e) => {
     const file = e.target.files[0];
     if (file) {
-      setCurrentProduct({ ...currentProduct, image: file });
+      setFormData({ ...formData, image: file });
       setImagePreview(URL.createObjectURL(file));
     }
   };
 
+  const removeImage = () => {
+    setFormData({ ...formData, image: null });
+    setImagePreview(null);
+  };
+
+  const handleFieldChange = (field, value) => {
+    setFormData({ ...formData, [field]: value });
+    setTouched({ ...touched, [field]: true });
+
+    // Validate single field
+    const fieldErrors = validateProduct({ ...formData, [field]: value });
+    setErrors({ ...errors, [field]: fieldErrors[field] });
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+
+    // Mark all fields as touched
+    const allTouched = {};
+    Object.keys(formData).forEach((key) => {
+      if (key !== "image") allTouched[key] = true;
+    });
+    setTouched(allTouched);
+
+    // Validate all fields
+    const validationErrors = validateProduct(formData);
+    if (Object.keys(validationErrors).length > 0) {
+      setErrors(validationErrors);
+      return;
+    }
+
+    setSubmitting(true);
+    const token = localStorage.getItem("token");
+    const payload = new FormData();
+
+    // Only append required fields
+    payload.append("name", formData.name);
+    payload.append("category_id", formData.category_id);
+    payload.append("supplier_id", formData.supplier_id);
+    payload.append("cost", formData.cost);
+    payload.append("stock_quantity", formData.stock_quantity);
+
+    if (formData.image) {
+      payload.append("image", formData.image);
+    }
+
+    const url = isEdit
+      ? `${API_BASE}/products/${formData.id}`
+      : `${API_BASE}/products`;
+
+    const method = isEdit ? "patch" : "post";
+
+    axios[method](url, payload, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "multipart/form-data",
+      },
+    })
+      .then(() => {
+        fetchProducts();
+        setShowModal(false);
+      })
+      .catch((error) => {
+        console.error(error);
+        if (error.response?.data?.message) {
+          setErrors({ submit: error.response.data.message });
+        }
+      })
+      .finally(() => {
+        setSubmitting(false);
+      });
+  };
+
+  // Filtered products
   const filteredProducts = products
     .filter(
       (p) =>
         p.name.toLowerCase().includes(search.toLowerCase()) ||
-        p.sku.toLowerCase().includes(search.toLowerCase())
+        p.sku?.toLowerCase().includes(search.toLowerCase())
     )
     .filter(
       (p) => selectedCategory === "All" || p.category === selectedCategory
@@ -189,41 +325,6 @@ function ProductPage() {
     }
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    setSubmitting(true);
-    const token = localStorage.getItem("token");
-    const formData = new FormData();
-
-    for (let key in currentProduct) {
-      if (currentProduct[key] !== null && currentProduct[key] !== undefined) {
-        formData.append(key, currentProduct[key]);
-      }
-    }
-
-    const url = isEdit
-      ? `${API_BASE}/products/${currentProduct.id}`
-      : `${API_BASE}/products`;
-
-    const method = isEdit ? "patch" : "post";
-
-    axios[method](url, formData, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "multipart/form-data",
-      },
-    })
-      .then(() => {
-        fetchProducts();
-        setShowModal(false);
-        setSubmitting(false);
-      })
-      .catch((error) => {
-        console.error(error);
-        setSubmitting(false);
-      });
-  };
-
   // Statistics
   const totalProducts = products.length;
   const totalStock = products.reduce(
@@ -231,7 +332,7 @@ function ProductPage() {
     0
   );
   const lowStockProducts = products.filter(
-    (p) => p.stock_quantity <= (p.reorder_level || 10)
+    (p) => p.stock_quantity <= 10
   ).length;
   const averagePrice =
     products.length > 0
@@ -257,13 +358,13 @@ function ProductPage() {
               alt={p.name}
               className="w-14 h-14 object-cover rounded-lg border border-gray-200"
             />
-            {p.stock_quantity <= (p.reorder_level || 10) && (
+            {p.stock_quantity <= 10 && (
               <div className="absolute -top-1 -right-1 w-5 h-5 bg-rose-500 rounded-full border-2 border-white"></div>
             )}
           </div>
           <div>
             <p className="font-medium text-gray-900">{p.name}</p>
-            <p className="text-sm text-gray-500 mt-1">{p.sku}</p>
+            <p className="text-sm text-gray-500 mt-1">{p.sku || "N/A"}</p>
           </div>
         </div>
       ),
@@ -289,29 +390,24 @@ function ProductPage() {
       ),
     },
     {
+      key: "cost",
+      label: "Cost",
+      render: (p) => (
+        <div className="font-medium text-gray-900">${p.cost || "0"}</div>
+      ),
+    },
+    {
       key: "price",
       label: "Price",
       render: (p) => (
-        <div>
-          <div className="font-bold text-gray-900">${p.price}</div>
-          {p.cost && (
-            <div className="text-sm text-gray-500">Cost: ${p.cost}</div>
-          )}
-        </div>
+        <div className="font-medium text-gray-900">${p.price || "0"}</div>
       ),
     },
     {
       key: "stock",
       label: "Stock",
       render: (p) => (
-        <div>
-          <div className="font-semibold text-gray-900">{p.stock_quantity}</div>
-          {p.reorder_level && (
-            <div className="text-sm text-gray-500">
-              Reorder at {p.reorder_level}
-            </div>
-          )}
-        </div>
+        <div className="font-semibold text-gray-900">{p.stock_quantity}</div>
       ),
     },
     {
@@ -345,7 +441,7 @@ function ProductPage() {
     },
   ];
 
-  // 🔹 Loading State using reusable Skeleton component
+  // Loading State
   if (loading) {
     return (
       <SkeletonPage
@@ -362,7 +458,7 @@ function ProductPage() {
 
   return (
     <div className="p-4 md:p-6 lg:p-8 bg-gradient-to-br from-gray-50 to-slate-100 min-h-screen">
-      {/* Header using reusable PageHeader */}
+      {/* Header */}
       <PageHeader
         title="Products"
         subtitle="Manage your inventory, track stock levels, and analyze product performance"
@@ -372,7 +468,7 @@ function ProductPage() {
         }
       />
 
-      {/* Stats Cards using reusable StatsCard components */}
+      {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
         <TotalProductsCard value={totalProducts} />
         <TotalStockCard value={totalStock} />
@@ -447,7 +543,7 @@ function ProductPage() {
         </div>
       </div>
 
-      {/* Table using reusable DataTable */}
+      {/* Table */}
       <DataTable
         columns={tableColumns}
         data={paginatedProducts}
@@ -463,7 +559,7 @@ function ProductPage() {
         minWidth="1200px"
       />
 
-      {/* Pagination using reusable Pagination */}
+      {/* Pagination */}
       <Pagination
         currentPage={currentPage}
         totalPages={totalPages}
@@ -472,13 +568,13 @@ function ProductPage() {
         totalItems={filteredProducts.length}
       />
 
-      {/* Modal using reusable Modal */}
+      {/* Simplified Modal Form */}
       {showModal && (
         <Modal
           isOpen={showModal}
           onClose={() => setShowModal(false)}
           title={isEdit ? "Edit Product" : "Add New Product"}
-          size="xl"
+          size="lg"
           footer={
             <ModalFooter
               onCancel={() => setShowModal(false)}
@@ -489,248 +585,202 @@ function ProductPage() {
             />
           }
         >
-          <form onSubmit={handleSubmit}>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Left Column */}
-              <div className="space-y-5">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Product Name *
-                  </label>
-                  <input
-                    type="text"
-                    value={currentProduct.name || ""}
-                    onChange={(e) =>
-                      setCurrentProduct({
-                        ...currentProduct,
-                        name: e.target.value,
-                      })
-                    }
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition"
-                    placeholder="Enter product name"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    SKU *
-                  </label>
-                  <input
-                    type="text"
-                    value={currentProduct.sku || ""}
-                    onChange={(e) =>
-                      setCurrentProduct({
-                        ...currentProduct,
-                        sku: e.target.value,
-                      })
-                    }
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition"
-                    placeholder="Enter SKU"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Price *
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={currentProduct.price || ""}
-                    onChange={(e) =>
-                      setCurrentProduct({
-                        ...currentProduct,
-                        price: e.target.value,
-                      })
-                    }
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition"
-                    placeholder="0.00"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Cost
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={currentProduct.cost || ""}
-                    onChange={(e) =>
-                      setCurrentProduct({
-                        ...currentProduct,
-                        cost: e.target.value,
-                      })
-                    }
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition"
-                    placeholder="0.00"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Category *
-                  </label>
-                  <select
-                    value={currentProduct.category_id || ""}
-                    onChange={(e) =>
-                      setCurrentProduct({
-                        ...currentProduct,
-                        category_id: e.target.value,
-                      })
-                    }
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition appearance-none bg-white"
-                    required
-                  >
-                    <option value="">Select a category</option>
-                    {categories.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Supplier *
-                  </label>
-                  <select
-                    value={currentProduct.supplier_id || ""}
-                    onChange={(e) =>
-                      setCurrentProduct({
-                        ...currentProduct,
-                        supplier_id: e.target.value,
-                      })
-                    }
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition appearance-none bg-white"
-                    required
-                  >
-                    <option value="">Select a supplier</option>
-                    {suppliers.map((s) => (
-                      <option key={s.id} value={s.id}>
-                        {s.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              {/* Right Column */}
-              <div className="space-y-5">
-                {/* Image Upload */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Product Image
-                  </label>
-                  <div className="border-2 border-dashed border-gray-300 rounded-2xl p-6 text-center hover:border-indigo-500 transition">
-                    {imagePreview ? (
-                      <div className="relative">
-                        <img
-                          src={imagePreview}
-                          alt="Preview"
-                          className="w-40 h-40 object-cover rounded-lg mx-auto"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setImagePreview(null);
-                            setCurrentProduct({
-                              ...currentProduct,
-                              image: null,
-                            });
-                          }}
-                          className="absolute top-2 right-2 p-1 bg-white rounded-full shadow hover:bg-gray-100"
-                        >
-                          <XMarkIcon className="w-4 h-4" />
-                        </button>
-                      </div>
-                    ) : (
-                      <div className="py-8">
-                        <PhotoIcon className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                        <p className="text-gray-600 mb-2">
-                          Drag & drop or click to upload
-                        </p>
-                        <p className="text-sm text-gray-500 mb-4">
-                          PNG, JPG up to 5MB
-                        </p>
-                        <label className="inline-block px-6 py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition cursor-pointer">
-                          Choose File
-                          <input
-                            type="file"
-                            accept="image/jpeg,image/png,image/jpg,image/gif"
-                            onChange={handleImageChange}
-                            className="hidden"
-                          />
-                        </label>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Initial Stock
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    value={currentProduct.stock_quantity || ""}
-                    onChange={(e) =>
-                      setCurrentProduct({
-                        ...currentProduct,
-                        stock_quantity: e.target.value,
-                      })
-                    }
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition"
-                    placeholder="0"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Reorder Level *
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    value={currentProduct.reorder_level || ""}
-                    onChange={(e) =>
-                      setCurrentProduct({
-                        ...currentProduct,
-                        reorder_level: e.target.value,
-                      })
-                    }
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition"
-                    placeholder="10"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Description */}
-            <div className="mt-6">
+          <form onSubmit={handleSubmit} className="space-y-5">
+            {/* Product Name */}
+            <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Description
+                Product Name *
               </label>
-              <textarea
-                value={currentProduct.description || ""}
-                onChange={(e) =>
-                  setCurrentProduct({
-                    ...currentProduct,
-                    description: e.target.value,
-                  })
-                }
-                rows="3"
-                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition"
-                placeholder="Enter product description..."
+              <input
+                type="text"
+                value={formData.name}
+                onChange={(e) => handleFieldChange("name", e.target.value)}
+                onBlur={() => setTouched({ ...touched, name: true })}
+                className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:border-transparent transition ${
+                  errors.name && touched.name
+                    ? "border-red-300 focus:ring-red-200"
+                    : "border-gray-300 focus:ring-indigo-500"
+                }`}
+                placeholder="Enter product name"
               />
+              {errors.name && touched.name && (
+                <p className="mt-1 text-sm text-red-600">{errors.name}</p>
+              )}
             </div>
+
+            {/* Category & Supplier Row */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Category *
+                </label>
+                <select
+                  value={formData.category_id}
+                  onChange={(e) =>
+                    handleFieldChange("category_id", e.target.value)
+                  }
+                  onBlur={() => setTouched({ ...touched, category_id: true })}
+                  className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:border-transparent transition appearance-none bg-white ${
+                    errors.category_id && touched.category_id
+                      ? "border-red-300 focus:ring-red-200"
+                      : "border-gray-300 focus:ring-indigo-500"
+                  }`}
+                >
+                  <option value="">Select Category</option>
+                  {categories.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
+                {errors.category_id && touched.category_id && (
+                  <p className="mt-1 text-sm text-red-600">
+                    {errors.category_id}
+                  </p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Supplier *
+                </label>
+                <select
+                  value={formData.supplier_id}
+                  onChange={(e) =>
+                    handleFieldChange("supplier_id", e.target.value)
+                  }
+                  onBlur={() => setTouched({ ...touched, supplier_id: true })}
+                  className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:border-transparent transition appearance-none bg-white ${
+                    errors.supplier_id && touched.supplier_id
+                      ? "border-red-300 focus:ring-red-200"
+                      : "border-gray-300 focus:ring-indigo-500"
+                  }`}
+                >
+                  <option value="">Select Supplier</option>
+                  {suppliers.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name}
+                    </option>
+                  ))}
+                </select>
+                {errors.supplier_id && touched.supplier_id && (
+                  <p className="mt-1 text-sm text-red-600">
+                    {errors.supplier_id}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {/* Cost & Stock Row */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Cost *
+                </label>
+                <div className="relative">
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500">
+                    $
+                  </span>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={formData.cost}
+                    onChange={(e) => handleFieldChange("cost", e.target.value)}
+                    onBlur={() => setTouched({ ...touched, cost: true })}
+                    className={`w-full pl-8 pr-4 py-3 border rounded-xl focus:ring-2 focus:border-transparent transition ${
+                      errors.cost && touched.cost
+                        ? "border-red-300 focus:ring-red-200"
+                        : "border-gray-300 focus:ring-indigo-500"
+                    }`}
+                    placeholder="0.00"
+                  />
+                </div>
+                {errors.cost && touched.cost && (
+                  <p className="mt-1 text-sm text-red-600">{errors.cost}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Stock Quantity *
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  value={formData.stock_quantity}
+                  onChange={(e) =>
+                    handleFieldChange("stock_quantity", e.target.value)
+                  }
+                  onBlur={() =>
+                    setTouched({ ...touched, stock_quantity: true })
+                  }
+                  className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:border-transparent transition ${
+                    errors.stock_quantity && touched.stock_quantity
+                      ? "border-red-300 focus:ring-red-200"
+                      : "border-gray-300 focus:ring-indigo-500"
+                  }`}
+                  placeholder="0"
+                />
+                {errors.stock_quantity && touched.stock_quantity && (
+                  <p className="mt-1 text-sm text-red-600">
+                    {errors.stock_quantity}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {/* Image Upload */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Product Image
+              </label>
+              <div className="border-2 border-dashed border-gray-300 rounded-xl p-6 text-center hover:border-indigo-500 transition">
+                {imagePreview ? (
+                  <div className="relative inline-block">
+                    <img
+                      src={imagePreview}
+                      alt="Preview"
+                      className="w-32 h-32 object-cover rounded-lg mx-auto"
+                    />
+                    <button
+                      type="button"
+                      onClick={removeImage}
+                      className="absolute -top-2 -right-2 p-1 bg-white rounded-full shadow hover:bg-gray-100"
+                    >
+                      <XMarkIcon className="w-4 h-4" />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="py-6">
+                    <PhotoIcon className="w-10 h-10 text-gray-400 mx-auto mb-3" />
+                    <p className="text-gray-600 mb-2">Click to upload image</p>
+                    <p className="text-sm text-gray-500">PNG, JPG up to 5MB</p>
+                    <label className="inline-block mt-3 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition cursor-pointer">
+                      Choose File
+                      <input
+                        type="file"
+                        accept="image/jpeg,image/png,image/jpg"
+                        onChange={handleImageChange}
+                        className="hidden"
+                      />
+                    </label>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Backend Error */}
+            {errors.submit && (
+              <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+                <p className="text-sm text-red-600">{errors.submit}</p>
+              </div>
+            )}
+
+            {/* Note */}
+            <p className="text-xs text-gray-500">
+              * SKU, barcode, price, and reorder level will be auto-generated.
+            </p>
           </form>
         </Modal>
       )}

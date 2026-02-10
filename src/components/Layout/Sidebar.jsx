@@ -23,7 +23,7 @@ function Sidebar({ onClose }) {
   const location = useLocation();
   const userData = localStorage.getItem("user");
   const user = userData && userData !== "undefined" ? JSON.parse(userData) : null;
-  const role = user?.role?.name; // "Admin", "Manager", "Staff"
+  const role = user?.role; // "Admin", "Manager", "Staff"
   const [lowStockAlert, setLowStockAlert] = useState(0);
 
   useEffect(() => {

@@ -1,13 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ElMessage } from 'element-plus';
-import {
-  User,
-  Lock,
-  Message,
-  ArrowRight,
-  Timer
-} from '@element-plus/icons-vue';
-import { register, verifyOtp, resendOtp } from '../../api/authApi';
+import { FiUser, FiLock, FiMail, FiArrowRight, FiClock, FiEye, FiEyeOff, FiCheck, FiX } from 'react-icons/fi';
+import { register, verifyOtp, resendOtp, CookieUtils } from '../../api/authApi';
 import OtpInput from './components/OtpInput';
 import ApprovalStatus from './components/ApprovalStatus';
 
@@ -22,9 +16,50 @@ const SignupPage = () => {
   const [loading, setLoading] = useState(false);
   const [resendingOtp, setResendingOtp] = useState(false);
   const [otpEmail, setOtpEmail] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [emailError, setEmailError] = useState('');
+  const [passwordStrength, setPasswordStrength] = useState({ score: 0, label: '', color: '' });
+
+  useEffect(() => {
+    // Check for stored email on mount
+    const storedEmail = localStorage.getItem('otpEmail');
+    if (storedEmail) {
+      setOtpEmail(storedEmail);
+      setCurrentStep('otp');
+    }
+  }, []);
+
+  const validateEmail = (email) => {
+    const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return re.test(email);
+  };
+
+  const checkPasswordStrength = (password) => {
+    let score = 0;
+    if (password.length >= 8) score++;
+    if (/[A-Z]/.test(password)) score++;
+    if (/[0-9]/.test(password)) score++;
+    if (/[^A-Za-z0-9]/.test(password)) score++;
+    
+    const strengthData = {
+      0: { label: 'Very Weak', color: '#ef4444' },
+      1: { label: 'Weak', color: '#f97316' },
+      2: { label: 'Fair', color: '#eab308' },
+      3: { label: 'Good', color: '#22c55e' },
+      4: { label: 'Strong', color: '#10b981' }
+    };
+    return { score, ...strengthData[score] };
+  };
 
   const handleInputChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
+    
+    if (field === 'email') {
+      setEmailError(validateEmail(value) ? '' : 'Please enter a valid email address');
+    }
+    if (field === 'password') {
+      setPasswordStrength(checkPasswordStrength(value));
+    }
   };
 
   const validateForm = () => {
@@ -55,11 +90,14 @@ const SignupPage = () => {
         password_confirmation: formData.password_confirmation
       });
 
-      if (response.status === 201 || response.status === 200) {
+      if (response.success) {
         ElMessage.success('Registration successful! Please verify your OTP.');
         setOtpEmail(formData.email);
         setCurrentStep('otp');
+        
+        // Store email in cookies and localStorage
         localStorage.setItem('otpEmail', formData.email);
+        CookieUtils.set('otpEmail', formData.email, 1);
       } else {
         ElMessage.error(response.message || 'Registration failed');
       }
@@ -76,10 +114,11 @@ const SignupPage = () => {
     try {
       const response = await verifyOtp(otpEmail, otp);
       
-      if (response.status === 200) {
+      if (response.success) {
         ElMessage.success('OTP verified successfully! Waiting for admin approval.');
         setCurrentStep('approved');
         localStorage.setItem('verifiedEmail', otpEmail);
+        CookieUtils.set('verifiedEmail', otpEmail, 1);
       } else {
         ElMessage.error(response.message || 'OTP verification failed');
       }
@@ -116,57 +155,104 @@ const SignupPage = () => {
           <div className="signup-form">
             <div className="form-item">
               <label>Full Name</label>
-              <input
-                type="text"
-                className="el-input__inner"
-                placeholder="Enter your full name"
-                value={formData.name}
-                onChange={(e) => handleInputChange('name', e.target.value)}
-              />
+              <div className="input-wrapper">
+                <span className="input-icon"><FiUser /></span>
+                <input
+                  type="text"
+                  className="el-input__inner"
+                  placeholder="Enter your full name"
+                  value={formData.name}
+                  onChange={(e) => handleInputChange('name', e.target.value)}
+                />
+              </div>
             </div>
 
             <div className="form-item">
               <label>Email Address</label>
-              <input
-                type="email"
-                className="el-input__inner"
-                placeholder="Enter your email"
-                value={formData.email}
-                onChange={(e) => handleInputChange('email', e.target.value)}
-              />
+              <div className="input-wrapper">
+                <span className="input-icon"><FiMail /></span>
+                <input
+                  type="email"
+                  className={`el-input__inner ${emailError ? 'input-error' : ''}`}
+                  placeholder="Enter your email"
+                  value={formData.email}
+                  onChange={(e) => handleInputChange('email', e.target.value)}
+                />
+              </div>
+              {emailError && <span className="field-error">{emailError}</span>}
             </div>
 
             <div className="form-item">
               <label>Password</label>
-              <input
-                type="password"
-                className="el-input__inner"
-                placeholder="Create a password"
-                value={formData.password}
-                onChange={(e) => handleInputChange('password', e.target.value)}
-              />
+              <div className="input-wrapper">
+                <span className="input-icon"><FiLock /></span>
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  className="el-input__inner"
+                  placeholder="Create a password"
+                  value={formData.password}
+                  onChange={(e) => handleInputChange('password', e.target.value)}
+                />
+                <button
+                  type="button"
+                  className="toggle-password"
+                  onClick={() => setShowPassword(!showPassword)}
+                >
+                  {showPassword ? <FiEyeOff /> : <FiEye />}
+                </button>
+              </div>
+              {formData.password && (
+                <div className="password-strength">
+                  <div className="strength-bar">
+                    <div 
+                      className="strength-fill" 
+                      style={{ 
+                        width: `${(passwordStrength.score + 1) * 20}%`,
+                        backgroundColor: passwordStrength.color 
+                      }}
+                    ></div>
+                  </div>
+                  <span className="strength-text" style={{ color: passwordStrength.color }}>
+                    {passwordStrength.label}
+                  </span>
+                </div>
+              )}
             </div>
 
             <div className="form-item">
               <label>Confirm Password</label>
-              <input
-                type="password"
-                className="el-input__inner"
-                placeholder="Confirm your password"
-                value={formData.password_confirmation}
-                onChange={(e) => handleInputChange('password_confirmation', e.target.value)}
-              />
+              <div className="input-wrapper">
+                <span className="input-icon"><FiLock /></span>
+                <input
+                  type="password"
+                  className={`el-input__inner ${formData.password_confirmation && formData.password !== formData.password_confirmation ? 'input-error' : ''}`}
+                  placeholder="Confirm your password"
+                  value={formData.password_confirmation}
+                  onChange={(e) => handleInputChange('password_confirmation', e.target.value)}
+                />
+                {formData.password_confirmation && (
+                  <span className="password-match">
+                    {formData.password === formData.password_confirmation ? 
+                      <FiCheck style={{ color: '#10b981' }} /> : 
+                      <FiX style={{ color: '#ef4444' }} />
+                    }
+                  </span>
+                )}
+              </div>
+              {formData.password_confirmation && formData.password !== formData.password_confirmation && (
+                <span className="field-error">Passwords do not match</span>
+              )}
             </div>
 
             <button
               type="button"
               className="el-button el-button--primary el-button--large submit-btn"
               onClick={handleRegister}
-              disabled={loading}
+              disabled={loading || !!emailError || (formData.password && formData.password !== formData.password_confirmation)}
             >
               {loading ? 'Creating Account...' : (
                 <>
-                  Create Account <ArrowRight style={{ marginLeft: '8px' }} />
+                  Create Account <FiArrowRight style={{ marginLeft: '8px' }} />
                 </>
               )}
             </button>
@@ -218,17 +304,78 @@ const SignupPage = () => {
             color: #374151;
             margin-bottom: 8px;
           }
+          .input-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+          }
+          .input-icon {
+            position: absolute;
+            left: 14px;
+            color: #9ca3af;
+            display: flex;
+            align-items: center;
+          }
           .el-input__inner {
             width: 100%;
-            padding: 12px 16px;
+            padding: 12px 16px 12px 40px;
             border: 1px solid #dcdfe6;
             border-radius: 8px;
             font-size: 14px;
             outline: none;
-            transition: border-color 0.2s;
+            transition: all 0.2s;
           }
           .el-input__inner:focus {
             border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+          }
+          .el-input__inner.input-error {
+            border-color: #ef4444;
+          }
+          .field-error {
+            color: #ef4444;
+            font-size: 12px;
+            margin-top: 4px;
+            display: block;
+          }
+          .toggle-password {
+            position: absolute;
+            right: 12px;
+            background: none;
+            border: none;
+            color: #9ca3af;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            padding: 4px;
+          }
+          .toggle-password:hover {
+            color: #6b7280;
+          }
+          .password-match {
+            position: absolute;
+            right: 12px;
+            display: flex;
+            align-items: center;
+          }
+          .password-strength {
+            margin-top: 8px;
+          }
+          .strength-bar {
+            height: 4px;
+            background: #e5e7eb;
+            border-radius: 2px;
+            overflow: hidden;
+            margin-bottom: 4px;
+          }
+          .strength-fill {
+            height: 100%;
+            border-radius: 2px;
+            transition: width 0.3s ease;
+          }
+          .strength-text {
+            font-size: 12px;
+            font-weight: 500;
           }
           .submit-btn {
             width: 100%;
@@ -240,9 +387,15 @@ const SignupPage = () => {
             justify-content: center;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             border: none;
+            transition: all 0.2s;
           }
-          .submit-btn:hover {
-            background: linear-gradient(135deg, #5a6fd6 0%, #6a4190 100%);
+          .submit-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+          }
+          .submit-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
           }
           .signup-footer {
             text-align: center;
@@ -276,19 +429,11 @@ const SignupPage = () => {
             <p>Enter the 6-digit code sent to <strong>{otpEmail}</strong></p>
           </div>
 
-          <OtpInput onComplete={handleOtpVerify} loading={loading} />
-
-          <div className="otp-actions">
-            <button
-              type="button"
-              className="el-button el-button--text"
-              onClick={handleResendOtp}
-              disabled={resendingOtp}
-            >
-              <Timer style={{ marginRight: '8px' }} />
-              {resendingOtp ? 'Sending...' : 'Resend OTP'}
-            </button>
-          </div>
+          <OtpInput 
+            onComplete={handleOtpVerify} 
+            loading={loading}
+            onResendClick={handleResendOtp}
+          />
 
           <div className="otp-footer">
             <p>Wrong email? <a href="/signup">Go back</a></p>
@@ -325,11 +470,6 @@ const SignupPage = () => {
           .otp-header p {
             color: #6b7280;
             font-size: 14px;
-          }
-          .otp-actions {
-            display: flex;
-            justify-content: center;
-            margin-top: 24px;
           }
           .otp-footer {
             text-align: center;

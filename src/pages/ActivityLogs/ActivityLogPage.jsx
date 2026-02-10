@@ -70,7 +70,7 @@ function ActivityLogPage() {
       .catch(() => setLoading(false));
 
     axios
-      .get(`${API_BASE}/users`, {
+      .get(`${API_BASE}/admin/users`, {
         headers: { Authorization: `Bearer ${token}` },
       })
       .then((res) => setUsers(res.data.data || []))

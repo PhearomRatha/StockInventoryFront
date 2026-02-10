@@ -1,10 +1,13 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import api from '../plugin/axios';
-import { logout as apiLogout } from '../api/authApi';
+import { logout as apiLogout, CookieUtils } from '../api/authApi';
 
 const AuthContext = createContext();
 
 export const useAuth = () => useContext(AuthContext);
+
+const TOKEN_NAME = 'auth_token';
+const USER_NAME = 'auth_user';
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
@@ -12,14 +15,13 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
-  // Initialize auth state from localStorage
+  // Initialize auth state from cookies
   useEffect(() => {
     const initAuth = async () => {
-      const storedToken = localStorage.getItem('token');
-      const storedUser = localStorage.getItem('user');
+      const storedToken = CookieUtils.get(TOKEN_NAME);
+      const storedUser = CookieUtils.get(USER_NAME);
 
       if (storedToken && storedUser) {
-        // Verify token is still valid
         try {
           setToken(storedToken);
           setUser(JSON.parse(storedUser));
@@ -38,7 +40,7 @@ export const AuthProvider = ({ children }) => {
     initAuth();
   }, []);
 
-  // Login function
+  // Login function - stores token in both cookie and fallback localStorage
   const login = useCallback(async (userData, authToken) => {
     try {
       const tokenValue = authToken || userData.token;
@@ -47,7 +49,11 @@ export const AuthProvider = ({ children }) => {
       setToken(tokenValue);
       setIsAuthenticated(true);
 
-      // Store in localStorage
+      // Store in cookies (primary)
+      CookieUtils.set(TOKEN_NAME, tokenValue, 7);
+      CookieUtils.set(USER_NAME, JSON.stringify(userData), 7);
+      
+      // Also store in localStorage as fallback
       localStorage.setItem('token', tokenValue);
       localStorage.setItem('user', JSON.stringify(userData));
 
@@ -78,8 +84,16 @@ export const AuthProvider = ({ children }) => {
     setUser(null);
     setToken(null);
     setIsAuthenticated(false);
+    
+    // Remove from cookies
+    CookieUtils.remove(TOKEN_NAME);
+    CookieUtils.remove(USER_NAME);
+    
+    // Remove from localStorage
     localStorage.removeItem('token');
     localStorage.removeItem('user');
+    
+    // Remove auth header
     delete api.defaults.headers.common['Authorization'];
   };
 
@@ -87,6 +101,7 @@ export const AuthProvider = ({ children }) => {
   const updateUser = useCallback((updates) => {
     const updatedUser = { ...user, ...updates };
     setUser(updatedUser);
+    CookieUtils.set(USER_NAME, JSON.stringify(updatedUser), 7);
     localStorage.setItem('user', JSON.stringify(updatedUser));
   }, [user]);
 

@@ -1,27 +1,23 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { ElMessage } from 'element-plus';
-import {
-  CircleCheck,
-  Clock,
-  Loading,
-  Bell,
-  CheckCircle
-} from '@element-plus/icons-vue';
+import { FiCheck, FiClock, FiBell, FiCheckCircle, FiX, FiRefreshCw } from 'react-icons/fi';
+import { CgSpinner } from 'react-icons/cg';
 import { checkUserStatus } from '../../../api/authApi';
 
-// User status constants
+// User status constants (matching backend verification_status)
 const STATUS = {
-  PENDING: 0,
-  VERIFIED: 1,
-  WAITING_APPROVAL: 2,
-  ACTIVE: 3,
-  REJECTED: 4
+  PENDING: 'PENDING',
+  VERIFIED: 'VERIFIED',
+  PENDING_APPROVAL: 'PENDING_APPROVAL',
+  ACTIVE: 'ACTIVE',
+  REJECTED: 'REJECTED'
 };
 
 const ApprovalStatus = ({ email }) => {
   const [currentStatus, setCurrentStatus] = useState(STATUS.VERIFIED);
   const [loading, setLoading] = useState(true);
   const [checkingStatus, setCheckingStatus] = useState(false);
+  const [lastChecked, setLastChecked] = useState(null);
 
   // Step definitions with icons and labels
   const steps = [
@@ -29,67 +25,81 @@ const ApprovalStatus = ({ email }) => {
       key: 'registered',
       label: 'Registered',
       description: 'Account created successfully',
-      icon: Bell
+      icon: FiBell
     },
     {
       key: 'verified',
       label: 'Email Verified',
       description: 'OTP verification completed',
-      icon: CheckCircle
+      icon: FiCheckCircle
     },
     {
       key: 'pending',
       label: 'Pending Approval',
       description: 'Waiting for admin review',
-      icon: Clock
+      icon: FiClock
     },
     {
       key: 'active',
       label: 'Active',
       description: 'Account approved and active',
-      icon: CircleCheck
+      icon: FiCheck
     }
   ];
 
-  useEffect(() => {
-    // Check status every 10 seconds if not active
-    const pollStatus = async () => {
-      if (currentStatus < STATUS.ACTIVE) {
-        await checkStatus();
-      }
-    };
-
-    const interval = setInterval(pollStatus, 10000);
-    checkStatus();
-
-    return () => clearInterval(interval);
-  }, [currentStatus]);
-
-  const checkStatus = async () => {
+  const checkStatus = useCallback(async () => {
     setCheckingStatus(true);
     try {
       const response = await checkUserStatus(email);
-      if (response.status === 200 && response.data) {
-        setCurrentStatus(response.data.status);
+      if (response.success && response.data) {
+        const newStatus = response.data.verification_status || response.data.account_status;
+        setCurrentStatus(newStatus);
+        setLastChecked(new Date());
         
-        if (response.data.status === STATUS.ACTIVE) {
+        if (newStatus === STATUS.ACTIVE && currentStatus !== STATUS.ACTIVE) {
           ElMessage.success('Congratulations! Your account has been approved!');
         }
       }
     } catch (error) {
       console.error('Status check error:', error);
-      // On error, keep current status
+      // On error, keep current status but show friendly message
+      if (!lastChecked) {
+        ElMessage.warning('Unable to check status. Please try again.');
+      }
     } finally {
       setCheckingStatus(false);
       setLoading(false);
     }
-  };
+  }, [email, currentStatus, lastChecked]);
+
+  useEffect(() => {
+    // Check status immediately on mount
+    checkStatus();
+
+    // Poll every 15 seconds if not active or rejected
+    const pollInterval = setInterval(() => {
+      if (currentStatus !== STATUS.ACTIVE && currentStatus !== STATUS.REJECTED) {
+        checkStatus();
+      }
+    }, 15000);
+
+    return () => clearInterval(pollInterval);
+  }, [checkStatus, currentStatus]);
 
   const getStatusStep = () => {
-    if (currentStatus === STATUS.VERIFIED) return 1; // After verified step
-    if (currentStatus === STATUS.WAITING_APPROVAL) return 2; // After pending step
-    if (currentStatus === STATUS.ACTIVE) return 3; // After active step
+    if (currentStatus === STATUS.VERIFIED) return 1;
+    if (currentStatus === STATUS.PENDING_APPROVAL || currentStatus === STATUS.PENDING) return 2;
+    if (currentStatus === STATUS.ACTIVE) return 3;
+    if (currentStatus === STATUS.REJECTED) return 3;
     return 0;
+  };
+
+  const formatLastChecked = () => {
+    if (!lastChecked) return 'Not checked yet';
+    const now = new Date();
+    const diff = Math.floor((now - lastChecked) / 1000);
+    if (diff < 60) return 'Just now';
+    return `${diff}s ago`;
   };
 
   const statusStep = getStatusStep();
@@ -143,7 +153,7 @@ const ApprovalStatus = ({ email }) => {
       <div className="status-card">
         <div className="status-header">
           <div className="success-icon">
-            <CheckCircle />
+            <FiCheckCircle />
           </div>
           <h1>Account Verified!</h1>
           <p>Your email has been verified. Your account is now waiting for admin approval.</p>
@@ -156,27 +166,32 @@ const ApprovalStatus = ({ email }) => {
             const isCompleted = index <= statusStep;
             const isCurrent = index === statusStep;
             const isPending = index > statusStep;
+            const isRejected = currentStatus === STATUS.REJECTED && index === 3;
 
             return (
               <div
                 key={step.key}
-                className={`step ${isCompleted ? 'completed' : ''} ${isCurrent ? 'current' : ''} ${isPending ? 'pending' : ''}`}
+                className={`step ${isCompleted ? 'completed' : ''} ${isCurrent ? 'current' : ''} ${isPending ? 'pending' : ''} ${isRejected ? 'rejected' : ''}`}
               >
                 <div className="step-indicator">
-                  {isCompleted ? (
+                  {isCompleted && !isRejected ? (
                     <span className="step-icon completed">
-                      <CheckCircle />
+                      <FiCheckCircle />
+                    </span>
+                  ) : isRejected ? (
+                    <span className="step-icon rejected">
+                      <FiX />
                     </span>
                   ) : (
                     <span className={`step-icon ${isCurrent ? 'current' : 'pending'}`}>
                       {isCurrent && checkingStatus ? (
-                        <Loading className="animate-spin" />
+                        <CgSpinner className="animate-spin" />
                       ) : (
                         <Icon />
                       )}
                     </span>
                   )}
-                  {index < steps.length - 1 && (
+                  {index < steps.length - 1 && !isRejected && (
                     <div className={`step-line ${index < statusStep ? 'completed' : ''}`}></div>
                   )}
                 </div>
@@ -191,35 +206,47 @@ const ApprovalStatus = ({ email }) => {
 
         {/* Current Status Message */}
         <div className="status-message">
-          {currentStatus === STATUS.VERIFIED && (
+          {(currentStatus === STATUS.VERIFIED || currentStatus === STATUS.PENDING) && (
             <div className="message-box pending">
-              <Clock />
-              <p>Your account is pending admin approval. This usually takes 24-48 hours.</p>
+              <FiClock />
+              <div>
+                <p>Your account is pending admin approval.</p>
+                <span className="message-subtitle">This usually takes 24-48 hours.</span>
+              </div>
             </div>
           )}
-          {currentStatus === STATUS.WAITING_APPROVAL && (
+          {currentStatus === STATUS.PENDING_APPROVAL && (
             <div className="message-box waiting">
-              <Clock />
-              <p>Your request is being reviewed. Please wait a bit longer.</p>
+              <FiClock />
+              <div>
+                <p>Your request is being reviewed.</p>
+                <span className="message-subtitle">Please wait a bit longer.</span>
+              </div>
             </div>
           )}
           {currentStatus === STATUS.ACTIVE && (
             <div className="message-box active">
-              <CircleCheck />
-              <p>Congratulations! Your account has been approved. You can now log in.</p>
+              <FiCheck />
+              <div>
+                <p>Congratulations! Your account has been approved.</p>
+                <span className="message-subtitle">You can now log in.</span>
+              </div>
               <a href="/login" className="login-btn">Go to Login</a>
             </div>
           )}
           {currentStatus === STATUS.REJECTED && (
             <div className="message-box rejected">
-              <CircleCheck />
-              <p>Your account request has been rejected. Please contact support for more information.</p>
+              <FiX />
+              <div>
+                <p>Your account request has been rejected.</p>
+                <span className="message-subtitle">Please contact support for more information.</span>
+              </div>
             </div>
           )}
         </div>
 
         {/* Refresh Button */}
-        {currentStatus < STATUS.ACTIVE && (
+        {currentStatus !== STATUS.ACTIVE && currentStatus !== STATUS.REJECTED && (
           <div className="refresh-section">
             <button
               type="button"
@@ -227,22 +254,16 @@ const ApprovalStatus = ({ email }) => {
               onClick={checkStatus}
               disabled={checkingStatus}
             >
-              {checkingStatus ? (
-                <>
-                  <Loading className="animate-spin" /> Checking...
-                </>
-              ) : (
-                <>
-                  <Loading /> Refresh Status
-                </>
-              )}
+              <FiRefreshCw className={checkingStatus ? 'animate-spin' : ''} />
+              {checkingStatus ? 'Checking...' : 'Refresh Status'}
             </button>
+            <span className="last-checked">Last checked: {formatLastChecked()}</span>
           </div>
         )}
 
         {/* Email Notification Info */}
         <div className="email-notification">
-          <Bell />
+          <FiBell />
           <p>You'll receive an email notification once your account is approved.</p>
         </div>
       </div>
@@ -326,6 +347,10 @@ const ApprovalStatus = ({ email }) => {
           background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
           color: white;
         }
+        .step-icon.rejected {
+          background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+          color: white;
+        }
         .step-line {
           width: 2px;
           height: 40px;
@@ -338,9 +363,9 @@ const ApprovalStatus = ({ email }) => {
         .step-content {
           display: flex;
           flex-direction: column;
-          padding-bottom: 24px;
-        }
-        .step-label {
+          padding-bottom:  }
+        .step24px;
+       -label {
           font-weight: 600;
           color: #374151;
           font-size: 14px;
@@ -378,6 +403,12 @@ const ApprovalStatus = ({ email }) => {
           flex-shrink: 0;
           margin-top: 2px;
         }
+        .message-subtitle {
+          font-size: 12px;
+          opacity: 0.8;
+          display: block;
+          margin-top: 4px;
+        }
         .login-btn {
           display: inline-block;
           margin-top: 12px;
@@ -394,7 +425,9 @@ const ApprovalStatus = ({ email }) => {
         }
         .refresh-section {
           display: flex;
-          justify-content: center;
+          flex-direction: column;
+          align-items: center;
+          gap: 8px;
           margin-bottom: 24px;
         }
         .refresh-btn {
@@ -410,8 +443,16 @@ const ApprovalStatus = ({ email }) => {
           cursor: pointer;
           transition: all 0.2s;
         }
-        .refresh-btn:hover {
+        .refresh-btn:hover:not(:disabled) {
           background: #e5e7eb;
+        }
+        .refresh-btn:disabled {
+          opacity: 0.6;
+          cursor: not-allowed;
+        }
+        .last-checked {
+          font-size: 12px;
+          color: #9ca3af;
         }
         .email-notification {
           display: flex;

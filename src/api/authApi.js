@@ -1,6 +1,29 @@
 import api from '../plugin/axios';
 
-const API_BASE = `${import.meta.env.VITE_API_URL}/api`;
+const API_BASE = `${import.meta.env.VITE_API_URL}/api/auth`;
+
+// Cookie helper functions
+const CookieUtils = {
+  set(name, value, days = 7) {
+    const expires = new Date();
+    expires.setTime(expires.getTime() + days * 24 * 60 * 60 * 1000);
+    document.cookie = `${name}=${value};expires=${expires.toUTCString()};path=/;SameSite=Lax`;
+  },
+  
+  get(name) {
+    const nameEQ = `${name}=`;
+    const ca = document.cookie.split(';');
+    for (let c of ca) {
+      while (c.charAt(0) === ' ') c = c.substring(1, c.length);
+      if (c.indexOf(nameEQ) === 0) return c.substring(nameEQ.length, c.length);
+    }
+    return null;
+  },
+  
+  remove(name) {
+    document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/`;
+  }
+};
 
 // Register new user
 export const register = async (userData) => {
@@ -66,12 +89,15 @@ export const checkUserStatus = async (email) => {
 // Get current user profile
 export const getCurrentUser = async () => {
   try {
-    const response = await api.get(`${API_BASE}/user`);
+    const response = await api.get(`${API_BASE}/me`);
     return response.data;
   } catch (error) {
     throw error.response?.data || { message: 'Failed to get user' };
   }
 };
+
+// Export cookie utilities
+export { CookieUtils };
 
 export default {
   register,
@@ -80,5 +106,6 @@ export default {
   verifyOtp,
   resendOtp,
   checkUserStatus,
-  getCurrentUser
+  getCurrentUser,
+  CookieUtils
 };

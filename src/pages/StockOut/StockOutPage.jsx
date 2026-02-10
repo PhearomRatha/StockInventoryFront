@@ -40,7 +40,7 @@ function StockOutPage() {
   // Fetch all data at once
   useEffect(() => {
     setLoading({ products: true, customers: true, users: true, stockOuts: true });
-    fetch(`${API_BASE}/stock-out-dashboard`, {
+    fetch(`${API_BASE}/stock-outs/stock-out-dashboard`, {
       headers: { Authorization: `Bearer ${token}` }
     })
       .then(res => res.json())

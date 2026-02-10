@@ -28,7 +28,7 @@ function UserManagement() {
       const params = new URLSearchParams();
       params.append('page', page);
       if (searchTerm) params.append('search', searchTerm);
-      const res = await axios.get(`${API_BASE}/users?${params.toString()}`, { headers });
+      const res = await axios.get(`${API_BASE}/admin/users?${params.toString()}`, { headers });
       console.log(res.data.data);
 
       setUsers(res.data.data || []);
@@ -58,7 +58,7 @@ function UserManagement() {
   // Update user info or status
   const updateUser = async (id, data) => {
     try {
-      await axios.put(`${API_BASE}/users/${id}`, data, { headers });
+      await axios.put(`${API_BASE}/admin/users/${id}`, data, { headers });
       setEditingUser(null);
       fetchUsers();
       setMessage({ text: "User updated successfully", type: "success" });
