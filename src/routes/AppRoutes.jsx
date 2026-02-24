@@ -1,6 +1,7 @@
 import React, { lazy, Suspense } from "react";
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import ProtectedRoute, { GuestRoute, AdminRoute, ManagerRoute, StaffRoute } from "../components/Layout/ProtectedRoute";
 
 // Lazy load pages for code splitting
 const Dashboard = lazy(() => import("../pages/Dashboard/Dashboard"));
@@ -9,182 +10,196 @@ const CategoryPage = lazy(() => import("../pages/Categories/CategoryPage"));
 const ActivityLogPage = lazy(() => import("../pages/ActivityLogs/ActivityLogPage"));
 const ReportsPage = lazy(() => import("../pages/Reports/ReportsPage"));
 const LoginPage = lazy(() => import("../pages/Auth/Login"));
+const SignupPage = lazy(() => import("../pages/Auth/SignupPage"));
 const StockInPage = lazy(() => import("../pages/StockIn/StockInPage"));
 const StockOutPage = lazy(() => import("../pages/StockOut/StockOutPage"));
 const Suppliers = lazy(() => import("../pages/Suppliers/Suppliers"));
 const CustomerCRMPage = lazy(() => import("../pages/Customers/CustomerCRMPage"));
 const UserManagement = lazy(() => import("../pages/Users/UserManagement"));
-const SignupPage = lazy(() => import("../pages/Auth/SignupPage"));
 const SalesPage = lazy(() => import("../pages/Sales/SalesPage"));
 const PaymentPage = lazy(() => import("../pages/Payments/PaymentPage"));
+const ProfilePage = lazy(() => import("../pages/Users/ProfilePage"));
 
-// Protected Route Component
-const ProtectedRoute = ({ children }) => {
-  const { isAuthenticated, loading } = useAuth();
-
-  if (loading) {
-    return (
-      <div className="flex justify-center items-center h-full">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
-      </div>
-    );
-  }
-
-  if (!isAuthenticated) {
-    return (
-      <div className="flex justify-center items-center h-full">
-        <div className="text-center">
-          <h2 className="text-2xl font-bold text-gray-700 mb-4">Access Denied</h2>
-          <p className="text-gray-500 mb-4">Please log in to access this page.</p>
-          <a href="/login" className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors">
-            Go to Login
-          </a>
-        </div>
-      </div>
-    );
-  }
-
-  return children;
-};
-
-// Auth Route Component (redirect if already logged in)
-const AuthRoute = ({ children }) => {
-  const { isAuthenticated, loading } = useAuth();
-
-  if (loading) {
-    return (
-      <div className="flex justify-center items-center h-full">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
-      </div>
-    );
-  }
-
-  if (isAuthenticated) {
-    window.location.href = "/";
-    return null;
-  }
-
-  return children;
-};
+// Loading fallback
+const LoadingFallback = () => (
+  <div className="flex justify-center items-center h-screen">
+    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+  </div>
+);
 
 function AppRoutes() {
+  const { user } = useAuth();
+  const userRole = user?.role;
+
   return (
-    <Suspense fallback={<div className="flex justify-center items-center h-full"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div></div>}>
+    <Suspense fallback={<LoadingFallback />}>
       <Routes>
-        {/* Auth Routes */}
-        <Route 
-          path="/login" 
+        {/* =====================
+            GUEST ROUTES
+            (Accessible only when NOT logged in)
+            ===================== */}
+        <Route
+          path="/login"
           element={
-            <AuthRoute>
+            <GuestRoute>
               <LoginPage />
-            </AuthRoute>
-          } 
+            </GuestRoute>
+          }
         />
-        <Route 
-          path="/signup" 
+        <Route
+          path="/signup"
           element={
-            <AuthRoute>
+            <GuestRoute>
               <SignupPage />
-            </AuthRoute>
-          } 
+            </GuestRoute>
+          }
         />
+
+        {/* =====================
+            PROTECTED ROUTES
+            (Require authentication)
+            ===================== */}
         
-        {/* Protected Routes */}
-        <Route 
-          path="/" 
+        {/* Dashboard - All authenticated users */}
+        <Route
+          path="/"
           element={
             <ProtectedRoute>
               <Dashboard />
             </ProtectedRoute>
-          } 
+          }
         />
-        <Route 
-          path="/products" 
-          element={
-            <ProtectedRoute>
-              <ProductPage />
-            </ProtectedRoute>
-          } 
-        />
-        <Route 
-          path="/categories" 
-          element={
-            <ProtectedRoute>
-              <CategoryPage />
-            </ProtectedRoute>
-          } 
-        />
-        <Route 
-          path="/activity-logs" 
-          element={
-            <ProtectedRoute>
-              <ActivityLogPage />
-            </ProtectedRoute>
-          } 
-        />
-        <Route 
-          path="/reports" 
-          element={
-            <ProtectedRoute>
-              <ReportsPage />
-            </ProtectedRoute>
-          } 
-        />
-        <Route 
-          path="/stock-in" 
-          element={
-            <ProtectedRoute>
-              <StockInPage />
-            </ProtectedRoute>
-          } 
-        />
-        <Route 
-          path="/stock-out" 
-          element={
-            <ProtectedRoute>
-              <StockOutPage />
-            </ProtectedRoute>
-          } 
-        />
-        <Route 
-          path="/suppliers" 
-          element={
-            <ProtectedRoute>
-              <Suppliers />
-            </ProtectedRoute>
-          } 
-        />
-        <Route 
-          path="/customer" 
-          element={
-            <ProtectedRoute>
-              <CustomerCRMPage />
-            </ProtectedRoute>
-          } 
-        />
-        <Route 
-          path="/users" 
-          element={
-            <ProtectedRoute>
-              <UserManagement />
-            </ProtectedRoute>
-          } 
-        />
-        <Route 
-          path="/sales" 
+
+        {/* Sales - All authenticated users */}
+        <Route
+          path="/sales"
           element={
             <ProtectedRoute>
               <SalesPage />
             </ProtectedRoute>
-          } 
+          }
         />
-        <Route 
-          path="/payments" 
+
+        {/* Products - All authenticated users (view) */}
+        <Route
+          path="/products"
+          element={
+            <ProtectedRoute>
+              <ProductPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Stock In - All authenticated users */}
+        <Route
+          path="/stock-in"
+          element={
+            <ProtectedRoute>
+              <StockInPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Stock Out - All authenticated users */}
+        <Route
+          path="/stock-out"
+          element={
+            <ProtectedRoute>
+              <StockOutPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Payments - All authenticated users */}
+        <Route
+          path="/payments"
           element={
             <ProtectedRoute>
               <PaymentPage />
             </ProtectedRoute>
-          } 
+          }
+        />
+
+        {/* Profile - All authenticated users */}
+        <Route
+          path="/profile"
+          element={
+            <ProtectedRoute>
+              <ProfilePage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Categories - Admin and Manager only */}
+        <Route
+          path="/categories"
+          element={
+            <ManagerRoute>
+              <CategoryPage />
+            </ManagerRoute>
+          }
+        />
+
+        {/* Suppliers - Admin and Manager only */}
+        <Route
+          path="/suppliers"
+          element={
+            <ManagerRoute>
+              <Suppliers />
+            </ManagerRoute>
+          }
+        />
+
+        {/* Customers - All authenticated users */}
+        <Route
+          path="/customer"
+          element={
+            <ProtectedRoute>
+              <CustomerCRMPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Reports - Admin and Manager only */}
+        <Route
+          path="/reports"
+          element={
+            <ManagerRoute>
+              <ReportsPage />
+            </ManagerRoute>
+          }
+        />
+
+        {/* Activity Logs - Admin and Manager only */}
+        <Route
+          path="/activity-logs"
+          element={
+            <ManagerRoute>
+              <ActivityLogPage />
+            </ManagerRoute>
+          }
+        />
+
+        {/* User Management - Admin only */}
+        <Route
+          path="/users"
+          element={
+            <AdminRoute>
+              <UserManagement />
+            </AdminRoute>
+          }
+        />
+
+        {/* =====================
+            CATCH ALL ROUTE
+            ===================== */}
+        <Route
+          path="*"
+          element={
+            <ProtectedRoute>
+              <Navigate to="/" replace />
+            </ProtectedRoute>
+          }
         />
       </Routes>
     </Suspense>

@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { ElMessage } from 'element-plus';
 import { FiCheck, FiClock, FiBell, FiCheckCircle, FiX, FiRefreshCw } from 'react-icons/fi';
+import { ElMessage } from '../../../utils/message';
 import { CgSpinner } from 'react-icons/cg';
-import { checkUserStatus } from '../../../api/authApi';
+import { checkVerificationStatus } from '../../../api/authApi';
 
 // User status constants (matching backend verification_status)
 const STATUS = {
@@ -30,7 +30,7 @@ const ApprovalStatus = ({ email }) => {
     {
       key: 'verified',
       label: 'Email Verified',
-      description: 'OTP verification completed',
+      description: 'Email verification completed',
       icon: FiCheckCircle
     },
     {
@@ -50,7 +50,7 @@ const ApprovalStatus = ({ email }) => {
   const checkStatus = useCallback(async () => {
     setCheckingStatus(true);
     try {
-      const response = await checkUserStatus(email);
+      const response = await checkVerificationStatus(email);
       if (response.success && response.data) {
         const newStatus = response.data.verification_status || response.data.account_status;
         setCurrentStatus(newStatus);

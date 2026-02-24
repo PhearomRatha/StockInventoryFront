@@ -4,12 +4,34 @@ import Sidebar from "./components/Layout/Sidebar";
 import AppRoutes from "./routes/AppRoutes";
 import { Bars3Icon } from "@heroicons/react/24/outline";
 import { useAuth } from "./context/AuthContext";
+import { CssBaseline, ThemeProvider, createTheme } from "@mui/material";
+import SnackbarProvider from "./components/UI/SnackbarProvider";
+import "./utils/message";
+
+const theme = createTheme({
+  palette: {
+    primary: {
+      main: '#667eea',
+    },
+    secondary: {
+      main: '#764ba2',
+    },
+  },
+  typography: {
+    fontFamily: '"Inter", "Roboto", "Helvetica", "Arial", sans-serif',
+  },
+});
 
 function App() {
   return (
-    <BrowserRouter>
-      <AppContent />
-    </BrowserRouter>
+    <ThemeProvider theme={theme}>
+      <CssBaseline />
+      <BrowserRouter>
+        <SnackbarProvider>
+          <AppContent />
+        </SnackbarProvider>
+      </BrowserRouter>
+    </ThemeProvider>
   );
 }
 

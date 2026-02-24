@@ -13,16 +13,16 @@ import {
   FiLogOut,
   FiX,
   FiChevronRight,
+  FiUser,
+  FiSettings,
 } from "react-icons/fi";
 import { Link, useLocation } from "react-router-dom";
 import { getStockReport } from "../../api/reportsApi";
-import { useAuth } from "../../context/AuthContext";
+import { useAuth, hasAnyRole, ROLES } from "../../context/AuthContext";
 
 function Sidebar({ onClose }) {
-  const { logout } = useAuth();
+  const { logout, user } = useAuth();
   const location = useLocation();
-  const userData = localStorage.getItem("user");
-  const user = userData && userData !== "undefined" ? JSON.parse(userData) : null;
   const role = user?.role; // "Admin", "Manager", "Staff"
   const [lowStockAlert, setLowStockAlert] = useState(0);
 
@@ -34,7 +34,7 @@ function Sidebar({ onClose }) {
       const cacheTime = localStorage.getItem(cacheTimeKey);
       const cachedData = localStorage.getItem(cacheKey);
 
-      if (cachedData && cacheTime && (now - cacheTime < 5 * 60 * 1000)) { // 5 minutes cache
+      if (cachedData && cacheTime && (now - cacheTime < 5 * 60 * 1000)) {
         setLowStockAlert(parseInt(cachedData));
         return;
       }
@@ -57,20 +57,126 @@ function Sidebar({ onClose }) {
     return location.pathname.startsWith(path);
   };
 
-  // Menu items with roles - ordered by user priority
+  // Menu items configuration based on requirements
   const menuItems = [
-    { path: "/", label: "Dashboard", icon: FiHome, roles: ["Admin","Manager","Staff"] },
-    { path: "/sales", label: "Sales", icon: FiDollarSign, roles: ["Admin","Manager","Staff"] },
-    { path: "/products", label: "Product Management", icon: FiBox, roles: ["Admin","Manager","Staff"] },
-    { path: "/stock-in", label: "Stock In", icon: FiDownload, roles: ["Admin","Manager","Staff"] },
-    { path: "/stock-out", label: "Stock Out", icon: FiUpload, roles: ["Admin","Manager","Staff"] },
-    { path: "/categories", label: "Categories", icon: FiTag, roles: ["Admin","Manager"] },
-    { path: "/suppliers", label: "Supplier Management", icon: FiTruck, roles: ["Admin","Manager"] },
-    { path: "/customer", label: "Customers", icon: FiUsers, roles: ["Admin","Manager","Staff"] },
-    { path: "/reports", label: "Reports", icon: FiBarChart2, roles: ["Admin","Manager"] },
-    { path: "/activity-logs", label: "Activity Logs", icon: FiFileText, roles: ["Admin","Manager"] },
-    { path: "/users", label: "User Management", icon: FiUsers, roles: ["Admin"] },
+    // Common items for all users
+    {
+      path: "/",
+      label: "Dashboard",
+      icon: FiHome,
+      roles: [ROLES.ADMIN, ROLES.MANAGER, ROLES.STAFF],
+      priority: 1
+    },
+    {
+      path: "/sales",
+      label: "Sales",
+      icon: FiDollarSign,
+      roles: [ROLES.ADMIN, ROLES.MANAGER, ROLES.STAFF],
+      priority: 2
+    },
+    {
+      path: "/products",
+      label: "Products",
+      icon: FiBox,
+      roles: [ROLES.ADMIN, ROLES.MANAGER, ROLES.STAFF],
+      permission: 'VIEW_ALL_PRODUCTS',
+      priority: 3
+    },
+    {
+      path: "/stock-in",
+      label: "Stock In",
+      icon: FiDownload,
+      roles: [ROLES.ADMIN, ROLES.MANAGER, ROLES.STAFF],
+      priority: 4
+    },
+    {
+      path: "/stock-out",
+      label: "Stock Out",
+      icon: FiUpload,
+      roles: [ROLES.ADMIN, ROLES.MANAGER, ROLES.STAFF],
+      priority: 5
+    },
+    {
+      path: "/payments",
+      label: "Payments",
+      icon: FiDollarSign,
+      roles: [ROLES.ADMIN, ROLES.MANAGER, ROLES.STAFF],
+      priority: 6
+    },
+    
+    // Admin and Manager only
+    {
+      path: "/categories",
+      label: "Categories",
+      icon: FiTag,
+      roles: [ROLES.ADMIN, ROLES.MANAGER],
+      permission: 'MANAGE_CATEGORIES',
+      priority: 7
+    },
+    {
+      path: "/suppliers",
+      label: "Suppliers",
+      icon: FiTruck,
+      roles: [ROLES.ADMIN, ROLES.MANAGER],
+      permission: 'MANAGE_SUPPLIERS',
+      priority: 8
+    },
+    {
+      path: "/customer",
+      label: "Customers",
+      icon: FiUsers,
+      roles: [ROLES.ADMIN, ROLES.MANAGER, ROLES.STAFF],
+      priority: 9
+    },
+    
+    // Reports and Activity Logs - Admin and Manager
+    {
+      path: "/reports",
+      label: "Reports",
+      icon: FiBarChart2,
+      roles: [ROLES.ADMIN, ROLES.MANAGER],
+      permission: 'VIEW_REPORTS',
+      priority: 10
+    },
+    {
+      path: "/activity-logs",
+      label: "Activity Logs",
+      icon: FiFileText,
+      roles: [ROLES.ADMIN, ROLES.MANAGER],
+      permission: 'VIEW_ACTIVITY_LOGS',
+      priority: 11
+    },
+    
+    // User Management - Admin only
+    {
+      path: "/users",
+      label: "User Management",
+      icon: FiUsers,
+      roles: [ROLES.ADMIN],
+      permission: 'VIEW_USERS',
+      priority: 12
+    },
   ];
+
+  // Filter menu items based on user role
+  const { hasPermission } = useAuth();
+  
+  const getVisibleMenuItems = () => {
+    return menuItems.filter(item => {
+      // Check if user's role is in the allowed roles
+      if (!item.roles.includes(role)) return false;
+      
+      // Check if user has required permission
+      if (item.permission) {
+        return hasPermission(user, item.permission);
+      }
+      
+      return true;
+    });
+  };
+
+  // Sort by priority
+  const visibleMenuItems = getVisibleMenuItems().sort((a, b) => a.priority - b.priority);
 
   return (
     <div className="w-64 h-screen bg-gradient-to-br from-slate-800 via-slate-900 to-slate-950 text-white flex flex-col p-6 shadow-xl border-r border-slate-700">
@@ -94,6 +200,19 @@ function Sidebar({ onClose }) {
         </h1>
         <div className="w-16 h-1 bg-gradient-to-r from-blue-500 to-purple-500 mx-auto mt-2 rounded-full"></div>
 
+        {/* User Role Badge */}
+        <div className="mt-4 flex justify-center">
+          <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+            role === ROLES.ADMIN 
+              ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30'
+              : role === ROLES.MANAGER
+              ? 'bg-blue-500/20 text-blue-300 border border-blue-500/30'
+              : 'bg-green-500/20 text-green-300 border border-green-500/30'
+          }`}>
+            {role || 'User'}
+          </span>
+        </div>
+
         {/* Stock Alert */}
         {lowStockAlert > 0 && (
           <div className="mt-4 p-3 bg-red-500/20 border border-red-500/30 rounded-lg">
@@ -114,43 +233,50 @@ function Sidebar({ onClose }) {
             display: none;
           }
         `}</style>
-        {menuItems.map((item) =>
-          item.roles.includes(role) && (
-            <Link
-              key={item.path}
-              to={item.path}
-              className={`flex items-center gap-3 p-3 rounded-xl transition-all duration-300 group ${
-                isActive(item.path)
-                  ? "bg-gradient-to-r from-blue-500/20 to-purple-500/20 border border-blue-400/30 shadow-lg"
-                  : "hover:bg-slate-700/50 hover:border hover:border-slate-600"
+        {visibleMenuItems.map((item) => (
+          <Link
+            key={item.path}
+            to={item.path}
+            className={`flex items-center gap-3 p-3 rounded-xl transition-all duration-300 group ${
+              isActive(item.path)
+                ? "bg-gradient-to-r from-blue-500/20 to-purple-500/20 border border-blue-400/30 shadow-lg"
+                : "hover:bg-slate-700/50 hover:border hover:border-slate-600"
+            }`}
+          >
+            <div
+              className={`p-2 rounded-lg transition-all duration-300 ${
+                isActive(item.path) ? "bg-blue-500 shadow-md" : "bg-slate-700 group-hover:bg-blue-500"
               }`}
             >
-              <div
-                className={`p-2 rounded-lg transition-all duration-300 ${
-                  isActive(item.path) ? "bg-blue-500 shadow-md" : "bg-slate-700 group-hover:bg-blue-500"
-                }`}
-              >
-                <item.icon size={18} className="text-white" />
-              </div>
-              <span className="font-medium flex-1">{item.label}</span>
-              {((item.path === '/reports' || item.path === '/products') && lowStockAlert > 0) && (
-                <span className="bg-red-500 text-white text-xs rounded-full px-2 py-1">
-                  {lowStockAlert}
-                </span>
-              )}
-              <FiChevronRight
-                size={16}
-                className={`text-gray-400 transition-transform duration-300 ${
-                  isActive(item.path) ? "text-blue-300" : "group-hover:text-white"
-                }`}
-              />
-            </Link>
-          )
-        )}
+              <item.icon size={18} className="text-white" />
+            </div>
+            <span className="font-medium flex-1">{item.label}</span>
+            {((item.path === '/reports' || item.path === '/products') && lowStockAlert > 0) && (
+              <span className="bg-red-500 text-white text-xs rounded-full px-2 py-1">
+                {lowStockAlert}
+              </span>
+            )}
+            <FiChevronRight
+              size={16}
+              className={`text-gray-400 transition-transform duration-300 ${
+                isActive(item.path) ? "text-blue-300" : "group-hover:text-white"
+              }`}
+            />
+          </Link>
+        ))}
       </nav>
 
-      {/* Footer with Logout */}
+      {/* Footer with Profile and Logout */}
       <div className="mt-8 pt-6 border-t border-slate-700 flex flex-col items-center gap-3">
+        {/* Profile Link */}
+        <Link
+          to="/profile"
+          className="flex items-center gap-2 w-full justify-center bg-slate-700 hover:bg-slate-600 text-white px-4 py-2 rounded-lg transition"
+        >
+          <FiUser size={18} /> View Profile
+        </Link>
+        
+        {/* Logout Button */}
         <button
           onClick={async () => {
             await logout();

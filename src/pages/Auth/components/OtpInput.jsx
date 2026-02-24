@@ -1,152 +1,98 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { ElMessage } from 'element-plus';
+import { FiRefreshCw } from 'react-icons/fi';
 
-const OtpInput = ({ onComplete, loading, onResendClick }) => {
-  const [otp, setOtp] = useState(['', '', '', '', '', '']);
-  const [localLoading, setLocalLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [statusMessage, setStatusMessage] = useState({ type: '', text: '' });
-  const [countdown, setCountdown] = useState(0);
+const OtpInput = ({ 
+  length = 6, 
+  onComplete, 
+  loading = false, 
+  onResendClick,
+  resending = false 
+}) => {
+  const [otp, setOtp] = useState(Array(length).fill(''));
+  const [focusedIndex, setFocusedIndex] = useState(0);
   const inputRefs = useRef([]);
-  const RESEND_COOLDOWN = 30;
 
+  // Focus first input on mount
   useEffect(() => {
     if (inputRefs.current[0]) {
       inputRefs.current[0].focus();
     }
-    setCountdown(RESEND_COOLDOWN);
   }, []);
 
-  useEffect(() => {
-    if (countdown > 0) {
-      const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
-      return () => clearTimeout(timer);
-    }
-  }, [countdown]);
+  // Handle input change
+  const handleChange = useCallback((e, index) => {
+    const value = e.target.value;
 
-  const handleInput = (index, value) => {
+    // Only allow numbers
     if (value && !/^\d+$/.test(value)) return;
 
     const newOtp = [...otp];
     newOtp[index] = value;
     setOtp(newOtp);
-    setError('');
-    setStatusMessage({ type: '', text: '' });
 
-    if (value && index < 5 && inputRefs.current[index + 1]) {
+    // Auto-submit when all digits are filled
+    if (value && index < length - 1) {
       inputRefs.current[index + 1].focus();
+      setFocusedIndex(index + 1);
     }
 
-    if (index === 5 && value) {
-      const fullOtp = newOtp.join('');
-      if (fullOtp.length === 6) {
-        handleSubmit(fullOtp);
-      }
+    // Check if complete
+    const otpString = newOtp.join('');
+    if (otpString.length === length) {
+      onComplete(otpString);
     }
-  };
+  }, [otp, length, onComplete]);
 
-  const handleKeyDown = (index, e) => {
-    if (e.key === 'Backspace') {
-      if (!otp[index] && index > 0 && inputRefs.current[index - 1]) {
-        inputRefs.current[index - 1].focus();
-      }
+  // Handle keydown
+  const handleKeyDown = useCallback((e, index) => {
+    if (e.key === 'Backspace' && !otp[index] && index > 0) {
+      inputRefs.current[index - 1].focus();
+      setFocusedIndex(index - 1);
     } else if (e.key === 'ArrowLeft' && index > 0) {
-      inputRefs.current[index - 1]?.focus();
-    } else if (e.key === 'ArrowRight' && index < 5) {
-      inputRefs.current[index + 1]?.focus();
+      inputRefs.current[index - 1].focus();
+      setFocusedIndex(index - 1);
+    } else if (e.key === 'ArrowRight' && index < length - 1) {
+      inputRefs.current[index + 1].focus();
+      setFocusedIndex(index + 1);
     }
-  };
+  }, [otp, length]);
 
-  const handlePaste = (e) => {
+  // Handle paste
+  const handlePaste = useCallback((e) => {
     e.preventDefault();
-    const pasteData = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6);
-    
-    if (pasteData.length > 0) {
-      setStatusMessage({ 
-        type: 'info', 
-        text: 'OTP pasted successfully!' 
-      });
-      ElMessage.success('OTP pasted successfully!');
-      
-      const newOtp = [...otp];
-      pasteData.split('').forEach((char, index) => {
-        if (index < 6) newOtp[index] = char;
-      });
-      setOtp(newOtp);
-      setError('');
+    const pastedData = e.clipboardData.getData('text').trim();
 
-      if (pasteData.length === 6) {
-        const fullOtp = newOtp.join('');
-        handleSubmit(fullOtp);
-      } else if (inputRefs.current[pasteData.length]) {
-        inputRefs.current[pasteData.length].focus();
+    // Only process if all characters are digits
+    if (!/^\d+$/.test(pastedData)) return;
+
+    const digits = pastedData.slice(0, length).split('');
+    const newOtp = [...otp];
+
+    digits.forEach((digit, index) => {
+      if (index < length) {
+        newOtp[index] = digit;
       }
-    }
-  };
-
-  const handleSubmit = async (fullOtp) => {
-    if (fullOtp.length !== 6) {
-      setError('Please enter complete OTP');
-      return;
-    }
-
-    setStatusMessage({ 
-      type: 'loading', 
-      text: 'Verifying your OTP...' 
     });
-    setLocalLoading(true);
-    setError('');
 
-    try {
-      await onComplete(fullOtp);
-    } catch (err) {
-      setStatusMessage({ type: '', text: '' });
-      setError(err.message || 'Invalid OTP. Please try again.');
-      setOtp(['', '', '', '', '', '']);
-      inputRefs.current[0]?.focus();
-    } finally {
-      setLocalLoading(false);
+    setOtp(newOtp);
+
+    // Focus the next empty input or the last input
+    const nextIndex = Math.min(digits.length, length - 1);
+    if (inputRefs.current[nextIndex]) {
+      inputRefs.current[nextIndex].focus();
+      setFocusedIndex(nextIndex);
     }
-  };
 
-  const handleResend = () => {
-    if (countdown > 0) return;
-    setCountdown(RESEND_COOLDOWN);
-    setStatusMessage({ 
-      type: 'info', 
-      text: 'Resending OTP...' 
-    });
-    if (onResendClick) {
-      onResendClick();
+    // Check if complete
+    const otpString = newOtp.join('');
+    if (otpString.length === length) {
+      onComplete(otpString);
     }
-  };
-
-  const isLoading = loading || localLoading;
+  }, [otp, length, onComplete]);
 
   return (
-    <div className="otp-input-container">
-      {statusMessage.text && statusMessage.type === 'info' && (
-        <div className="otp-message info">
-          <span className="message-icon">ℹ</span>
-          {statusMessage.text}
-        </div>
-      )}
-      
-      {statusMessage.text && statusMessage.type === 'loading' && (
-        <div className="otp-message loading">
-          <span className="loading-spinner"></span>
-          {statusMessage.text}
-        </div>
-      )}
-
-      {error && (
-        <div className="otp-error">
-          <span className="error-icon">✕</span>
-          {error}
-        </div>
-      )}
-      
-      <div className="otp-fields" onPaste={handlePaste}>
+    <div className="otp-container">
+      <div className="otp-inputs" onPaste={handlePaste}>
         {otp.map((digit, index) => (
           <input
             key={index}
@@ -155,201 +101,107 @@ const OtpInput = ({ onComplete, loading, onResendClick }) => {
             inputMode="numeric"
             maxLength={1}
             value={digit}
-            onChange={(e) => handleInput(index, e.target.value)}
-            onKeyDown={(e) => handleKeyDown(index, e)}
-            className={`otp-input ${digit ? 'filled' : ''} ${error ? 'error' : ''}`}
-            disabled={isLoading}
-            autoComplete="off"
+            onChange={(e) => handleChange(e, index)}
+            onKeyDown={(e) => handleKeyDown(e, index)}
+            onFocus={() => setFocusedIndex(index)}
+            className={`otp-input ${focusedIndex === index ? 'focused' : ''} ${digit ? 'filled' : ''}`}
+            disabled={loading}
+            autoComplete="one-time-code"
           />
         ))}
       </div>
 
-      <div className="otp-hint">
-        <span className="paste-icon">📋</span>
-        You can paste the OTP directly
-      </div>
-
-      {isLoading && (
-        <div className="otp-loading">
-          <span className="loading-spinner"></span>
-          Verifying...
-        </div>
-      )}
-
-      {!isLoading && (
+      {onResendClick && (
         <div className="otp-resend">
-          {countdown > 0 ? (
-            <span className="resend-timer">
-              <span className="timer-icon">⏱</span>
-              Resend OTP in {countdown}s
-            </span>
-          ) : (
-            <button
-              type="button"
-              className="resend-btn"
-              onClick={handleResend}
-            >
-              <span className="resend-icon">↻</span>
-              Resend OTP
-            </button>
-          )}
+          <button
+            type="button"
+            className="resend-btn"
+            onClick={onResendClick}
+            disabled={resending || loading}
+          >
+            <FiRefreshCw className={resending ? 'spinning' : ''} />
+            {resending ? 'Sending...' : 'Resend OTP'}
+          </button>
         </div>
       )}
 
-      <style>{`
-        .otp-input-container {
+      <style jsx>{`
+        .otp-container {
           display: flex;
           flex-direction: column;
           align-items: center;
-          width: 100%;
+          gap: 16px;
         }
-        .otp-message {
+
+        .otp-inputs {
           display: flex;
-          align-items: center;
           gap: 8px;
-          padding: 12px 16px;
-          border-radius: 8px;
-          margin-bottom: 16px;
-          font-size: 14px;
-          width: 100%;
-          animation: fadeIn 0.3s ease;
-        }
-        @keyframes fadeIn {
-          from { opacity: 0; transform: translateY(-10px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        .otp-message.info {
-          background: #e0f2fe;
-          color: #0369a1;
-          border: 1px solid #bae6fd;
-        }
-        .otp-message.loading {
-          background: #f3f4f6;
-          color: #4b5563;
-          border: 1px solid #e5e7eb;
-        }
-        .otp-message .message-icon {
-          font-size: 16px;
-        }
-        .otp-error {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          background: #fef2f2;
-          color: #dc2626;
-          padding: 12px 16px;
-          border-radius: 8px;
-          margin-bottom: 16px;
-          font-size: 14px;
-          width: 100%;
-          border: 1px solid #fecaca;
-          animation: shake 0.5s ease-in-out;
-        }
-        @keyframes shake {
-          0%, 100% { transform: translateX(0); }
-          25% { transform: translateX(-5px); }
-          75% { transform: translateX(5px); }
-        }
-        .otp-error .error-icon {
-          font-size: 16px;
-          font-weight: bold;
-        }
-        .otp-fields {
-          display: flex;
-          gap: 10px;
           justify-content: center;
-          margin-bottom: 12px;
         }
+
         .otp-input {
           width: 48px;
           height: 56px;
           text-align: center;
           font-size: 24px;
-          font-weight: 700;
+          font-weight: 600;
           border: 2px solid #e5e7eb;
-          border-radius: 10px;
+          border-radius: 8px;
           outline: none;
           transition: all 0.2s ease;
-          background: #f9fafb;
-          color: #1f2937;
+          background: #fff;
         }
+
         .otp-input:focus {
-          border-color: #667eea;
-          background: white;
-          box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.15);
-          transform: scale(1.05);
+          border-color: #3b82f6;
+          box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
         }
+
         .otp-input.filled {
-          border-color: #667eea;
-          background: white;
-          color: #667eea;
+          border-color: #10b981;
+          background: #f0fdf4;
         }
-        .otp-input.error {
-          border-color: #ef4444;
-          background: #fef2f2;
-          animation: shake 0.3s ease-in-out;
+
+        .otp-input:focus.filled {
+          border-color: #3b82f6;
+          background: #fff;
         }
-        .otp-hint {
-          display: flex;
-          align-items: center;
-          gap: 6px;
-          color: #9ca3af;
-          font-size: 13px;
-          margin-bottom: 16px;
-        }
-        .otp-hint .paste-icon {
-          font-size: 14px;
-        }
-        .otp-loading {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          color: #6b7280;
-          font-size: 14px;
-        }
-        .loading-spinner {
-          width: 18px;
-          height: 18px;
-          border: 2px solid #e5e7eb;
-          border-top-color: #667eea;
-          border-radius: 50%;
-          animation: spin 0.8s linear infinite;
-        }
-        @keyframes spin {
-          to { transform: rotate(360deg); }
-        }
-        .otp-resend {
-          margin-top: 8px;
-        }
-        .resend-timer {
-          display: flex;
-          align-items: center;
-          gap: 6px;
-          color: #9ca3af;
-          font-size: 14px;
-        }
-        .resend-timer .timer-icon {
-          font-size: 14px;
-        }
+
         .resend-btn {
           display: flex;
           align-items: center;
-          gap: 6px;
+          gap: 8px;
           background: none;
           border: none;
-          color: #667eea;
+          color: #3b82f6;
           font-size: 14px;
           font-weight: 500;
           cursor: pointer;
           padding: 8px 16px;
           border-radius: 6px;
-          transition: all 0.2s;
+          transition: all 0.2s ease;
         }
-        .resend-btn:hover {
-          background: rgba(102, 126, 234, 0.1);
+
+        .resend-btn:hover:not(:disabled) {
+          background: #eff6ff;
         }
-        .resend-icon {
-          font-size: 16px;
+
+        .resend-btn:disabled {
+          opacity: 0.6;
+          cursor: not-allowed;
+        }
+
+        .spinning {
+          animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+          from {
+            transform: rotate(0deg);
+          }
+          to {
+            transform: rotate(360deg);
+          }
         }
       `}</style>
     </div>

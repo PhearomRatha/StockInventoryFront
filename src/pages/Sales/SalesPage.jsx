@@ -97,7 +97,7 @@ function SalesPage() {
       axios.get(`${API_BASE}/sales`, { headers: { Authorization: `Bearer ${token}` } }),
       axios.get(`${API_BASE}/customers`, { headers: { Authorization: `Bearer ${token}` } }),
       axios.get(`${API_BASE}/products`, { headers: { Authorization: `Bearer ${token}` } }),
-      axios.get(`${API_BASE}/users`, { headers: { Authorization: `Bearer ${token}` } }),
+      axios.get(`${API_BASE}/admin/users`, { headers: { Authorization: `Bearer ${token}` } }),
     ];
 
     Promise.all(promises)
