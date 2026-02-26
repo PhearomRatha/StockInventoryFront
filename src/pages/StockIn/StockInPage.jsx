@@ -16,9 +16,8 @@ function StockInPage() {
     supplier_id: "",
     product_id: "",
     quantity: "",
-    unit_cost: "",
     date: new Date().toISOString().split("T")[0],
-    received_by: "",
+    notes: "",
   });
   const [suppliers, setSuppliers] = useState([]);
   const [products, setProducts] = useState([]);
@@ -69,8 +68,8 @@ function StockInPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const { supplier_id, product_id, quantity, unit_cost, date, received_by } = formData;
-    if (!supplier_id || !product_id || !quantity || !unit_cost || !received_by) {
+    const { supplier_id, product_id, quantity, date, notes } = formData;
+    if (!supplier_id || !product_id || !quantity) {
       setModalMessage("Please fill all required fields.");
       setShowErrorModal(true);
       return;
@@ -87,9 +86,8 @@ function StockInPage() {
           supplier_id,
           product_id,
           quantity: Number(quantity),
-          unit_cost: Number(unit_cost),
           date,
-          received_by,
+          notes,
         }),
       });
       const data = await res.json();
@@ -101,9 +99,8 @@ function StockInPage() {
           supplier_id: "",
           product_id: "",
           quantity: "",
-          unit_cost: "",
           date: new Date().toISOString().split("T")[0],
-          received_by: "",
+          notes: "",
         });
         loadOverview(); // reload everything in one call
       } else {
@@ -130,7 +127,7 @@ function StockInPage() {
     .sort((a, b) => new Date(b.received_date) - new Date(a.received_date));
 
   const totalValue = filteredHistory.reduce(
-    (sum, r) => sum + Number(r.quantity) * Number(r.unit_cost),
+    (sum, r) => sum + Number(r.quantity) * Number(r.cost || 0),
     0
   );
 
@@ -178,19 +175,12 @@ function StockInPage() {
               <input type="number" name="quantity" value={formData.quantity} onChange={handleInputChange} min="1" className="w-full px-4 py-3 border rounded-xl" required />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Unit Cost *</label>
-              <input type="number" name="unit_cost" value={formData.unit_cost} onChange={handleInputChange} step="0.01" className="w-full px-4 py-3 border rounded-xl" required />
-            </div>
-            <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Date *</label>
               <input type="date" name="date" value={formData.date} onChange={handleInputChange} className="w-full px-4 py-3 border rounded-xl" required />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Received By *</label>
-              <select name="received_by" value={formData.received_by} onChange={handleInputChange} required className="w-full px-4 py-3 border rounded-xl">
-                <option value="">Select User</option>
-                {users.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
-              </select>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Notes</label>
+              <textarea name="notes" value={formData.notes} onChange={handleInputChange} className="w-full px-4 py-3 border rounded-xl" rows="3"></textarea>
             </div>
             <button type="submit" className="w-full bg-gradient-to-r from-green-600 to-emerald-600 text-white px-6 py-3 rounded-xl">Record Stock In</button>
           </form>
@@ -236,7 +226,7 @@ function StockInPage() {
                       <td className="py-4 px-6">{r.product_name}</td>
                       <td className="py-4 px-6">{r.supplier_name}</td>
                       <td className="py-4 px-6 font-semibold">{r.quantity}</td>
-                      <td className="py-4 px-6 font-semibold">${Number(r.unit_cost).toFixed(2)}</td>
+                      <td className="py-4 px-6 font-semibold">${Number(r.cost || 0).toFixed(2)}</td>
                       <td className="py-4 px-6 text-gray-600">{r.received_by_name}</td>
                       <td className="py-4 px-6 text-sm text-gray-500">{new Date(r.received_date).toLocaleDateString()}</td>
                     </tr>

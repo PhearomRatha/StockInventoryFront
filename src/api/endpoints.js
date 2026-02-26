@@ -12,7 +12,7 @@ export const ENDPOINTS = {
   AUTH: {
     REGISTER: `${API_BASE}/auth/register`,
     LOGIN: `${API_BASE}/auth/login`,
-    GOOGLE_LOGIN: `${API_BASE}/auth/google-login`,
+    GOOGLE_LOGIN: `${API_BASE}/auth/google`,
     LINK_GOOGLE: `${API_BASE}/auth/link-google`,
     LOGOUT: `${API_BASE}/auth/logout`,
     LOGOUT_ALL: `${API_BASE}/auth/logout-all`,
@@ -36,15 +36,15 @@ export const ENDPOINTS = {
     PENDING_REQUESTS: `${API_BASE}/admin/pending-requests`,
     APPROVE_USER: `${API_BASE}/admin/approve-user`,
     REJECT_USER: `${API_BASE}/admin/reject-user`,
-    USERS: `${API_BASE}/admin/users`,
-    USERS_LIST: `${API_BASE}/admin/users-list`,
-    GET_USER: (id) => `${API_BASE}/admin/users/${id}`,
-    CREATE_USER: `${API_BASE}/admin/users`,
-    UPDATE_USER: (id) => `${API_BASE}/admin/users/${id}`,
-    DELETE_USER: (id) => `${API_BASE}/admin/users/${id}`,
-    RESET_USER_PASSWORD: (id) => `${API_BASE}/admin/users/${id}/reset-password`,
-    TOGGLE_STATUS: `${API_BASE}/admin/toggle-status`,
+    USERS: `${API_BASE}/users`,
+    USERS_LIST: `${API_BASE}/users`,
+    GET_USER: (id) => `${API_BASE}/users/${id}`,
+    CREATE_USER: `${API_BASE}/users`,
+    UPDATE_USER: (id) => `${API_BASE}/users/${id}`,
+    DELETE_USER: (id) => `${API_BASE}/users/${id}`,
+    TOGGLE_STATUS: (id) => `${API_BASE}/users/${id}/toggle-status`,
     STATS: `${API_BASE}/admin/stats`,
+    RESET_PASSWORD: `${API_BASE}/admin/reset-password`,
   },
 
   // =====================
@@ -185,7 +185,7 @@ export const ENDPOINTS = {
   // PUBLIC ROUTES
   // =====================
   PUBLIC: {
-    ROLES: `${API_BASE}/roles/public`,
+    ROLES: `${API_BASE}/roles`,
   },
 };
 

@@ -24,6 +24,16 @@ export default function Dashboard() {
     percent_stockout: 0,
   });
 
+  const [monthComparison, setMonthComparison] = useState({
+    revenue: { current: 0, last: 0, change: 0 },
+    stock_in: { current: 0, last: 0, change: 0 },
+    stock_out: { current: 0, last: 0, change: 0 },
+    sales_count: { current: 0, last: 0, change: 0 },
+    new_customers: { current: 0, last: 0, change: 0 },
+    new_suppliers: { current: 0, last: 0, change: 0 },
+    new_products: { current: 0, last: 0, change: 0 },
+  });
+
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -39,46 +49,37 @@ export default function Dashboard() {
       const cacheTimeKey = 'dashboardDataTime';
       const cacheExpiry = 5 * 60 * 1000; // 5 minutes
 
-      const cachedData = localStorage.getItem(cacheKey);
-      const cachedTime = localStorage.getItem(cacheTimeKey);
-      const now = Date.now();
-
-      if (cachedData && cachedTime && (now - cachedTime) < cacheExpiry) {
-        const data = JSON.parse(cachedData);
-        setTotals(data);
-        setLoading(false);
-        return;
-      }
+      // Clear old cache first to ensure fresh data
+      localStorage.removeItem(cacheKey);
+      localStorage.removeItem(cacheTimeKey);
 
       try {
         const res = await fetch(API_BASE, { headers, credentials: 'include' });
         const data = await res.json();
 
-        // Fix spacing issue in your API ("totalStockIn ")
-        const stockInObj =
-          data.totalStockIn || data["totalStockIn "] || { original: {} };
+        // Access the data from the new API response structure
+        const overview = data.data?.overview || {};
 
         const totalsData = {
-          total_customers: data.totalCustomer?.original?.total_this_month || 0,
-          total_products: data.totalProduct?.original?.total_this_month || 0,
-          total_suppliers: data.totalSupplier?.original?.total_this_month || 0,
-          total_sales: data.totalSales?.original?.total_this_month || 0,
-          stockin_this_month: stockInObj.original?.total_this_month || 0,
-          stockout_this_month:
-            data.totalStockOut?.original?.total_this_month || 0,
+          total_customers: overview.total_customers || 0,
+          total_products: overview.total_products || 0,
+          total_suppliers: overview.total_suppliers || 0,
+          total_sales: overview.total_sales || 0,
+          stockin_this_month: overview.total_stock_ins || 0,
+          stockout_this_month: overview.total_stock_outs || 0,
 
-          percent_customers: data.totalCustomer?.original?.percent_change || 0,
-          percent_products: data.totalProduct?.original?.percent_change || 0,
-          percent_suppliers: data.totalSupplier?.original?.percent_change || 0,
-          percent_sales: data.totalSales?.original?.percent_change || 0,
-          percent_stockin: stockInObj.original?.percent_change || 0,
-          percent_stockout:
-            data.totalStockOut?.original?.percent_change || 0,
+          percent_customers: overview.customers_percentage_change || 0,
+          percent_products: overview.products_percentage_change || 0,
+          percent_suppliers: overview.suppliers_percentage_change || 0,
+          percent_sales: overview.sales_percentage_change || 0,
+          percent_stockin: overview.stock_ins_percentage_change || 0,
+          percent_stockout: overview.stock_outs_percentage_change || 0,
         };
 
         setTotals(totalsData);
 
         // Cache the data
+        const now = Date.now();
         localStorage.setItem(cacheKey, JSON.stringify(totalsData));
         localStorage.setItem(cacheTimeKey, now.toString());
 

@@ -56,10 +56,10 @@ export const createUser = async (userData) => {
   }
 };
 
-// Update user
+// Update user (PATCH method per contract)
 export const updateUser = async (id, userData) => {
   try {
-    const response = await api.put(ENDPOINTS.ADMIN.UPDATE_USER(id), userData, {
+    const response = await api.patch(ENDPOINTS.ADMIN.UPDATE_USER(id), userData, {
       headers: getAuthHeaders(),
     });
     return response.data;
@@ -81,11 +81,11 @@ export const deleteUser = async (id) => {
 };
 
 // Reset user password (Admin/Manager can reset any user password)
-export const resetUserPassword = async (id, newPassword) => {
+export const resetUserPassword = async (userId, newPassword) => {
   try {
     const response = await api.post(
-      ENDPOINTS.ADMIN.RESET_USER_PASSWORD(id),
-      { password: newPassword },
+      ENDPOINTS.ADMIN.RESET_PASSWORD,
+      { user_id: userId, new_password: newPassword },
       { headers: getAuthHeaders() }
     );
     return response.data;
@@ -94,12 +94,12 @@ export const resetUserPassword = async (id, newPassword) => {
   }
 };
 
-// Toggle user status (active/inactive)
-export const toggleUserStatus = async (id, status) => {
+// Toggle user status (PATCH method per contract)
+export const toggleUserStatus = async (id) => {
   try {
     const response = await api.post(
-      ENDPOINTS.ADMIN.TOGGLE_STATUS,
-      { user_id: id, status },
+      ENDPOINTS.ADMIN.TOGGLE_STATUS(id),
+      { user_id: id },
       { headers: getAuthHeaders() }
     );
     return response.data;

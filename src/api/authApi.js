@@ -78,7 +78,7 @@ export const login = async (credentials) => {
 // Login with Google OAuth
 export const loginWithGoogle = async (googleToken) => {
   try {
-    const response = await api.post(`${API_BASE}/google-login`, { token: googleToken });
+    const response = await api.post(`${API_BASE}/google`, { token: googleToken });
     
     // Handle different response formats (same as login)
     let user = null;

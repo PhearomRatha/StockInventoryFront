@@ -70,7 +70,7 @@ function ActivityLogPage() {
       .catch(() => setLoading(false));
 
     axios
-      .get(`${API_BASE}/admin/users`, {
+      .get(`${API_BASE}/users`, {
         headers: { Authorization: `Bearer ${token}` },
       })
       .then((res) => setUsers(res.data.data || []))
@@ -417,7 +417,7 @@ function ActivityLogPage() {
                         </div>
                         <div>
                           <p className="font-medium text-gray-900">
-                            {log.user || 'Unknown'}
+                            {typeof log.user === 'object' ? log.user?.name || 'Unknown' : log.user || 'Unknown'}
                           </p>
                         </div>
                       </div>

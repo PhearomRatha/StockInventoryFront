@@ -80,7 +80,8 @@ function Suppliers() {
       if (editingIndex !== null) {
         const supplierId = suppliers[editingIndex].id;
 
-        await axios.patch(`${API_BASE}/suppliers/${supplierId}`, form, {
+        // Contract specifies POST method for supplier updates
+        await axios.post(`${API_BASE}/suppliers/${supplierId}`, form, {
           headers: { Authorization: `Bearer ${token}` },
         });
         setEditingIndex(null);

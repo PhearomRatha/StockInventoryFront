@@ -97,7 +97,7 @@ function SalesPage() {
       axios.get(`${API_BASE}/sales`, { headers: { Authorization: `Bearer ${token}` } }),
       axios.get(`${API_BASE}/customers`, { headers: { Authorization: `Bearer ${token}` } }),
       axios.get(`${API_BASE}/products`, { headers: { Authorization: `Bearer ${token}` } }),
-      axios.get(`${API_BASE}/admin/users`, { headers: { Authorization: `Bearer ${token}` } }),
+      axios.get(`${API_BASE}/users`, { headers: { Authorization: `Bearer ${token}` } }),
     ];
 
     Promise.all(promises)
@@ -310,7 +310,7 @@ function SalesPage() {
 
   const verifyPayment = () => {
     if (!currentSaleId || !currentMd5) {
-      setPaymentError("Cannot verify: sale ID or MD5 missing");
+      setPaymentError("Cannot verify: sale ID or payment reference missing");
       return;
     }
 
@@ -323,7 +323,7 @@ function SalesPage() {
         `${API_BASE}/sales/verify-payment`,
         {
           sale_id: currentSaleId,
-          md5: currentMd5,
+          payment_reference: currentMd5,
         },
         {
           headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },

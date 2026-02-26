@@ -12,11 +12,8 @@ function StockOutPage() {
     customer_id: "",
     product_id: "",
     quantity: 1,
-    unit_price: "",
-    total_amount: "",
-    sold_date: new Date().toISOString().slice(0, 10),
-    sold_by: "",
-    remarks: "",
+    date: new Date().toISOString().slice(0, 10),
+    notes: "",
   });
 
   const [products, setProducts] = useState([]);
@@ -65,11 +62,11 @@ function StockOutPage() {
 
     if (name === "product_id") {
       const selectedProduct = products.find((p) => p.id === Number(value));
-      updatedForm.unit_price = selectedProduct ? selectedProduct.price : "";
+      // Note: price comes from backend, not calculated on frontend
     }
 
     const qty = Number(updatedForm.quantity);
-    const price = Number(updatedForm.unit_price);
+    const price = Number(updatedForm.unit_price || 0);
     updatedForm.total_amount = !isNaN(qty * price) ? (qty * price).toFixed(2) : "";
 
     setForm(updatedForm);
@@ -77,7 +74,7 @@ function StockOutPage() {
 
   // Submit stock-out
   const handleSubmit = async () => {
-    if (!form.customer_id || !form.product_id || !form.unit_price || !form.sold_by) {
+    if (!form.customer_id || !form.product_id || !form.quantity) {
       setModalMessage("Please fill all required fields!");
       setShowErrorModal(true);
       return;
@@ -90,7 +87,13 @@ function StockOutPage() {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify(form),
+        body: JSON.stringify({
+          customer_id: form.customer_id || null,
+          product_id: form.product_id,
+          quantity: Number(form.quantity),
+          date: form.date,
+          notes: form.notes,
+        }),
       });
 
       const result = await response.json();
@@ -103,11 +106,8 @@ function StockOutPage() {
           customer_id: "",
           product_id: "",
           quantity: 1,
-          unit_price: "",
-          total_amount: "",
-          sold_date: new Date().toISOString().slice(0, 10),
-          sold_by: "",
-          remarks: "",
+          date: new Date().toISOString().slice(0, 10),
+          notes: "",
         });
       } else {
         setModalMessage(result.message || "Failed to record stock out");
@@ -200,35 +200,16 @@ function StockOutPage() {
               <input type="number" min="1" name="quantity" value={form.quantity} onChange={handleChange} className="w-full px-4 py-3 border rounded-xl" />
             </div>
 
-            {/* Unit Price & Total */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Unit Price</label>
-              <input type="number" name="unit_price" value={form.unit_price} readOnly className="w-full px-4 py-3 border rounded-xl bg-gray-100" />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Total</label>
-              <input type="number" name="total_amount" value={form.total_amount} readOnly className="w-full px-4 py-3 border rounded-xl bg-gray-100" />
-            </div>
-
-            {/* Sold By */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Sold By *</label>
-              {loading.users ? <p>Loading...</p> :
-                <select name="sold_by" value={form.sold_by} onChange={handleChange} className="w-full px-4 py-3 border rounded-xl">
-                  <option value="">Select User</option>
-                  {users.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
-                </select>
-              }
-            </div>
-
-            {/* Date & Remarks */}
+            {/* Date */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Date *</label>
-              <input type="date" name="sold_date" value={form.sold_date} onChange={handleChange} className="w-full px-4 py-3 border rounded-xl" />
+              <input type="date" name="date" value={form.date} onChange={handleChange} className="w-full px-4 py-3 border rounded-xl" />
             </div>
+
+            {/* Notes */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Remarks</label>
-              <input type="text" name="remarks" value={form.remarks} onChange={handleChange} className="w-full px-4 py-3 border rounded-xl" />
+              <label className="block text-sm font-medium text-gray-700 mb-2">Notes</label>
+              <textarea name="notes" value={form.notes} onChange={handleChange} className="w-full px-4 py-3 border rounded-xl" rows="3"></textarea>
             </div>
 
             <button type="button" onClick={handleSubmit} className="w-full bg-gradient-to-r from-red-600 to-pink-600 text-white px-6 py-3 rounded-xl">
@@ -257,7 +238,7 @@ function StockOutPage() {
                 <table className="w-full min-w-[800px]">
                   <thead className="bg-gray-50 border-b">
                     <tr>
-                      {["Customer","Product","Qty","Unit Price","Total","Date","Sold By","Remarks","Actions"].map(h => (
+                      {["Customer","Product","Qty","Unit Price","Total","Date","Notes","Actions"].map(h => (
                         <th key={h} className="py-4 px-6 text-left text-xs font-semibold text-gray-700">{h}</th>
                       ))}
                     </tr>
@@ -268,11 +249,10 @@ function StockOutPage() {
                         <td className="py-4 px-6">{s.customer_name}</td>
                         <td className="py-4 px-6">{s.product_name}</td>
                         <td className="py-4 px-6 font-semibold">{s.quantity}</td>
-                        <td className="py-4 px-6 font-semibold">${s.unit_price}</td>
-                        <td className="py-4 px-6 font-semibold">${s.total_amount}</td>
-                        <td className="py-4 px-6 text-sm text-gray-500">{new Date(s.sold_date).toLocaleDateString()}</td>
-                        <td className="py-4 px-6 text-gray-600">{s.sold_by}</td>
-                        <td className="py-4 px-6 text-gray-600">{s.remarks || '-'}</td>
+                        <td className="py-4 px-6 font-semibold">${Number(s.unit_price || 0).toFixed(2)}</td>
+                        <td className="py-4 px-6 font-semibold">${Number(s.total_amount || 0).toFixed(2)}</td>
+                        <td className="py-4 px-6 text-sm text-gray-500">{new Date(s.date || s.sold_date).toLocaleDateString()}</td>
+                        <td className="py-4 px-6 text-gray-600">{s.notes || s.remarks || '-'}</td>
                         <td className="py-4 px-6">
                           <button onClick={() => handleDelete(s.id)} className="p-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg">
                             <TrashIcon className="w-5 h-5"/>
