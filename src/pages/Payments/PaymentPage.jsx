@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from "react";
-import axios from "axios";
 import {
   PlusIcon,
   PencilIcon,
@@ -8,19 +7,16 @@ import {
   MagnifyingGlassIcon,
   FunnelIcon,
   ArrowsUpDownIcon,
-  PhotoIcon,
   XMarkIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
   CurrencyDollarIcon,
   TagIcon,
-  BuildingStorefrontIcon,
   CubeTransparentIcon,
   ChartBarIcon,
 } from "@heroicons/react/24/outline";
 
-// ✅ Base API
-const API_BASE = `${import.meta.env.VITE_API_URL}/api`;
+import { paymentApi, salesApi, stockInApi } from "../../api";
 
 function PaymentPage() {
   const [payments, setPayments] = useState([]);
@@ -40,45 +36,40 @@ function PaymentPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const paymentsPerPage = 8;
 
-  // Fetch payments, sales, stockIns, dashboard
-  const fetchPayments = () => {
-    const token = localStorage.getItem("token");
-    if (!token) return;
-
+// Fetch payments, sales, stockIns, dashboard
+  const fetchPayments = async () => {
     setLoading(true);
-
-    axios
-      .get(`${API_BASE}/payments`, {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-      .then((res) => {
-        if (res.data.status === 200) setPayments(res.data.data);
-      })
-      .catch(() => setLoading(false));
-
-    axios
-      .get(`${API_BASE}/sales`, {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-      .then((res) => setSales(res.data.data || []))
-      .catch(console.error);
-
-    axios
-      .get(`${API_BASE}/stock-ins`, {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-      .then((res) => setStockIns(res.data.data || []))
-      .catch(console.error);
-
-    axios
-      .get(`${API_BASE}/payments/dashboard`, {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-      .then((res) => {
-        setDashboard(res.data);
-        setLoading(false);
-      })
-      .catch(() => setLoading(false));
+    try {
+      const [paymentsRes, salesRes, stockInsRes, dashboardRes] = await Promise.all([
+        paymentApi.getAll(),
+        salesApi.getAll(),
+        stockInApi.getAll(),
+        paymentApi.getDashboard()
+      ]);
+      
+      if (paymentsRes.data?.status === 200 || paymentsRes.data?.data) {
+        const paymentsData = paymentsRes.data.data?.data || paymentsRes.data.data || [];
+        setPayments(Array.isArray(paymentsData) ? paymentsData : []);
+      }
+      
+      if (salesRes.data) {
+        const salesData = salesRes.data.data?.data || salesRes.data.data || [];
+        setSales(Array.isArray(salesData) ? salesData : []);
+      }
+      
+      if (stockInsRes.data) {
+        const stockInsData = stockInsRes.data.data?.data || stockInsRes.data.data || [];
+        setStockIns(Array.isArray(stockInsData) ? stockInsData : []);
+      }
+      
+      if (dashboardRes.data) {
+        setDashboard(dashboardRes.data.data || dashboardRes.data || {});
+      }
+    } catch (error) {
+      console.error('Error fetching payments:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -137,44 +128,43 @@ function PaymentPage() {
     currentPage * paymentsPerPage
   );
 
-  const handleDelete = (id) => {
+  const handleDelete = async (id) => {
     if (window.confirm("Are you sure you want to delete this payment?")) {
-      axios
-        .delete(`${API_BASE}/payments/${id}`, {
-          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-        })
-        .then(() => {
-          fetchPayments();
-        })
-        .catch(console.error);
+      try {
+        await paymentApi.delete(id);
+        fetchPayments();
+      } catch (error) {
+        console.error('Error deleting payment:', error);
+      }
     }
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    const token = localStorage.getItem("token");
-    const userData = localStorage.getItem("user");
-    const user = userData ? JSON.parse(userData) : {};
+    
+    const payload = {
+      reference_type: currentPayment.reference_type || '',
+      reference_id: currentPayment.reference_id || currentPayment.sale_id || '',
+      payment_type: currentPayment.payment_type || currentPayment.type || 'income',
+      amount: currentPayment.amount,
+      payment_method: currentPayment.payment_method,
+      paid_to_from: currentPayment.paid_to_from,
+      payment_date: currentPayment.payment_date,
+      status: currentPayment.status || 'pending',
+      notes: currentPayment.notes || ''
+    };
 
-    const payload = { ...currentPayment, recorded_by: user.id };
-
-    const url = isEdit
-      ? `${API_BASE}/payments/${currentPayment.id}`
-      : `${API_BASE}/payments`;
-
-    const method = isEdit ? 'patch' : 'post';
-
-    axios[method](url, payload, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-      },
-    })
-      .then(() => {
-        fetchPayments();
-        setShowModal(false);
-      })
-      .catch(console.error);
+    try {
+      if (isEdit) {
+        await paymentApi.update(currentPayment.id, payload);
+      } else {
+        await paymentApi.create(payload);
+      }
+      fetchPayments();
+      setShowModal(false);
+    } catch (error) {
+      console.error('Error saving payment:', error);
+    }
   };
 
   // Statistics
@@ -361,7 +351,7 @@ function PaymentPage() {
                       </span>
                     </td>
                     <td className="py-4 px-6">
-                      <div className="text-sm text-gray-500">{p.paid_to_from}</div>
+                      <div className="text-sm text-gray-500">{typeof p.paid_to_from === 'object' ? p.paid_to_from?.name || JSON.stringify(p.paid_to_from) : p.paid_to_from}</div>
                     </td>
                     <td className="py-4 px-6">
                       <div className="text-sm text-gray-500">{new Date(p.payment_date).toLocaleDateString()}</div>
@@ -545,7 +535,7 @@ function PaymentPage() {
                       {currentPayment.reference_type === 'sale' &&
                         sales.map((s) => (
                           <option key={s.id} value={s.id}>
-                            Sale #{s.id} - {s.customer?.name || 'Unknown'}
+                            Sale #{s.id} - {typeof s.customer === 'object' && s.customer?.name ? s.customer.name : (s.customer || 'Unknown')}
                           </option>
                         ))}
                       {currentPayment.reference_type === 'purchase' &&

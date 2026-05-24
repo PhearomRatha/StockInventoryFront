@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { FaTrash, FaEdit, FaPlus, FaSort, FaSortUp, FaSortDown } from "react-icons/fa";
+import { customerApi } from "../../api";
 
 function CustomerCrmPage() {
   const [customers, setCustomers] = useState([]);
@@ -17,28 +18,20 @@ function CustomerCrmPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
-  const token = localStorage.getItem("token");
-  const API_BASE = `${import.meta.env.VITE_API_URL}/api`;
-
   // ---------------- Fetch Customers ----------------
   const fetchCustomers = async () => {
     setLoading(true);
-    try {
-      const res = await fetch(`${API_BASE}/customers`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const data = await res.json();
-      setCustomers(Array.isArray(data.data) ? data.data : []);
-    } catch (err) {
-      console.error("Error fetching customers:", err);
-    } finally {
-      setLoading(false);
+    const result = await customerApi.getAll();
+    if (result.success) {
+      const customersData = result.data?.data || result.data;
+      setCustomers(Array.isArray(customersData) ? customersData : []);
     }
+    setLoading(false);
   };
 
   useEffect(() => {
     fetchCustomers();
-  }, [token]);
+  }, []);
 
   // ---------------- Handle Form Change ----------------
   const handleChange = (e) => {
@@ -49,39 +42,27 @@ function CustomerCrmPage() {
   // ---------------- Add / Edit Customer ----------------
   const handleSubmit = async () => {
     if (!form.name) return alert("Name is required!");
-    try {
-      const method = editingId ? "PATCH" : "POST";
-      const url = editingId
-        ? `${API_BASE}/customers/${editingId}`
-        : `${API_BASE}/customers`;
+    
+    let result;
+    if (editingId) {
+      result = await customerApi.update(editingId, form);
+    } else {
+      result = await customerApi.create(form);
+    }
 
-      const response = await fetch(url, {
-        method,
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(form),
+    if (result.success) {
+      await fetchCustomers();
+      setForm({
+        name: "",
+        email: "",
+        phone: "",
+        address: "",
+        preferences: "",
+        notes: "",
       });
-
-      const result = await response.json();
-      if (response.ok) {
-        await fetchCustomers();
-        setForm({
-          name: "",
-          email: "",
-          phone: "",
-          address: "",
-          preferences: "",
-          notes: "",
-        });
-        setEditingId(null);
-      } else {
-        alert(result.message || "Failed to save customer");
-      }
-    } catch (error) {
-      console.error(error);
-      alert("Error saving customer.");
+      setEditingId(null);
+    } else {
+      alert(result.message || "Failed to save customer");
     }
   };
 
@@ -89,19 +70,12 @@ function CustomerCrmPage() {
   const handleDelete = async (id) => {
     if (!window.confirm("Are you sure you want to delete this customer?")) return;
 
-    try {
-      const response = await fetch(`${API_BASE}/customers/${id}`, {
-        method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` },
-      });
+    const result = await customerApi.delete(id);
 
-      if (response.ok) {
-        setCustomers(customers.filter((c) => c.id !== id));
-      } else {
-        alert("Failed to delete customer");
-      }
-    } catch (err) {
-      console.error(err);
+    if (result.success) {
+      setCustomers(customers.filter((c) => c.id !== id));
+    } else {
+      alert(result.message || "Failed to delete customer");
     }
   };
 
@@ -141,13 +115,15 @@ function CustomerCrmPage() {
   const paginatedCustomers = sortedCustomers.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   const formatName = (name) => {
-    const parts = name.trim().split(' ');
+    // Handle object or string
+    const nameStr = typeof name === 'object' ? name?.name || JSON.stringify(name) : (name || '');
+    const parts = nameStr.trim().split(' ');
     if (parts.length > 1) {
       const first = parts[0];
       const last = parts.slice(1).join(' ');
       return `${last}, ${first}`;
     }
-    return name;
+    return nameStr;
   };
 
   const renderSortIcon = (key) => {
@@ -213,8 +189,8 @@ function CustomerCrmPage() {
               <table className="w-full min-w-[800px]">
                 <thead className="bg-gradient-to-r from-gray-50 to-slate-50 border-b border-gray-100">
                   <tr>
-                    <th onClick={() => handleSort("id")} className="py-4 px-6 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider cursor-pointer select-none hover:text-blue-600">
-                      ID {renderSortIcon("id")}
+                    <th className="py-4 px-6 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                      No
                     </th>
                     <th onClick={() => handleSort("name")} className="py-4 px-6 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider cursor-pointer select-none hover:text-blue-600">
                       Name {renderSortIcon("name")}
@@ -235,9 +211,9 @@ function CustomerCrmPage() {
                 </thead>
 
                 <tbody className="divide-y divide-gray-100">
-                  {paginatedCustomers.map((c) => (
+                  {paginatedCustomers.map((c, index) => (
                     <tr key={c.id} className="hover:bg-gray-50/80 transition-colors duration-200">
-                      <td className="py-4 px-6 text-sm text-gray-900">{c.id}</td>
+                      <td className="py-4 px-6 text-sm text-gray-900">{index + 1}</td>
                       <td className="py-4 px-6 text-sm text-gray-900 font-medium">{formatName(c.name)}</td>
                       <td className="py-4 px-6 text-sm text-gray-600">{c.email}</td>
                       <td className="py-4 px-6 text-sm text-gray-600">{c.phone}</td>

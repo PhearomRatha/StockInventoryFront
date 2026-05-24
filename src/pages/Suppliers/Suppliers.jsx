@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from "react";
-import axios from "axios";
 import {
   FaBuilding,
   FaUserTie,
@@ -14,8 +13,7 @@ import {
   FaExclamationCircle,
 } from "react-icons/fa";
 
-const API_BASE = `${import.meta.env.VITE_API_URL}/api`;
-const token = localStorage.getItem("token");
+import { supplierApi } from "../../api";
 
 function Suppliers() {
   const [suppliers, setSuppliers] = useState([]);
@@ -50,15 +48,12 @@ function Suppliers() {
     return Object.keys(newErrors).length === 0;
   };
 
-  const fetchSuppliers = () => {
-    axios
-      .get(`${API_BASE}/suppliers`, {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-      .then((res) => {
-        if (res.data && res.data.data) setSuppliers(res.data.data);
-      })
-      .catch((err) => console.error("Error fetching suppliers:", err));
+  const fetchSuppliers = async () => {
+    const result = await supplierApi.getAll();
+    if (result.success) {
+      const suppliersData = result.data?.data || result.data;
+      setSuppliers(Array.isArray(suppliersData) ? suppliersData : []);
+    }
   };
 
   useEffect(() => {
@@ -79,16 +74,10 @@ function Suppliers() {
     try {
       if (editingIndex !== null) {
         const supplierId = suppliers[editingIndex].id;
-
-        // Contract specifies POST method for supplier updates
-        await axios.post(`${API_BASE}/suppliers/${supplierId}`, form, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        await supplierApi.update(supplierId, form);
         setEditingIndex(null);
       } else {
-        await axios.post(`${API_BASE}/suppliers`, form, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        await supplierApi.create(form);
       }
       fetchSuppliers();
       resetForm();
@@ -121,9 +110,7 @@ function Suppliers() {
     if (window.confirm("Are you sure to delete this supplier?")) {
       setDeletingId(supplierId);
       try {
-        await axios.delete(`${API_BASE}/suppliers/${supplierId}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        await supplierApi.delete(supplierId);
         fetchSuppliers();
       } catch (err) {
         console.error("Error deleting supplier:", err);
@@ -324,14 +311,14 @@ function Suppliers() {
               <table className="w-full min-w-[800px]">
                 <thead className="bg-gradient-to-r from-gray-50 to-slate-50 border-b border-gray-100">
                   <tr>
-                    {["id", "name", "company", "phone", "email", "address", "notes"].map((key) => (
+                    {["No", "name", "company", "phone", "email", "address", "notes"].map((key) => (
                       <th
                         key={key}
                         className="py-4 px-6 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider cursor-pointer select-none hover:text-blue-600"
-                        onClick={() => handleSort(key)}
+                        onClick={() => key !== "No" && handleSort(key)}
                       >
                         {key.charAt(0).toUpperCase() + key.slice(1)}
-                        {sortConfig.key === key
+                        {sortConfig.key === key && key !== "No"
                           ? sortConfig.direction === "asc"
                             ? " ▲"
                             : " ▼"
@@ -345,7 +332,7 @@ function Suppliers() {
                 <tbody className="divide-y divide-gray-100">
                   {sortedSuppliers.map((s, i) => (
                     <tr key={s.id} className="hover:bg-gray-50/80 transition-colors duration-200">
-                      <td className="py-4 px-6 text-sm text-gray-900">{s.id}</td>
+                      <td className="py-4 px-6 text-sm text-gray-900">{i + 1}</td>
                       <td className="py-4 px-6 text-sm text-gray-900 font-medium">{s.name}</td>
                       <td className="py-4 px-6 text-sm text-gray-600">{s.company}</td>
                       <td className="py-4 px-6 text-sm text-gray-600">{s.phone}</td>

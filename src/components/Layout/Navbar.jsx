@@ -111,7 +111,7 @@ function Navbar() {
                 </div>
                 <div className="mt-2">
                   <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${getRoleBadgeColor()}`}>
-                    {user?.role || 'User'}
+                    {typeof user?.role === 'object' ? (user.role?.name || 'User') : (user?.role || 'User')}
                   </span>
                 </div>
               </div>

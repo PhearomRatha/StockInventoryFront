@@ -19,6 +19,7 @@ const UserManagement = lazy(() => import("../pages/Users/UserManagement"));
 const SalesPage = lazy(() => import("../pages/Sales/SalesPage"));
 const PaymentPage = lazy(() => import("../pages/Payments/PaymentPage"));
 const ProfilePage = lazy(() => import("../pages/Users/ProfilePage"));
+const RolesPage = lazy(() => import("../pages/Roles/RolesPage"));
 
 // Loading fallback
 const LoadingFallback = () => (
@@ -186,6 +187,16 @@ function AppRoutes() {
           element={
             <AdminRoute>
               <UserManagement />
+            </AdminRoute>
+          }
+        />
+
+        {/* Roles - Admin only */}
+        <Route
+          path="/roles"
+          element={
+            <AdminRoute>
+              <RolesPage />
             </AdminRoute>
           }
         />

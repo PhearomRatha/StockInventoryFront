@@ -8,8 +8,7 @@ import {
   TruckIcon,
 } from "@heroicons/react/24/outline";
 
-const API_BASE = `${import.meta.env.VITE_API_URL}/api`;
-const token = localStorage.getItem("token");
+import { stockInApi, supplierApi, productApi } from "../../api";
 
 function StockInPage() {
   const [formData, setFormData] = useState({
@@ -40,19 +39,17 @@ function StockInPage() {
   const loadOverview = async () => {
     try {
       setLoading(true);
-  const token = localStorage.getItem("token");
-
-      const res = await fetch(`${API_BASE}/stock-ins/overview`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const data = await res.json();
-      if (data.status === 200) {
-        setSuppliers(data.suppliers);
-        setProducts(data.products);
-        setUsers(data.users);
-        setStockInHistory(data.stock_history);
-      } else {
-        console.error("Failed to load stock overview");
+      const [overviewRes] = await Promise.all([
+        stockInApi.getOverview(),
+        supplierApi.getAll(),
+        productApi.getAll(),
+      ]);
+      
+      if (overviewRes.success) {
+        setSuppliers(overviewRes.data?.suppliers || []);
+        setProducts(overviewRes.data?.products || []);
+        setUsers(overviewRes.data?.users || []);
+        setStockInHistory(overviewRes.data?.stock_history || []);
       }
     } catch (err) {
       console.error("Load overview error:", err);
@@ -75,41 +72,29 @@ function StockInPage() {
       return;
     }
 
-    try {
-      const res = await fetch(`${API_BASE}/stock-ins`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          supplier_id,
-          product_id,
-          quantity: Number(quantity),
-          date,
-          notes,
-        }),
-      });
-      const data = await res.json();
+    const payload = {
+      supplier_id,
+      product_id,
+      quantity: Number(quantity),
+      date,
+      notes,
+    };
 
-      if (data.status === 201) {
-        setModalMessage("Stock In recorded successfully!");
-        setShowSuccessModal(true);
-        setFormData({
-          supplier_id: "",
-          product_id: "",
-          quantity: "",
-          date: new Date().toISOString().split("T")[0],
-          notes: "",
-        });
-        loadOverview(); // reload everything in one call
-      } else {
-        setModalMessage("Failed to record Stock In.");
-        setShowErrorModal(true);
-      }
-    } catch (err) {
-      console.error(err);
-      setModalMessage("An error occurred while recording Stock In.");
+    const result = await stockInApi.create(payload);
+
+    if (result.success) {
+      setModalMessage("Stock In recorded successfully!");
+      setShowSuccessModal(true);
+      setFormData({
+        supplier_id: "",
+        product_id: "",
+        quantity: "",
+        date: new Date().toISOString().split("T")[0],
+        notes: "",
+      });
+      loadOverview();
+    } else {
+      setModalMessage(result.message || "Failed to record Stock In.");
       setShowErrorModal(true);
     }
   };

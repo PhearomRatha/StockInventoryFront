@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from "react";
-import axios from "axios";
 import {
   PlusIcon,
   PencilIcon,
@@ -14,8 +13,7 @@ import {
   CubeIcon,
 } from "@heroicons/react/24/outline";
 
-// ✅ Base API
-const API_BASE = `${import.meta.env.VITE_API_URL}/api`;
+import { categoryApi } from "../../api";
 
 function CategoryPage() {
   const [categories, setCategories] = useState([]);
@@ -26,27 +24,22 @@ function CategoryPage() {
   const [showModal, setShowModal] = useState(false);
   const [isEdit, setIsEdit] = useState(false);
   const [currentCategory, setCurrentCategory] = useState({});
+  const [errors, setErrors] = useState({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
   const categoriesPerPage = 8;
 
   // Fetch categories
-  const fetchCategories = () => {
-    const token = localStorage.getItem("token");
-    if (!token) return;
-
+  const fetchCategories = async () => {
     setLoading(true);
-
-    axios
-      .get(`${API_BASE}/categories`, {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-      .then((res) => {
-        if (res.data.status === 200) setCategories(res.data.data);
-        setLoading(false);
-      })
-      .catch(() => setLoading(false));
+    const result = await categoryApi.getAll();
+    if (result.success) {
+      const categoriesData = result.data?.data || result.data;
+      setCategories(Array.isArray(categoriesData) ? categoriesData : []);
+    }
+    setLoading(false);
   };
 
   useEffect(() => {
@@ -65,16 +58,18 @@ function CategoryPage() {
   const openAddModal = () => {
     setIsEdit(false);
     setCurrentCategory({});
+    setErrors({});
     setShowModal(true);
   };
 
   const openEditModal = (category) => {
     setIsEdit(true);
     setCurrentCategory(category);
+    setErrors({});
     setShowModal(true);
   };
 
-  const filteredCategories = categories
+  const filteredCategories = (Array.isArray(categories) ? categories : [])
     .filter(
       (c) =>
         c.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -93,40 +88,63 @@ function CategoryPage() {
     currentPage * categoriesPerPage
   );
 
-  const handleDelete = (id) => {
+  const handleDelete = async (id) => {
     if (window.confirm("Are you sure you want to delete this category?")) {
-      axios
-        .delete(`${API_BASE}/categories/${id}`, {
-          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-        })
-        .then(() => {
-          fetchCategories();
-        })
-        .catch(console.error);
+      const result = await categoryApi.delete(id);
+      if (result.success) {
+        fetchCategories();
+      }
     }
   };
 
-  const handleSubmit = (e) => {
+  // Validate form fields
+  const validateForm = () => {
+    const newErrors = {};
+    
+    if (!currentCategory.name || currentCategory.name.trim() === "") {
+      newErrors.name = "Category name is required";
+    } else if (currentCategory.name.trim().length > 255) {
+      newErrors.name = "Category name must not exceed 255 characters";
+    }
+    
+    if (currentCategory.description && currentCategory.description.length > 1000) {
+      newErrors.description = "Description must not exceed 1000 characters";
+    }
+    
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    const token = localStorage.getItem("token");
 
-    const url = isEdit
-      ? `${API_BASE}/categories/${currentCategory.id}`
-      : `${API_BASE}/categories`;
+    if (!validateForm()) {
+      return;
+    }
 
-    const method = isEdit ? 'patch' : 'post';
+    setIsSubmitting(true);
 
-    axios[method](url, currentCategory, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-      },
-    })
-      .then(() => {
-        fetchCategories();
-        setShowModal(false);
-      })
-      .catch(console.error);
+    let result;
+    if (isEdit) {
+      result = await categoryApi.update(currentCategory.id, currentCategory);
+    } else {
+      result = await categoryApi.create(currentCategory);
+    }
+
+    if (result.success) {
+      fetchCategories();
+      setShowModal(false);
+      setCurrentCategory({});
+      setErrors({});
+    } else {
+      if (result.errors) {
+        setErrors(result.errors);
+      } else {
+        alert(result.message || "Failed to save category. Please try again.");
+      }
+    }
+
+    setIsSubmitting(false);
   };
 
   // Statistics
@@ -407,15 +425,18 @@ function CategoryPage() {
                   <input
                     type="text"
                     value={currentCategory.name || ""}
-                    onChange={(e) =>
-                      setCurrentCategory({ ...currentCategory, name: e.target.value })
-                    }
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition"
+                    onChange={(e) => {
+                      setCurrentCategory({ ...currentCategory, name: e.target.value });
+                      if (errors.name) setErrors({ ...errors, name: "" });
+                    }}
+                    className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition ${errors.name ? 'border-red-500 focus:ring-red-500' : 'border-gray-300'}`}
                     placeholder="Enter category name"
-                    required
                     minLength="1"
                     maxLength="255"
                   />
+                  {errors.name && (
+                    <p className="mt-1 text-sm text-red-600">{errors.name}</p>
+                  )}
                 </div>
 
                 <div>
@@ -424,16 +445,20 @@ function CategoryPage() {
                   </label>
                   <textarea
                     value={currentCategory.description || ""}
-                    onChange={(e) =>
+                    onChange={(e) => {
                       setCurrentCategory({
                         ...currentCategory,
                         description: e.target.value,
-                      })
-                    }
+                      });
+                      if (errors.description) setErrors({ ...errors, description: "" });
+                    }}
                     rows="3"
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition"
+                    className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition ${errors.description ? 'border-red-500 focus:ring-red-500' : 'border-gray-300'}`}
                     placeholder="Enter category description..."
                   />
+                  {errors.description && (
+                    <p className="mt-1 text-sm text-red-600">{errors.description}</p>
+                  )}
                 </div>
               </div>
 
@@ -443,14 +468,26 @@ function CategoryPage() {
                   type="button"
                   onClick={() => setShowModal(false)}
                   className="px-6 py-3 text-gray-700 font-medium rounded-xl border border-gray-300 hover:bg-gray-50 transition"
+                  disabled={isSubmitting}
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-medium rounded-xl hover:shadow-lg transition-all duration-300 shadow-md"
+                  disabled={isSubmitting}
+                  className="px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-medium rounded-xl hover:shadow-lg transition-all duration-300 shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {isEdit ? "Update Category" : "Create Category"}
+                  {isSubmitting ? (
+                    <span className="flex items-center gap-2">
+                      <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                      </svg>
+                      Saving...
+                    </span>
+                  ) : (
+                    isEdit ? "Update Category" : "Create Category"
+                  )}
                 </button>
               </div>
             </form>

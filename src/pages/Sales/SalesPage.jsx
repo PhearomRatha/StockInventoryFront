@@ -1,6 +1,5 @@
 // … your imports stay exactly the same
 import React, { useState, useEffect } from "react";
-import axios from "axios";
 import { QRCodeCanvas } from "qrcode.react";
 import {
   PlusIcon,
@@ -21,11 +20,11 @@ import {
   ChartBarIcon,
 } from "@heroicons/react/24/outline";
 
-const API_BASE = `${import.meta.env.VITE_API_URL}/api`;
-const token = localStorage.getItem("token");
-const user = JSON.parse(localStorage.getItem("user"));
+import { salesApi, customerApi, productApi } from "../../api";
+import { useAuth } from "../../context/AuthContext";
 
 function SalesPage() {
+  const { user } = useAuth();
   const [sales, setSales] = useState([]);
   const [customers, setCustomers] = useState([]);
   const [users, setUsers] = useState([]);
@@ -63,20 +62,26 @@ function SalesPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const salesPerPage = 8;
 
+  // Search states for modal
+  const [productSearch, setProductSearch] = useState("");
+  const [customerSearch, setCustomerSearch] = useState("");
+  const [searchedProducts, setSearchedProducts] = useState([]);
+  const [searchedCustomers, setSearchedCustomers] = useState([]);
+  const [searchingProducts, setSearchingProducts] = useState(false);
+  const [searchingCustomers, setSearchingCustomers] = useState(false);
+
   const clearCache = () => {
     localStorage.removeItem('salesData');
     localStorage.removeItem('salesDataTime');
+    localStorage.removeItem('cachedSales');
   };
 
-  const fetchSales = (force = false) => {
-    const token = localStorage.getItem("token");
-    if (!token) return;
-
+  const fetchSales = async (force = false) => {
     setLoading(true);
 
     const cacheKey = 'salesData';
     const cacheTimeKey = 'salesDataTime';
-    const cacheExpiry = 5 * 60 * 1000; // 5 minutes
+    const cacheExpiry = 5 * 60 * 1000;
 
     const cachedData = localStorage.getItem(cacheKey);
     const cachedTime = localStorage.getItem(cacheTimeKey);
@@ -86,53 +91,101 @@ function SalesPage() {
       const data = JSON.parse(cachedData);
       setSales(data.sales || []);
       setCustomers(data.customers || []);
-      setUsers(data.users || []);
-      setProducts(data.products || []);
       setLoading(false);
       return;
     }
 
-    // Fetch all data in parallel
-    const promises = [
-      axios.get(`${API_BASE}/sales`, { headers: { Authorization: `Bearer ${token}` } }),
-      axios.get(`${API_BASE}/customers`, { headers: { Authorization: `Bearer ${token}` } }),
-      axios.get(`${API_BASE}/products`, { headers: { Authorization: `Bearer ${token}` } }),
-      axios.get(`${API_BASE}/users`, { headers: { Authorization: `Bearer ${token}` } }),
-    ];
+    const [salesRes, customersRes] = await Promise.all([
+      salesApi.getAll({ per_page: 100 }),
+      customerApi.getAll({ per_page: 100 }),
+    ]);
 
-    Promise.all(promises)
-      .then((responses) => {
-        const salesRes = responses[0];
-        const customersRes = responses[1];
-        const productsRes = responses[2];
-        const usersRes = responses[3]; // only if admin
+    if (salesRes.success) {
+      const sales = Array.isArray(salesRes.data?.data || salesRes.data) 
+        ? salesRes.data?.data || salesRes.data 
+        : [];
+      setSales(sales);
+    }
 
-        const sales = Array.isArray(salesRes.data.data) ? salesRes.data.data : [];
-        const customers = Array.isArray(customersRes.data.data) ? customersRes.data.data : [];
-        const products = Array.isArray(productsRes.data.data) ? productsRes.data.data : [];
-        const users = Array.isArray(usersRes.data.data.data) ? usersRes.data.data.data : [];
+    if (customersRes.success) {
+      const customers = Array.isArray(customersRes.data?.data || customersRes.data) 
+        ? customersRes.data?.data || customersRes.data 
+        : [];
+      setCustomers(customers);
+      const dataToCache = { sales: salesRes.data?.data || salesRes.data, customers };
+      localStorage.setItem(cacheKey, JSON.stringify(dataToCache));
+      localStorage.setItem(cacheTimeKey, now.toString());
+    }
 
-        setSales(sales);
-        setCustomers(customers);
-        setUsers(users);
-        setProducts(products);
-
-        // Cache the data
-        const dataToCache = { sales, customers, users, products };
-        localStorage.setItem(cacheKey, JSON.stringify(dataToCache));
-        localStorage.setItem(cacheTimeKey, now.toString());
-
-        setLoading(false);
-      })
-      .catch((errors) => {
-        console.error('Error fetching data:', errors);
-        setLoading(false);
-      });
+    setLoading(false);
   };
 
   useEffect(() => {
     fetchSales();
   }, []);
+
+  // Search products when modal opens
+  useEffect(() => {
+    if (showModal && !isEdit) {
+      searchProducts("");
+    }
+  }, [showModal, isEdit]);
+
+  // Debounced product search
+  useEffect(() => {
+    if (!showModal || isEdit) return;
+    const timer = setTimeout(() => {
+      searchProducts(productSearch);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [productSearch, showModal, isEdit]);
+
+  // Debounced customer search
+  useEffect(() => {
+    if (!showModal || isEdit) return;
+    const timer = setTimeout(() => {
+      searchCustomers(customerSearch);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [customerSearch, showModal, isEdit]);
+
+  // Search products API call
+  const searchProducts = async (search) => {
+    setSearchingProducts(true);
+    try {
+      const result = await salesApi.searchProducts(search);
+      if (result.success) {
+        const data = Array.isArray(result.data?.data || result.data) 
+          ? result.data?.data || result.data 
+          : [];
+        setSearchedProducts(data);
+      }
+    } catch (err) {
+      console.error('Error searching products:', err);
+      setSearchedProducts([]);
+    } finally {
+      setSearchingProducts(false);
+    }
+  };
+
+  // Search customers API call
+  const searchCustomers = async (search) => {
+    setSearchingCustomers(true);
+    try {
+      const result = await salesApi.searchCustomers(search);
+      if (result.success) {
+        const data = Array.isArray(result.data?.data || result.data) 
+          ? result.data?.data || result.data 
+          : [];
+        setSearchedCustomers(data);
+      }
+    } catch (err) {
+      console.error('Error searching customers:', err);
+      setSearchedCustomers([]);
+    } finally {
+      setSearchingCustomers(false);
+    }
+  };
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -155,6 +208,10 @@ function SalesPage() {
     setCurrentSale({ payment_method: "Cash", sold_by: Number(user?.id) });
     setCart([]);
     setErrors({});
+    setProductSearch("");
+    setCustomerSearch("");
+    setSearchedProducts([]);
+    setSearchedCustomers([]);
     setShowModal(true);
   };
 
@@ -175,6 +232,10 @@ function SalesPage() {
     }));
     setCart(loadedCart);
     setErrors({});
+    // Load products and customers for edit mode
+    searchProducts("");
+    searchCustomers("");
+    setCustomerSearch(typeof sale.customer === 'object' && sale.customer?.name ? sale.customer.name : (sale.customer || ''));
     setShowModal(true);
   };
 
@@ -189,7 +250,7 @@ function SalesPage() {
       return;
     }
 
-    const product = products.find((p) => p.id === Number(newItem.product_id));
+    const product = searchedProducts.find((p) => p.id === Number(newItem.product_id));
     if (!product) return;
 
     if (newItem.quantity > product.stock_quantity) {
@@ -400,14 +461,14 @@ function SalesPage() {
   // Filter and sort sales
   const filteredSales = sales
     .filter((s) => {
-      const matchesSearch =
+                    const matchesSearch =
         debouncedSearch === "" ||
-        s.customer?.name?.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+        (typeof s.customer === 'object' ? s.customer?.name : s.customer)?.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
         s.items?.some((item) =>
-          item.product?.name?.toLowerCase().includes(debouncedSearch.toLowerCase())
+          (typeof item.product === 'object' ? item.product?.name : item.product)?.toLowerCase().includes(debouncedSearch.toLowerCase())
         );
-      const matchesCustomer =
-        selectedCustomer === "All" || s.customer?.name === selectedCustomer;
+                    const matchesCustomer =
+        selectedCustomer === "All" || (typeof s.customer === 'object' ? s.customer?.name : s.customer) === selectedCustomer;
       return matchesSearch && matchesCustomer;
     })
     .sort((a, b) => {
@@ -620,13 +681,13 @@ function SalesPage() {
                   >
                     <td className="py-4 px-6">
                       <div className="font-medium text-gray-900">
-                        {s.invoice_number}
+                        {typeof s.invoice_number === 'object' ? (s.invoice_number?.name || JSON.stringify(s.invoice_number)) : s.invoice_number}
                       </div>
                     </td>
                     <td className="py-4 px-6">
                       <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-indigo-50 text-indigo-700 text-sm font-medium">
                         <BuildingStorefrontIcon className="w-3.5 h-3.5" />
-                        {s.customer?.name}
+                        {typeof s.customer === 'object' && s.customer?.name ? s.customer.name : (s.customer || 'Unknown')}
                       </span>
                     </td>
                     <td className="py-4 px-6">
@@ -648,13 +709,14 @@ function SalesPage() {
                     <td className="py-4 px-6">
                       <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-blue-50 text-blue-700 text-sm font-medium">
                         <TagIcon className="w-3.5 h-3.5" />
-                        {s.payment_method ||
-                          (s.status === "paid" ? "Bakong" : "")}
+                        {typeof s.payment_method === 'object'
+                          ? (s.payment_method?.name || "Bakong")
+                          : (s.payment_method || (s.status === "paid" ? "Bakong" : ""))}
                       </span>
                     </td>
                     <td className="py-4 px-6">
                       <div className="text-sm text-gray-500">
-                        {s.sold_by}
+                        {typeof s.soldBy === 'object' && s.soldBy?.name ? s.soldBy.name : (typeof s.sold_by === 'object' ? (s.sold_by?.name || s.sold_by?.id || 'Unknown') : (s.sold_by || "Unknown"))}
                       </div>
                     </td>
                     <td className="py-4 px-6">
@@ -799,24 +861,43 @@ function SalesPage() {
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Customer *
                     </label>
-                    <select
-                      value={currentSale.customer_id || ""}
-                      onChange={(e) => {
-                        setCurrentSale({
-                          ...currentSale,
-                          customer_id: e.target.value,
-                        });
-                        setErrors({ ...errors, customer: "" });
-                      }}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition appearance-none bg-white"
-                    >
-                      <option value="">Select a customer</option>
-                      {customers.map((c) => (
-                        <option key={c.id} value={c.id}>
-                          {c.name}
-                        </option>
-                      ))}
-                    </select>
+                    <div className="relative">
+                      <input
+                        type="text"
+                        placeholder="Search customers..."
+                        value={customerSearch}
+                        onChange={(e) => setCustomerSearch(e.target.value)}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition"
+                      />
+                      {searchingCustomers && (
+                        <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-indigo-600"></div>
+                        </div>
+                      )}
+                    </div>
+                    {customerSearch && (
+                      <div className="mt-2 border border-gray-200 rounded-xl max-h-48 overflow-y-auto">
+                        {searchedCustomers.length > 0 ? (
+                          searchedCustomers.map((c) => (
+                            <div
+                              key={c.id}
+                              onClick={() => {
+                                setCurrentSale({ ...currentSale, customer_id: c.id });
+                                setCustomerSearch(c.name);
+                                setErrors({ ...errors, customer: "" });
+                              }}
+                              className={`px-4 py-2 cursor-pointer hover:bg-indigo-50 ${
+                                currentSale.customer_id === c.id ? "bg-indigo-50" : ""
+                              }`}
+                            >
+                              {c.name}
+                            </div>
+                          ))
+                        ) : (
+                          <div className="px-4 py-2 text-gray-500 text-sm">No customers found</div>
+                        )}
+                      </div>
+                    )}
                     {errors.customer && <p className="text-red-500 text-sm mt-1">{errors.customer}</p>}
                   </div>
 
@@ -876,39 +957,50 @@ function SalesPage() {
                       <label className="block text-sm font-medium text-gray-700 mb-1">
                         Product
                       </label>
-                      <select
-                        value={newItem.product_id}
-                        onChange={(e) => {
-                          const selected = products.find(
-                            (p) => p.id == e.target.value
-                          );
-                          setNewItem({
-                            ...newItem,
-                            product_id: Number(e.target.value),
-                            quantity: 1,
-                            maxQuantity: selected?.stock_quantity || 1,
-                          });
-                          setErrors({ ...errors, product: "" });
-                        }}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition appearance-none bg-white"
-                      >
-                        <option value="">Select Product</option>
-                        {products.map((p) => (
-                          <option
-                            key={p.id}
-                            value={p.id}
-                            disabled={p.stock_quantity === 0}
-                            style={{
-                              color: p.stock_quantity === 0 ? "red" : "black",
-                            }}
-                          >
-                            {p.name}{" "}
-                            {p.stock_quantity === 0
-                              ? "(Out of Stock)"
-                              : `(Available: ${p.stock_quantity})`}
-                          </option>
-                        ))}
-                      </select>
+                      <div className="relative">
+                        <input
+                          type="text"
+                          placeholder="Search products..."
+                          value={productSearch}
+                          onChange={(e) => setProductSearch(e.target.value)}
+                          className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition"
+                        />
+                        {searchingProducts && (
+                          <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-indigo-600"></div>
+                          </div>
+                        )}
+                      </div>
+                      {productSearch && (
+                        <div className="mt-2 border border-gray-200 rounded-xl max-h-48 overflow-y-auto">
+                          {searchedProducts.length > 0 ? (
+                            searchedProducts.map((p) => (
+                              <div
+                                key={p.id}
+                                onClick={() => {
+                                  if (p.stock_quantity > 0) {
+                                    setNewItem({
+                                      ...newItem,
+                                      product_id: p.id,
+                                      quantity: 1,
+                                      maxQuantity: p.stock_quantity,
+                                    });
+                                    setProductSearch(p.name);
+                                    setErrors({ ...errors, product: "" });
+                                  }
+                                }}
+                                className={`px-4 py-2 cursor-pointer hover:bg-indigo-50 ${
+                                  p.stock_quantity === 0 ? "opacity-50 cursor-not-allowed" : ""
+                                }`}
+                              >
+                                {p.name} - ${p.price} (Stock: {p.stock_quantity})
+                              </div>
+                            ))
+                          ) : (
+                            <div className="px-4 py-2 text-gray-500 text-sm">No products found</div>
+                          )}
+                        </div>
+                      )}
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">

@@ -1,15 +1,15 @@
 import React, { useState, useEffect, useCallback } from "react";
-import axios from "axios";
 import { 
   FaTrash, FaUserSlash, FaEdit, FaCheck, FaTimes, FaClock, 
   FaUserPlus, FaSearch, FaFilter, FaKey 
 } from "react-icons/fa";
 import { ChevronLeftIcon, ChevronRightIcon } from "@heroicons/react/24/outline";
-import { useAuth, ROLES } from "../../context/AuthContext";
+import { useAuth, ROLES, hasPermission } from "../../context/AuthContext";
 import { ElMessage } from "../../utils/message";
 import { getUsers, createUser, updateUser, deleteUser, resetUserPassword } from "../../api/adminApi";
-
-const API_BASE = `${import.meta.env.VITE_API_URL}/api`;
+import { approveUser, rejectUser } from "../../api";
+import api from "../../plugin/axios";
+import ENDPOINTS from "../../api/endpoints";
 
 function UserManagement() {
   const { user: currentUser, hasPermission, canManageUser } = useAuth();
@@ -75,10 +75,12 @@ function UserManagement() {
       
       // Handle different response structures
       if (res.data && res.data.data) {
-        setUsers(res.data.data);
-        setCurrentPage(res.data.current_page || 1);
-        setTotalPages(res.data.last_page || 1);
-        setTotalUsers(res.data.total || 0);
+        // Paginated response: { data: { current_page, data: [...], ... } }
+        const usersData = res.data.data.data || res.data.data;
+        setUsers(Array.isArray(usersData) ? usersData : []);
+        setCurrentPage(res.data.data.current_page || 1);
+        setTotalPages(res.data.data.last_page || 1);
+        setTotalUsers(res.data.data.total || 0);
       } else if (Array.isArray(res.data)) {
         setUsers(res.data);
         setTotalUsers(res.data.length);
@@ -94,15 +96,12 @@ function UserManagement() {
   // Fetch roles
   const fetchRoles = useCallback(async () => {
     try {
-      const token = localStorage.getItem("token");
-      const res = await axios.get(`${API_BASE}/roles`, { 
-        headers: { Authorization: `Bearer ${token}` } 
-      });
-      
-      if (res.data && res.data.data) {
-        setRoles(res.data.data);
-      } else if (Array.isArray(res.data)) {
-        setRoles(res.data);
+      const result = await api.get(ENDPOINTS.ROLES.INDEX);
+      if (result.data && result.data.data) {
+        const rolesData = result.data.data.data || result.data.data;
+        setRoles(Array.isArray(rolesData) ? rolesData : []);
+      } else if (Array.isArray(result.data)) {
+        setRoles(result.data);
       }
     } catch (err) {
       console.error('Error fetching roles:', err);
@@ -291,37 +290,23 @@ function UserManagement() {
 
   // Approve user
   const handleApproveUser = async (userId) => {
-    try {
-      const res = await axios.post(
-        `${API_BASE}/admin/approve-user`,
-        { user_id: userId },
-        { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } }
-      );
-      
-      if (res.data.success) {
-        ElMessage.success('User approved successfully!');
-        fetchUsers(currentPage);
-      }
-    } catch (err) {
-      ElMessage.error(err.response?.data?.message || 'Failed to approve user');
+    const result = await approveUser(userId);
+    if (result.success) {
+      ElMessage.success('User approved successfully!');
+      fetchUsers(currentPage);
+    } else {
+      ElMessage.error(result.message || 'Failed to approve user');
     }
   };
 
   // Reject user
   const handleRejectUser = async (userId) => {
-    try {
-      const res = await axios.post(
-        `${API_BASE}/admin/reject-user`,
-        { user_id: userId },
-        { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } }
-      );
-      
-      if (res.data.success) {
-        ElMessage.success('User rejected!');
-        fetchUsers(currentPage);
-      }
-    } catch (err) {
-      ElMessage.error(err.response?.data?.message || 'Failed to reject user');
+    const result = await rejectUser(userId);
+    if (result.success) {
+      ElMessage.success('User rejected!');
+      fetchUsers(currentPage);
+    } else {
+      ElMessage.error(result.message || 'Failed to reject user');
     }
   };
 
@@ -345,12 +330,33 @@ function UserManagement() {
   };
 
   // Get user status
-  const getUserStatus = (user) => {
-    if (user.status === true || user.status === 1) return { label: "Active", class: "bg-green-100 text-green-800" };
-    if (user.status === false || user.status === 0) return { label: "Pending", class: "bg-yellow-100 text-yellow-800" };
-    if (user.status === 2) return { label: "Inactive", class: "bg-red-100 text-red-800" };
-    return { label: "Unknown", class: "bg-gray-100 text-gray-800" };
-  };
+const getUserStatus = (user) => {
+  switch (user.status) {
+    case "ACTIVE":
+      return {
+        label: "Active",
+        class: "bg-green-100 text-green-800",
+      };
+
+    case "PENDING":
+      return {
+        label: "Pending",
+        class: "bg-yellow-100 text-yellow-800",
+      };
+
+    case "INACTIVE":
+      return {
+        label: "Inactive",
+        class: "bg-red-100 text-red-800",
+      };
+
+    default:
+      return {
+        label: "Unknown",
+        class: "bg-gray-100 text-gray-800",
+      };
+  }
+};
 
   // Get role name
   const getRoleName = (role) => {
@@ -369,14 +375,14 @@ function UserManagement() {
       <div className="max-w-7xl mx-auto">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-3xl font-bold text-gray-900">User Management</h1>
-          {hasPermission(currentUser, 'CREATE_USERS') && (
-            <button
-              onClick={() => setShowCreateModal(true)}
-              className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition"
-            >
-              <FaUserPlus /> Create User
-            </button>
-          )}
+        {hasPermission(currentUser, 'users', 'create') && (
+          <button
+            onClick={() => setShowCreateModal(true)}
+            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition"
+          >
+            <FaUserPlus /> Create User
+          </button>
+        )}
         </div>
 
         {message.text && (
@@ -413,9 +419,9 @@ function UserManagement() {
                 className="border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <option value="all">All Status</option>
-                <option value="1">Active</option>
-                <option value="0">Pending</option>
-                <option value="2">Inactive</option>
+                <option value="ACTIVE">Active</option>
+                <option value="PENDING">Pending</option>
+                <option value="INACTIVE">Inactive</option>
               </select>
             </div>
 
@@ -681,12 +687,12 @@ function UserManagement() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
                 <select
                   value={editForm.status}
-                  onChange={(e) => setEditForm(prev => ({ ...prev, status: parseInt(e.target.value) }))}
+                  onChange={(e) => setEditForm(prev => ({ ...prev, status: e.target.value }))}
                   className="w-full p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
-                  <option value={0}>Pending</option>
-                  <option value={1}>Active</option>
-                  <option value={2}>Inactive</option>
+                  <option value="PENDING">Pending</option>
+                  <option value="ACTIVE">Active</option>
+                  <option value="INACTIVE">Inactive</option>
                 </select>
               </div>
               

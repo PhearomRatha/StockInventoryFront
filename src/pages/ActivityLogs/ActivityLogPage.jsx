@@ -64,7 +64,10 @@ function ActivityLogPage() {
         params,
       })
       .then((res) => {
-        if (res.data.status === 200) setLogs(res.data.data);
+        if (res.data.status === 200) {
+          const logsData = res.data.data?.data || res.data.data;
+          setLogs(Array.isArray(logsData) ? logsData : []);
+        }
         setLoading(false);
       })
       .catch(() => setLoading(false));
@@ -73,7 +76,10 @@ function ActivityLogPage() {
       .get(`${API_BASE}/users`, {
         headers: { Authorization: `Bearer ${token}` },
       })
-      .then((res) => setUsers(res.data.data || []))
+      .then((res) => {
+        const usersData = res.data.data?.data || res.data.data;
+        setUsers(Array.isArray(usersData) ? usersData : []);
+      })
       .catch(console.error);
   };
 
@@ -110,7 +116,11 @@ function ActivityLogPage() {
       const multiplier = sortOrder === "asc" ? 1 : -1;
       if (sortBy === "created_at")
         return multiplier * new Date(a.created_at) - new Date(b.created_at);
-      if (sortBy === "user") return multiplier * (a.user || '').localeCompare(b.user || '');
+      if (sortBy === "user") {
+        const userA = typeof a.user === 'object' ? a.user?.name || '' : (a.user || '');
+        const userB = typeof b.user === 'object' ? b.user?.name || '' : (b.user || '');
+        return multiplier * userA.localeCompare(userB);
+      }
       if (sortBy === "id") return multiplier * (a.id - b.id);
       if (sortBy === "action") return multiplier * (a.action || '').localeCompare(b.action || '');
       if (sortBy === "module") return multiplier * (a.module || '').localeCompare(b.module || '');
@@ -374,8 +384,7 @@ function ActivityLogPage() {
           <table className="w-full min-w-[800px]">
             <thead className="bg-gradient-to-r from-gray-50 to-slate-50 border-b">
               <tr>
-                {[
-                  "ID",
+                {[                  "No",
                   "User",
                   "Action",
                   "Module",
@@ -384,7 +393,7 @@ function ActivityLogPage() {
                   "Date",
                   "Actions",
                 ].map((h) => {
-                  const sortKey = h === "Date" ? "created_at" : h === "ID" ? "id" : h === "Record ID" ? "record_id" : h.toLowerCase();
+                  const sortKey = h === "Date" ? "created_at" : h === "No" ? "id" : h === "Record ID" ? "record_id" : h.toLowerCase();
                   const isSortable = !["Description", "Actions"].includes(h);
                   return (
                     <th
@@ -400,14 +409,14 @@ function ActivityLogPage() {
             </thead>
             <tbody className="divide-y divide-gray-100">
               {paginatedLogs.length > 0 ? (
-                paginatedLogs.map((log) => (
+                paginatedLogs.map((log, index) => (
                   <tr
                     key={log.id}
                     className="hover:bg-gray-50/80 transition-colors duration-200"
                   >
                     <td className="py-4 px-6">
                       <span className="text-sm text-gray-900 font-mono">
-                        {log.id}
+                        {(currentPage - 1) * logsPerPage + index + 1}
                       </span>
                     </td>
                     <td className="py-4 px-6">

@@ -47,6 +47,7 @@ function Sidebar({ onClose }) {
         localStorage.setItem(cacheTimeKey, now.toString());
       } catch (err) {
         console.error("Error fetching stock alert:", err);
+        setLowStockAlert(0);
       }
     };
     fetchStockAlert();
@@ -209,7 +210,7 @@ function Sidebar({ onClose }) {
               ? 'bg-blue-500/20 text-blue-300 border border-blue-500/30'
               : 'bg-green-500/20 text-green-300 border border-green-500/30'
           }`}>
-            {role || 'User'}
+            {typeof role === 'object' ? (role?.name || 'User') : (role || 'User')}
           </span>
         </div>
 

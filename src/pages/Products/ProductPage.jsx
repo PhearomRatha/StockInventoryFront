@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from "react";
-import axios from "axios";
 import {
   PlusIcon,
   CubeTransparentIcon,
@@ -7,10 +6,10 @@ import {
   BuildingStorefrontIcon,
   PhotoIcon,
   XMarkIcon,
-  CheckCircleIcon,
 } from "@heroicons/react/24/outline";
 
-// Reusable UI components
+import { productApi, categoryApi, supplierApi } from "../../api";
+
 import {
   PageHeader,
   TotalProductsCard,
@@ -27,10 +26,13 @@ import {
   AddButton,
 } from "../../components/UI";
 
-// Skeleton loader
 import { SkeletonPage } from "../../components/Skeleton";
 
-const API_BASE = `${import.meta.env.VITE_API_URL}/api`;
+// LocalStorage keys for storing edit form selections
+const STORAGE_KEYS = {
+  EDIT_CATEGORY: 'edit_product_category_id',
+  EDIT_SUPPLIER: 'edit_product_supplier_id'
+};
 
 // Simplified validation
 const validateProduct = (formData) => {
@@ -93,36 +95,31 @@ function ProductPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const productsPerPage = 8;
 
-  // Fetch products, categories, suppliers
-  const fetchProducts = () => {
-    const token = localStorage.getItem("token");
-    if (!token) return;
-
+  const fetchProducts = async () => {
     setLoading(true);
 
-    axios
-      .get(`${API_BASE}/products`, {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-      .then((res) => {
-        if (res.data.status === 200) setProducts(res.data.data);
-        setLoading(false);
-      })
-      .catch(() => setLoading(false));
+    const [productsRes, categoriesRes, suppliersRes] = await Promise.all([
+      productApi.getAll(),
+      categoryApi.getAll(),
+      supplierApi.getAll(),
+    ]);
 
-    axios
-      .get(`${API_BASE}/categories`, {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-      .then((res) => setCategories(res.data.data || []))
-      .catch(console.error);
+    if (productsRes.success) {
+      const productsData = productsRes.data?.data || productsRes.data;
+      setProducts(Array.isArray(productsData) ? productsData : []);
+    }
 
-    axios
-      .get(`${API_BASE}/suppliers`, {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-      .then((res) => setSuppliers(res.data.data || []))
-      .catch(console.error);
+    if (categoriesRes.success) {
+      const categoriesData = categoriesRes.data?.data || categoriesRes.data;
+      setCategories(Array.isArray(categoriesData) ? categoriesData : []);
+    }
+
+    if (suppliersRes.success) {
+      const suppliersData = suppliersRes.data?.data || suppliersRes.data;
+      setSuppliers(Array.isArray(suppliersData) ? suppliersData : []);
+    }
+
+    setLoading(false);
   };
 
   useEffect(() => {
@@ -179,19 +176,43 @@ function ProductPage() {
     setErrors({});
     setTouched({});
     setShowModal(true);
+    
+    // Clear localStorage when opening add form (in case switching from edit)
+    localStorage.removeItem(STORAGE_KEYS.EDIT_CATEGORY);
+    localStorage.removeItem(STORAGE_KEYS.EDIT_SUPPLIER);
   };
 
   const openEditModal = (product) => {
     setIsEdit(true);
+    
+    // Get product's category and supplier (from nested object or direct id)
+    const productCategoryId = product.category_id || (product.category?.id) || "";
+    const productSupplierId = product.supplier_id || (product.supplier?.id) || "";
+    
+    // Use product's values if available, otherwise fall back to localStorage values
+    // This helps users who want to just change stock without reselecting category/supplier
+    const categoryId = productCategoryId || localStorage.getItem(STORAGE_KEYS.EDIT_CATEGORY) || "";
+    const supplierId = productSupplierId || localStorage.getItem(STORAGE_KEYS.EDIT_SUPPLIER) || "";
+    
     setFormData({
       id: product.id,
       name: product.name,
-      category_id: product.category_id || "",
-      supplier_id: product.supplier_id || "",
+      category_id: categoryId,
+      supplier_id: supplierId,
       cost: product.cost || "",
       stock_quantity: product.stock_quantity || "",
       image: product.image || null,
     });
+    
+    // Store supplier and category in localStorage for future edits
+    // This prevents needing to reselect after each update
+    if (categoryId) {
+      localStorage.setItem(STORAGE_KEYS.EDIT_CATEGORY, categoryId);
+    }
+    if (supplierId) {
+      localStorage.setItem(STORAGE_KEYS.EDIT_SUPPLIER, supplierId);
+    }
+    
     setImagePreview(product.image || null);
     setErrors({});
     setTouched({});
@@ -215,12 +236,21 @@ function ProductPage() {
     setFormData({ ...formData, [field]: value });
     setTouched({ ...touched, [field]: true });
 
+    // Save category and supplier to localStorage for UX improvement
+    // This way, when user edits another product, they don't need to reselect
+    if (field === 'category_id' && value) {
+      localStorage.setItem(STORAGE_KEYS.EDIT_CATEGORY, value);
+    }
+    if (field === 'supplier_id' && value) {
+      localStorage.setItem(STORAGE_KEYS.EDIT_SUPPLIER, value);
+    }
+
     // Validate single field
     const fieldErrors = validateProduct({ ...formData, [field]: value });
     setErrors({ ...errors, [field]: fieldErrors[field] });
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     // Mark all fields as touched
@@ -238,10 +268,8 @@ function ProductPage() {
     }
 
     setSubmitting(true);
-    const token = localStorage.getItem("token");
-    const payload = new FormData();
 
-    // Only append required fields
+    const payload = new FormData();
     payload.append("name", formData.name);
     payload.append("category_id", formData.category_id);
     payload.append("supplier_id", formData.supplier_id);
@@ -252,31 +280,23 @@ function ProductPage() {
       payload.append("image", formData.image);
     }
 
-    const url = isEdit
-      ? `${API_BASE}/products/${formData.id}`
-      : `${API_BASE}/products`;
+    let result;
+    if (isEdit) {
+      result = await productApi.update(formData.id, payload);
+    } else {
+      result = await productApi.create(payload);
+    }
 
-    const method = isEdit ? "patch" : "post";
+    if (result.success) {
+      fetchProducts();
+      setShowModal(false);
+      localStorage.removeItem(STORAGE_KEYS.EDIT_CATEGORY);
+      localStorage.removeItem(STORAGE_KEYS.EDIT_SUPPLIER);
+    } else {
+      setErrors({ submit: result.message });
+    }
 
-    axios[method](url, payload, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "multipart/form-data",
-      },
-    })
-      .then(() => {
-        fetchProducts();
-        setShowModal(false);
-      })
-      .catch((error) => {
-        console.error(error);
-        if (error.response?.data?.message) {
-          setErrors({ submit: error.response.data.message });
-        }
-      })
-      .finally(() => {
-        setSubmitting(false);
-      });
+    setSubmitting(false);
   };
 
   // Filtered products
@@ -287,7 +307,7 @@ function ProductPage() {
         p.sku?.toLowerCase().includes(search.toLowerCase())
     )
     .filter(
-      (p) => selectedCategory === "All" || p.category === selectedCategory
+      (p) => selectedCategory === "All" || (typeof p.category === 'object' ? p.category?.name : p.category) === selectedCategory
     )
     .sort((a, b) => {
       const multiplier = sortOrder === "asc" ? 1 : -1;
@@ -310,18 +330,12 @@ function ProductPage() {
     currentPage * productsPerPage
   );
 
-  const handleDelete = (id) => {
+  const handleDelete = async (id) => {
     if (window.confirm("Are you sure you want to delete this product?")) {
-      axios
-        .delete(`${API_BASE}/products/${id}`, {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-        })
-        .then(() => {
-          fetchProducts();
-        })
-        .catch(console.error);
+      const result = await productApi.delete(id);
+      if (result.success) {
+        fetchProducts();
+      }
     }
   };
 
@@ -375,7 +389,7 @@ function ProductPage() {
       render: (p) => (
         <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-indigo-50 text-indigo-700 text-sm font-medium">
           <TagIcon className="w-3.5 h-3.5" />
-          {p.category}
+          {typeof p.category === 'object' ? p.category?.name || 'Unknown' : p.category}
         </span>
       ),
     },
@@ -385,7 +399,7 @@ function ProductPage() {
       render: (p) => (
         <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-blue-50 text-blue-700 text-sm font-medium">
           <BuildingStorefrontIcon className="w-3.5 h-3.5" />
-          {p.supplier}
+          {typeof p.supplier === 'object' ? p.supplier?.name || 'Unknown' : p.supplier}
         </span>
       ),
     },
@@ -492,7 +506,7 @@ function ProductPage() {
               onChange={setSelectedCategory}
               options={[
                 { value: "All", label: "All Categories" },
-                ...categories.map((c) => ({ value: c.name, label: c.name })),
+                ...(Array.isArray(categories) ? categories.map((c) => ({ value: c.name, label: c.name })) : []),
               ]}
               icon={(props) => (
                 <svg
@@ -627,7 +641,7 @@ function ProductPage() {
                   }`}
                 >
                   <option value="">Select Category</option>
-                  {categories.map((c) => (
+                  {(Array.isArray(categories) ? categories : []).map((c) => (
                     <option key={c.id} value={c.id}>
                       {c.name}
                     </option>
@@ -657,7 +671,7 @@ function ProductPage() {
                   }`}
                 >
                   <option value="">Select Supplier</option>
-                  {suppliers.map((s) => (
+                  {(Array.isArray(suppliers) ? suppliers : []).map((s) => (
                     <option key={s.id} value={s.id}>
                       {s.name}
                     </option>

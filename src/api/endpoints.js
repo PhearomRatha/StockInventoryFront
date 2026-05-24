@@ -7,6 +7,28 @@ const API_BASE = `${import.meta.env.VITE_API_URL}/api`;
 
 export const ENDPOINTS = {
   // =====================
+  // INVENTORY ROUTES
+  // =====================
+  INVENTORY: {
+    // Transactions
+    TRANSACTIONS_INDEX: `${API_BASE}/inventory/transactions`,
+    TRANSACTIONS_SHOW: (id) => `${API_BASE}/inventory/transactions/${id}`,
+    INVENTORY_OVERVIEW: `${API_BASE}/inventory/overview`,
+    PURCHASE: `${API_BASE}/inventory/purchases`,
+    // Adjustments
+    ADJUSTMENTS_INDEX: `${API_BASE}/inventory/adjustments`,
+    ADJUSTMENTS_SHOW: (id) => `${API_BASE}/inventory/adjustments/${id}`,
+    ADJUSTMENTS_STORE: `${API_BASE}/inventory/adjustments`,
+    // Transfers
+    TRANSFERS_INDEX: `${API_BASE}/inventory/transfers`,
+    TRANSFERS_SHOW: (id) => `${API_BASE}/inventory/transfers/${id}`,
+    TRANSFERS_STORE: `${API_BASE}/inventory/transfers`,
+    TRANSFERS_APPROVE: (id) => `${API_BASE}/inventory/transfers/${id}/approve`,
+    TRANSFERS_REJECT: (id) => `${API_BASE}/inventory/transfers/${id}/reject`,
+    TRANSFERS_COMPLETE: (id) => `${API_BASE}/inventory/transfers/${id}/complete`,
+  },
+
+  // =====================
   // AUTH ROUTES
   // =====================
   AUTH: {
@@ -145,6 +167,8 @@ export const ENDPOINTS = {
     CHECKOUT: `${API_BASE}/sales/checkout`,
     VERIFY_PAYMENT: `${API_BASE}/sales/verify-payment`,
     DATA: `${API_BASE}/sales/data`,
+    SEARCH_PRODUCTS: `${API_BASE}/sales/products`,
+    SEARCH_CUSTOMERS: `${API_BASE}/sales/customers`,
   },
 
   // =====================

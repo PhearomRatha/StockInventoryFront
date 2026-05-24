@@ -7,6 +7,8 @@ import {
   CheckCircleIcon,
 } from "@heroicons/react/24/outline";
 
+import { stockOutApi, productApi, customerApi } from "../../api";
+
 function StockOutPage() {
   const [form, setForm] = useState({
     customer_id: "",
@@ -31,29 +33,33 @@ function StockOutPage() {
   const [showErrorModal, setShowErrorModal] = useState(false);
   const [modalMessage, setModalMessage] = useState("");
 
-  const token = localStorage.getItem("token");
-  const API_BASE = `${import.meta.env.VITE_API_URL}/api`;
-
   // Fetch all data at once
   useEffect(() => {
-    setLoading({ products: true, customers: true, users: true, stockOuts: true });
-    fetch(`${API_BASE}/stock-outs/stock-out-dashboard`, {
-      headers: { Authorization: `Bearer ${token}` }
-    })
-      .then(res => res.json())
-      .then(data => {
-        setProducts(data.products || []);
-        setCustomers(data.customers || []);
-        setUsers(data.users || []);
-        setStockOuts(data.stockOuts || []);
-      })
-      .catch(err => {
-        console.error("Load error:", err);
-        setModalMessage("Failed to load initial data.");
+    loadDashboardData();
+  }, []);
+
+  const loadDashboardData = async () => {
+    try {
+      setLoading({ products: true, customers: true, users: true, stockOuts: true });
+      const result = await stockOutApi.getDashboard();
+      
+      if (result.success) {
+        setProducts(result.data?.products || []);
+        setCustomers(result.data?.customers || []);
+        setUsers(result.data?.users || []);
+        setStockOuts(result.data?.stockOuts || result.data?.stock_outs || []);
+      } else {
+        setModalMessage(result.message || "Failed to load dashboard data.");
         setShowErrorModal(true);
-      })
-      .finally(() => setLoading({ products: false, customers: false, users: false, stockOuts: false }));
-  }, [token]);
+      }
+    } catch (err) {
+      console.error("Load error:", err);
+      setModalMessage("Failed to load initial data. Please check your connection.");
+      setShowErrorModal(true);
+    } finally {
+      setLoading({ products: false, customers: false, users: false, stockOuts: false });
+    }
+  };
 
   // Form changes
   const handleChange = (e) => {
@@ -80,42 +86,29 @@ function StockOutPage() {
       return;
     }
 
-    try {
-      const response = await fetch(`${API_BASE}/stock-outs`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          customer_id: form.customer_id || null,
-          product_id: form.product_id,
-          quantity: Number(form.quantity),
-          date: form.date,
-          notes: form.notes,
-        }),
+    const payload = {
+      customer_id: form.customer_id || null,
+      product_id: form.product_id,
+      quantity: Number(form.quantity),
+      date: form.date,
+      notes: form.notes,
+    };
+
+    const result = await stockOutApi.create(payload);
+
+    if (result.success) {
+      setModalMessage("Stock out recorded successfully!");
+      setShowSuccessModal(true);
+      loadDashboardData();
+      setForm({
+        customer_id: "",
+        product_id: "",
+        quantity: 1,
+        date: new Date().toISOString().slice(0, 10),
+        notes: "",
       });
-
-      const result = await response.json();
-
-      if (response.ok) {
-        setModalMessage("Stock out recorded successfully!");
-        setShowSuccessModal(true);
-        setStockOuts([...stockOuts, result]);
-        setForm({
-          customer_id: "",
-          product_id: "",
-          quantity: 1,
-          date: new Date().toISOString().slice(0, 10),
-          notes: "",
-        });
-      } else {
-        setModalMessage(result.message || "Failed to record stock out");
-        setShowErrorModal(true);
-      }
-    } catch (error) {
-      console.error(error);
-      setModalMessage("Error submitting stock out. Check backend.");
+    } else {
+      setModalMessage(result.message || "Failed to record stock out");
       setShowErrorModal(true);
     }
   };
@@ -124,22 +117,14 @@ function StockOutPage() {
   const handleDelete = async (id) => {
     if (!window.confirm("Are you sure you want to delete this record?")) return;
 
-    try {
-      const response = await fetch(`${API_BASE}/stock-outs/${id}`, {
-        method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (response.ok) {
-        setStockOuts(stockOuts.filter((s) => s.id !== id));
-        setModalMessage("Stock out record deleted successfully!");
-        setShowSuccessModal(true);
-      } else {
-        setModalMessage("Failed to delete stock out record");
-        setShowErrorModal(true);
-      }
-    } catch (err) {
-      console.error(err);
-      setModalMessage("Error deleting record.");
+    const result = await stockOutApi.delete(id);
+
+    if (result.success) {
+      setStockOuts(stockOuts.filter((s) => s.id !== id));
+      setModalMessage("Stock out record deleted successfully!");
+      setShowSuccessModal(true);
+    } else {
+      setModalMessage(result.message || "Failed to delete stock out record");
       setShowErrorModal(true);
     }
   };

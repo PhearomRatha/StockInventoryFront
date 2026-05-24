@@ -255,7 +255,7 @@ function ReportsPage() {
                       <tbody className="divide-y divide-gray-200">
                         {salesReport.top_customers.slice(0, 5).map((customer, index) => (
                           <tr key={index} className="hover:bg-gray-50">
-                            <td className="py-3 px-4 text-sm text-gray-900">{customer.customer}</td>
+                            <td className="py-3 px-4 text-sm text-gray-900">{typeof customer.customer === 'object' ? customer.customer?.name || customer.customer?.id || 'Unknown' : customer.customer}</td>
                             <td className="py-3 px-4 text-sm text-gray-600">${customer.total_sales}</td>
                             <td className="py-3 px-4 text-sm text-gray-600">{customer.invoice_count}</td>
                           </tr>

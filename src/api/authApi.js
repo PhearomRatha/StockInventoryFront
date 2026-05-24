@@ -179,7 +179,7 @@ export const getCurrentUser = async () => {
 // Update user profile
 export const updateProfile = async (profileData) => {
   try {
-    const response = await api.put(`${API_BASE}/profile`, profileData);
+    const response = await api.patch(`${API_BASE}/profile`, profileData);
     return response.data;
   } catch (error) {
     throw error.response?.data || { message: 'Failed to update profile' };
@@ -189,7 +189,7 @@ export const updateProfile = async (profileData) => {
 // Change password
 export const changePassword = async (passwordData) => {
   try {
-    const response = await api.put(`${API_BASE}/change-password`, passwordData);
+    const response = await api.patch(`${API_BASE}/change-password`, passwordData);
     return response.data;
   } catch (error) {
     throw error.response?.data || { message: 'Failed to change password' };

@@ -249,8 +249,8 @@ function ProfilePage() {
                   {profile.name ? profile.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) : 'U'}
                 </span>
               </div>
-              <span className={`absolute bottom-2 right-2 px-3 py-1 rounded-full text-sm font-medium border ${getRoleBadgeColor(profile.role)}`}>
-                {profile.role || 'User'}
+              <span className={`absolute bottom-2 right-2 px-3 py-1 rounded-full text-sm font-medium border ${getRoleBadgeColor(typeof profile.role === 'object' ? profile.role?.name : profile.role)}`}>
+                {typeof profile.role === 'object' ? profile.role?.name || 'User' : (profile.role || 'User')}
               </span>
             </div>
 
