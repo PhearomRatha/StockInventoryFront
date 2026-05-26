@@ -316,43 +316,34 @@ function SalesPage() {
     if (Object.keys(newErrors).length > 0) return;
 
     setSubmitting(true);
-    const token = localStorage.getItem("token");
-    let payload, url, method;
 
-    if (isEdit) {
-      payload = { ...currentSale };
-      url = `${API_BASE}/sales/${currentSale.id}`;
-      method = "patch";
-    } else {
-      payload = {
-        customer_id: Number(currentSale.customer_id),
-        sold_by: Number(currentSale.sold_by),
-        items: cart.map((item) => ({
-          product_id: Number(item.product_id),
-          quantity: Number(item.quantity),
-          discount_percent: Number(item.discount_percent),
-        })),
-        payment_method: currentSale.payment_method,
-      };
-
-      url = `${API_BASE}/sales/checkout`;
-      method = "post";
-    }
+    const payload = {
+      customer_id: Number(currentSale.customer_id),
+      sold_by: Number(currentSale.sold_by),
+      items: cart.map((item) => ({
+        product_id: Number(item.product_id),
+        quantity: Number(item.quantity),
+        discount_percent: Number(item.discount_percent),
+      })),
+      payment_method: currentSale.payment_method,
+    };
 
     if (!isEdit && currentSale.payment_method === "Bakong")
       setGeneratingQR(true);
 
-    axios[method](url, payload, {
-      headers: { Authorization: `Bearer ${token}` },
-    })
+    const request = isEdit
+      ? salesApi.update(currentSale.id, { ...currentSale, ...payload })
+      : salesApi.checkout(payload);
+
+    request
       .then((res) => {
         setSubmitting(false);
         if (!isEdit && currentSale.payment_method === "Bakong") {
           setGeneratingQR(false);
-          if (res.data.qr_string) {
-            setQrCode(res.data.qr_string);
-            setCurrentSaleId(res.data.sale.id);
-            setCurrentMd5(res.data.md5);
+          if (res.qr_string) {
+            setQrCode(res.qr_string);
+            setCurrentSaleId(res.sale.id);
+            setCurrentMd5(res.md5);
           }
         } else {
           clearCache();
@@ -379,32 +370,24 @@ function SalesPage() {
     setPaymentError(null);
     setSuccessMessage(null);
 
-    axios
-      .post(
-        `${API_BASE}/sales/verify-payment`,
-        {
-          sale_id: currentSaleId,
-          payment_reference: currentMd5,
-        },
-        {
-          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-        }
-      )
+    salesApi.verifyPayment({
+      sale_id: currentSaleId,
+      payment_reference: currentMd5,
+    })
       .then((res) => {
-        if (res.data.state === 'paid' || (res.data.status && res.data.bakong && res.data.bakong.data && res.data.bakong.data.acknowledgedDateMs)) {
+        if (res.state === 'paid' || (res.status && res.bakong && res.bakong.data && res.bakong.data.acknowledgedDateMs)) {
           setSuccessMessage("Payment verified successfully!");
           setShowSuccessModal(true);
-          console.log("Verify Payment Success:", res.data);
-          setShowModal(false); // Close the main modal on success
-        } else if (res.data.state === 'pending' || (res.data.bakong && res.data.bakong.responseCode === 1)) {
+          console.log("Verify Payment Success:", res);
+          setShowModal(false);
+        } else if (res.state === 'pending' || (res.bakong && res.bakong.responseCode === 1)) {
           setPaymentError("Payment not yet scanned. Please wait and try again later.");
-          console.warn("Verify Payment Pending:", res.data);
+          console.warn("Verify Payment Pending:", res);
         } else {
-          setPaymentError(res.data.message || "Payment verification failed.");
-          console.warn("Verify Payment Failed:", res.data);
+          setPaymentError(res.message || "Payment verification failed.");
+          console.warn("Verify Payment Failed:", res);
         }
 
-        // Reset QR / current sale info
         setQrCode(null);
         setCurrentSaleId(null);
         setCurrentMd5(null);
@@ -416,12 +399,10 @@ function SalesPage() {
         let serverMessage = "Unknown error";
 
         if (err.response && err.response.data) {
-          // backend returned JSON (like 500)
           serverMessage =
             err.response.data.message ||
             JSON.stringify(err.response.data);
         } else if (err.message) {
-          // Axios/network error
           serverMessage = err.message;
         }
 
@@ -437,10 +418,7 @@ function SalesPage() {
 
   const handleDelete = (id) => {
     if (!window.confirm("Are you sure you want to delete this sale?")) return;
-    axios
-      .delete(`${API_BASE}/sales/${id}`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-      })
+    salesApi.delete(id)
       .then(() => {
         clearCache();
         fetchSales(true);

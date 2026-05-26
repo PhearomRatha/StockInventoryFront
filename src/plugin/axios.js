@@ -10,9 +10,24 @@ const api = axios.create({
   },
 })
 
+const TOKEN_NAME = 'auth_token'
+
+const clearAuthData = () => {
+  localStorage.removeItem('token')
+  localStorage.removeItem('user')
+  document.cookie = `${TOKEN_NAME}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/`
+  document.cookie = 'auth_user=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/'
+  delete api.defaults.headers.common['Authorization']
+  window.dispatchEvent(new CustomEvent('auth:tokenExpired'))
+}
+
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('token')
+    const token = localStorage.getItem('token') || document.cookie
+      .split(';')
+      .find(row => row.trim().startsWith(`${TOKEN_NAME}=`))
+      ?.split('=')[1]
+    
     if (token) {
       config.headers.Authorization = `Bearer ${token}`
     }
@@ -34,10 +49,7 @@ api.interceptors.response.use(
       const { status, data } = error.response
 
       if (status === 401) {
-        localStorage.removeItem('token')
-        localStorage.removeItem('user')
-        delete api.defaults.headers.common['Authorization']
-        
+        clearAuthData()
         ElMessage.error('Session expired. Please login again.')
         
         if (window.location.pathname !== '/login') {

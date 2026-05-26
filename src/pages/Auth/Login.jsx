@@ -84,8 +84,10 @@ const Login = () => {
   const checkAccountStatus = (user) => {
     if (!user) return { blocked: true, message: 'Account not found. Please register first or contact admin.', type: 'error' };
     
+    const status = user.status ?? 1; // Default to 1 (Active) if status is undefined
+    
     // Status: 0 = Pending, 1 = Active, 2 = Rejected
-    switch (user.status) {
+    switch (status) {
       case 0:
         return { blocked: true, message: 'Your account is pending approval. Please wait for admin approval.', type: 'warning' };
       case 2:
@@ -202,37 +204,44 @@ const Login = () => {
       
       const res = await api.post(`${API_BASE}/login`, loginForm);
       
-      // Debug: Log the actual response to understand the structure
       console.log('Login response:', res.data);
 
-      // Handle different response formats flexibly
+      // Handle unwrapped response format from axios interceptor
+      // After interceptor: { user, token, message } (data was unwrapped)
       let user = null;
       let token = null;
       let message = '';
       let success = false;
 
-      // Format 1: { status: 200, data: { user, token } }
-      if (res.data.status === 200 && res.data.data) {
-        user = res.data.data.user;
-        token = res.data.data.token;
-        message = res.data.message;
-        success = true;
-      }
-      // Format 2: { user, token } (direct)
-      else if (res.data.user && res.data.token) {
+      // Format after interceptor: { user, token } (unwrapped from { success: true, data: { user, token } })
+      if (res.data.user && res.data.token) {
         user = res.data.user;
         token = res.data.token;
         message = res.data.message || '';
         success = true;
       }
-      // Format 3: { success: true, data: { user, token } }
+      // Format with status: { status: 200, user, token, message }
+      else if (res.data.status === 200 && res.data.user) {
+        user = res.data.user;
+        token = res.data.token;
+        message = res.data.message;
+        success = !!token;
+      }
+      // Format without interceptor unwrapping: { success: true, data: { user, token } }
       else if (res.data.success === true && res.data.data) {
         user = res.data.data.user;
         token = res.data.data.token;
         message = res.data.message;
         success = true;
       }
-      // Format 4: Check for direct token in various locations
+      // Format without interceptor unwrapping: { status: 200, data: { user, token } }
+      else if (res.data.status === 200 && res.data.data) {
+        user = res.data.data.user;
+        token = res.data.data.token;
+        message = res.data.message;
+        success = true;
+      }
+      // Fallback: Check for direct token in various locations
       else if (res.data.token || res.data.access_token) {
         token = res.data.token || res.data.access_token;
         user = res.data.user || res.data.data?.user;
@@ -460,7 +469,8 @@ const Login = () => {
         </form>
       )}
 
-      {/* Google Login Button */}
+      {/* Google Login Button - Temporarily disabled */}
+      {/* 
       <div className="divider">
         <span>or</span>
       </div>
@@ -495,6 +505,7 @@ const Login = () => {
           </button>
         )
       )}
+      */}
 
 
     </>

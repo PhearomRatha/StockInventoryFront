@@ -6,6 +6,7 @@ import {
   CubeIcon,
   DocumentTextIcon,
 } from "@heroicons/react/24/outline";
+import { Select } from "../../components/UI";
 
 // ✅ Base API
 const API_BASE = `${import.meta.env.VITE_API_URL}/api`;
@@ -126,26 +127,29 @@ function ReportsPage() {
           {activeTab === 'sales' && (
             <div>
               <div className="flex gap-4 mb-6">
-                <select
-                  value={salesFilters.period}
-                  onChange={(e) => setSalesFilters({ ...salesFilters, period: e.target.value })}
-                  className="px-4 py-2 border border-gray-300 rounded-xl"
-                >
-                  <option value="daily">Daily</option>
-                  <option value="monthly">Monthly</option>
-                  <option value="yearly">Yearly</option>
-                </select>
+                <div className="w-48">
+                  <Select
+                    value={salesFilters.period}
+                    onChange={(val) => setSalesFilters({ ...salesFilters, period: val })}
+                    options={[
+                      { value: "daily", label: "Daily" },
+                      { value: "monthly", label: "Monthly" },
+                      { value: "yearly", label: "Yearly" },
+                    ]}
+                  />
+                </div>
                 {salesFilters.period === 'monthly' && (
                   <>
-                    <select
-                      value={salesFilters.month}
-                      onChange={(e) => setSalesFilters({ ...salesFilters, month: e.target.value })}
-                      className="px-4 py-2 border border-gray-300 rounded-xl"
-                    >
-                      {Array.from({ length: 12 }, (_, i) => (
-                        <option key={i+1} value={i+1}>{new Date(0, i).toLocaleString('default', { month: 'long' })}</option>
-                      ))}
-                    </select>
+                    <div className="w-48">
+                      <Select
+                        value={salesFilters.month}
+                        onChange={(val) => setSalesFilters({ ...salesFilters, month: val })}
+                        options={Array.from({ length: 12 }, (_, i) => ({
+                          value: i + 1,
+                          label: new Date(0, i).toLocaleString('default', { month: 'long' })
+                        }))}
+                      />
+                    </div>
                     <input
                       type="number"
                       value={salesFilters.year}
@@ -287,15 +291,17 @@ function ReportsPage() {
           {activeTab === 'financial' && (
             <div>
               <div className="flex gap-4 mb-6">
-                <select
-                  value={financialFilters.period}
-                  onChange={(e) => setFinancialFilters({ ...financialFilters, period: e.target.value })}
-                  className="px-4 py-2 border border-gray-300 rounded-xl"
-                >
-                  <option value="today">Today</option>
-                  <option value="monthly">Monthly</option>
-                  <option value="yearly">Yearly</option>
-                </select>
+                <div className="w-48">
+                  <Select
+                    value={financialFilters.period}
+                    onChange={(val) => setFinancialFilters({ ...financialFilters, period: val })}
+                    options={[
+                      { value: "today", label: "Today" },
+                      { value: "monthly", label: "Monthly" },
+                      { value: "yearly", label: "Yearly" },
+                    ]}
+                  />
+                </div>
                 {/* Similar period filters */}
               </div>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">

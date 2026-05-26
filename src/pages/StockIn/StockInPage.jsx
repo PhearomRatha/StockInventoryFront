@@ -9,6 +9,7 @@ import {
 } from "@heroicons/react/24/outline";
 
 import { stockInApi, supplierApi, productApi } from "../../api";
+import { Select } from "../../components/UI";
 
 function StockInPage() {
   const [formData, setFormData] = useState({
@@ -59,7 +60,9 @@ function StockInPage() {
   };
 
   const handleInputChange = (e) => {
-    const { name, value } = e.target;
+    const name = e?.target?.name || e?.name;
+    const value = e?.target?.value !== undefined ? e.target.value : e?.value;
+    if (!name) return;
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
@@ -142,18 +145,28 @@ function StockInPage() {
           </div>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Supplier *</label>
-              <select name="supplier_id" value={formData.supplier_id} onChange={handleInputChange} required className="w-full px-4 py-3 border rounded-xl">
-                <option value="">Select Supplier</option>
-                {suppliers.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-              </select>
+              <Select
+                label="Supplier"
+                value={formData.supplier_id}
+                onChange={(val) => handleInputChange({ name: "supplier_id", value: val })}
+                options={suppliers.map((s) => ({ value: s.id, label: s.name }))}
+                required
+                placeholder="Select Supplier"
+              />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Product *</label>
-              <select name="product_id" value={formData.product_id} onChange={handleInputChange} required className="w-full px-4 py-3 border rounded-xl">
-                <option value="">Select Product</option>
-                {products.map((p) => <option key={p.id} value={p.id}>{p.name} ({p.stock_quantity} in stock)</option>)}
-              </select>
+              <Select
+                label="Product"
+                value={formData.product_id}
+                onChange={(val) => handleInputChange({ name: "product_id", value: val })}
+                options={products.map((p) => ({ 
+                  value: p.id, 
+                  label: p.name, 
+                  sublabel: `${p.stock_quantity} in stock` 
+                }))}
+                required
+                placeholder="Select Product"
+              />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Quantity *</label>
@@ -181,10 +194,16 @@ function StockInPage() {
           </div>
           <div className="flex flex-col lg:flex-row gap-4 mb-4">
             <input type="text" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} placeholder="Search..." className="flex-1 px-4 py-3 border rounded-xl" />
-            <select value={selectedSupplier} onChange={(e) => setSelectedSupplier(e.target.value)} className="px-4 py-3 border rounded-xl">
-              <option value="All">All Suppliers</option>
-              {suppliers.map((s) => <option key={s.id} value={s.name}>{s.name}</option>)}
-            </select>
+            <div className="w-full md:w-64 flex-shrink-0">
+              <Select
+                value={selectedSupplier}
+                onChange={(val) => setSelectedSupplier(val)}
+                options={[
+                  { value: "All", label: "All Suppliers" },
+                  ...suppliers.map((s) => ({ value: s.name, label: s.name }))
+                ]}
+              />
+            </div>
             <input type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} className="px-4 py-3 border rounded-xl" />
           </div>
 

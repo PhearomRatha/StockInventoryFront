@@ -13,6 +13,7 @@ import {
   CubeIcon,
 } from "@heroicons/react/24/outline";
 
+import { Select } from "../../components/UI";
 import { categoryApi } from "../../api";
 
 function CategoryPage() {
@@ -242,16 +243,16 @@ function CategoryPage() {
           </div>
 
           <div className="flex flex-wrap gap-3 w-full lg:w-auto">
-            <div className="relative">
-              <ArrowsUpDownIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-              <select
+            <div className="relative w-48">
+              <Select
                 value={sortBy}
-                onChange={(e) => handleSort(e.target.value)}
-                className="pl-10 pr-8 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent appearance-none bg-white"
-              >
-                <option value="created_at">Sort by Date</option>
-                <option value="name">Sort by Name</option>
-              </select>
+                onChange={handleSort}
+                options={[
+                  { value: "created_at", label: "Sort by Date" },
+                  { value: "name", label: "Sort by Name" }
+                ]}
+                icon={(props) => <ArrowsUpDownIcon {...props} />}
+              />
             </div>
           </div>
         </div>

@@ -6,10 +6,10 @@ import {
 import { ChevronLeftIcon, ChevronRightIcon } from "@heroicons/react/24/outline";
 import { useAuth, ROLES, hasPermission } from "../../context/AuthContext";
 import { ElMessage } from "../../utils/message";
-import { getUsers, createUser, updateUser, deleteUser, resetUserPassword } from "../../api/adminApi";
-import { approveUser, rejectUser } from "../../api";
+import { getUsers, createUser, updateUser, deleteUser, resetUserPassword, approveUser, rejectUser } from "../../api/adminApi";
 import api from "../../plugin/axios";
 import ENDPOINTS from "../../api/endpoints";
+import { Select } from "../../components/UI";
 
 function UserManagement() {
   const { user: currentUser, hasPermission, canManageUser } = useAuth();
@@ -399,30 +399,34 @@ const getUserStatus = (user) => {
             {/* Role Filter */}
             <div className="flex items-center gap-2">
               <FaFilter className="text-gray-500" />
-              <select
-                value={roleFilter}
-                onChange={(e) => setRoleFilter(e.target.value)}
-                className="border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="all">All Roles</option>
-                <option value={ROLES.ADMIN}>Admin</option>
-                <option value={ROLES.MANAGER}>Manager</option>
-                <option value={ROLES.STAFF}>Staff</option>
-              </select>
+              <div className="w-48">
+                <Select
+                  value={roleFilter}
+                  onChange={(val) => setRoleFilter(val)}
+                  options={[
+                    { value: "all", label: "All Roles" },
+                    { value: ROLES.ADMIN, label: "Admin" },
+                    { value: ROLES.MANAGER, label: "Manager" },
+                    { value: ROLES.STAFF, label: "Staff" }
+                  ]}
+                />
+              </div>
             </div>
 
             {/* Status Filter */}
             <div className="flex items-center gap-2">
-              <select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                className="border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="all">All Status</option>
-                <option value="ACTIVE">Active</option>
-                <option value="PENDING">Pending</option>
-                <option value="INACTIVE">Inactive</option>
-              </select>
+              <div className="w-48">
+                <Select
+                  value={statusFilter}
+                  onChange={(val) => setStatusFilter(val)}
+                  options={[
+                    { value: "all", label: "All Status" },
+                    { value: "ACTIVE", label: "Active" },
+                    { value: "PENDING", label: "Pending" },
+                    { value: "INACTIVE", label: "Inactive" }
+                  ]}
+                />
+              </div>
             </div>
 
             {/* Search */}
@@ -577,22 +581,19 @@ const getUserStatus = (user) => {
                 </div>
                 
                 <div className="mb-3">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Role</label>
-                  <select
+                  <Select
+                    label="Role"
                     value={createForm.role}
-                    onChange={(e) => setCreateForm(prev => ({ ...prev, role: e.target.value }))}
-                    className="w-full p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    onChange={(val) => setCreateForm(prev => ({ ...prev, role: val }))}
+                    options={[
+                      ...(currentUser?.role === ROLES.ADMIN ? [
+                        { value: ROLES.ADMIN, label: "Admin" },
+                        { value: ROLES.MANAGER, label: "Manager" }
+                      ] : []),
+                      { value: ROLES.STAFF, label: "Staff" }
+                    ]}
                     required
-                  >
-                    <option value="">Select Role</option>
-                    {currentUser?.role === ROLES.ADMIN && (
-                      <>
-                        <option value={ROLES.ADMIN}>Admin</option>
-                        <option value={ROLES.MANAGER}>Manager</option>
-                      </>
-                    )}
-                    <option value={ROLES.STAFF}>Staff</option>
-                  </select>
+                  />
                 </div>
                 
                 <div className="mb-3">
@@ -617,7 +618,6 @@ const getUserStatus = (user) => {
                     required
                   />
                 </div>
-                
                 <div className="flex justify-end gap-3 mt-4">
                   <button
                     type="button"

@@ -1,4 +1,5 @@
-import React from "react";
+import React, { useState } from "react";
+import ModalSelect from "./ModalSelect";
 
 /**
  * Reusable Search Input Component
@@ -41,12 +42,7 @@ export const SearchInput = ({
 };
 
 /**
- * Reusable Filter Dropdown Component
- * @param {string} value - Selected value
- * @param {function} onChange - Change handler
- * @param {Array} options - Options array [{value, label}]
- * @param {string} icon - Icon component
- * @param {string} className - Additional CSS classes
+ * Reusable Filter Dropdown Component using ModalSelect
  */
 export const FilterDropdown = ({ 
   value, 
@@ -55,31 +51,40 @@ export const FilterDropdown = ({
   icon: Icon,
   className = "" 
 }) => {
+  const [isOpen, setIsOpen] = useState(false);
+
+  const selectedOpt = options.find(o => o.value === value) || options[0];
+
   return (
     <div className={`relative ${className}`}>
       {Icon && (
-        <Icon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+        <Icon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" />
       )}
-      <select
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className={`pl-10 pr-8 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent appearance-none bg-white transition-all ${className}`}
+      <button
+        onClick={() => setIsOpen(true)}
+        className={`w-full text-left flex justify-between items-center ${Icon ? 'pl-10' : 'pl-4'} pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all bg-white hover:bg-gray-50`}
       >
-        {options.map((option) => (
-          <option key={option.value} value={option.value}>
-            {option.label}
-          </option>
-        ))}
-      </select>
+        <span className="truncate mr-4 text-gray-700">{selectedOpt?.label || "Select..."}</span>
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4 text-gray-400">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+        </svg>
+      </button>
+
+      <ModalSelect
+        isOpen={isOpen}
+        onClose={() => setIsOpen(false)}
+        title="Filter"
+        options={options}
+        selectedValue={value}
+        onSelect={onChange}
+        placeholder="Search filters..."
+      />
     </div>
   );
 };
 
 /**
  * Combined Search and Filter Controls Component
- * @param {object} searchProps - Search input props
- * @param {Array} filters - Array of filter config objects
- * @param {string} layout - Layout mode: 'horizontal' | 'vertical'
  */
 export const SearchFilterControls = ({ 
   searchProps = {}, 

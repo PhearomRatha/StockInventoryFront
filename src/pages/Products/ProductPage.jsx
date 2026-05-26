@@ -24,6 +24,7 @@ import {
   ModalFooter,
   ActionButtons,
   AddButton,
+  Select,
 } from "../../components/UI";
 
 import { SkeletonPage } from "../../components/Skeleton";
@@ -625,63 +626,27 @@ function ProductPage() {
             {/* Category & Supplier Row */}
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Category *
-                </label>
-                <select
+                <Select
+                  label="Category"
                   value={formData.category_id}
-                  onChange={(e) =>
-                    handleFieldChange("category_id", e.target.value)
-                  }
-                  onBlur={() => setTouched({ ...touched, category_id: true })}
-                  className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:border-transparent transition appearance-none bg-white ${
-                    errors.category_id && touched.category_id
-                      ? "border-red-300 focus:ring-red-200"
-                      : "border-gray-300 focus:ring-indigo-500"
-                  }`}
-                >
-                  <option value="">Select Category</option>
-                  {(Array.isArray(categories) ? categories : []).map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name}
-                    </option>
-                  ))}
-                </select>
-                {errors.category_id && touched.category_id && (
-                  <p className="mt-1 text-sm text-red-600">
-                    {errors.category_id}
-                  </p>
-                )}
+                  onChange={(val) => handleFieldChange("category_id", val)}
+                  options={categories.map((c) => ({ value: c.id, label: c.name }))}
+                  required
+                  error={touched.category_id ? errors.category_id : null}
+                  placeholder="Select Category"
+                />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Supplier *
-                </label>
-                <select
+                <Select
+                  label="Supplier"
                   value={formData.supplier_id}
-                  onChange={(e) =>
-                    handleFieldChange("supplier_id", e.target.value)
-                  }
-                  onBlur={() => setTouched({ ...touched, supplier_id: true })}
-                  className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:border-transparent transition appearance-none bg-white ${
-                    errors.supplier_id && touched.supplier_id
-                      ? "border-red-300 focus:ring-red-200"
-                      : "border-gray-300 focus:ring-indigo-500"
-                  }`}
-                >
-                  <option value="">Select Supplier</option>
-                  {(Array.isArray(suppliers) ? suppliers : []).map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.name}
-                    </option>
-                  ))}
-                </select>
-                {errors.supplier_id && touched.supplier_id && (
-                  <p className="mt-1 text-sm text-red-600">
-                    {errors.supplier_id}
-                  </p>
-                )}
+                  onChange={(val) => handleFieldChange("supplier_id", val)}
+                  options={suppliers.map((s) => ({ value: s.id, label: s.name }))}
+                  required
+                  error={touched.supplier_id ? errors.supplier_id : null}
+                  placeholder="Select Supplier"
+                />
               </div>
             </div>
 

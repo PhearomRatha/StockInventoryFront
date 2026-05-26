@@ -559,7 +559,7 @@ function RolesPage() {
                           </div>
                         ))}
                     </div>
-                  }
+                  </div>
                 ))}
                 
                 <div className="flex justify-end pt-6">

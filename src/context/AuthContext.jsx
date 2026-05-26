@@ -18,9 +18,9 @@ export const ROLES = {
 
 // Role hierarchy level (higher number = more privileges)
 export const ROLE_HIERARCHY = {
-  [ROLES.ADMIN]: 3,
+  [ROLES.ADMIN]: -1,
   [ROLES.MANAGER]: 2,
-  [ROLES.STAFF]: 1
+  [ROLES.STAFF]: 3
 };
 
 // Permission definitions using module/action structure
@@ -407,35 +407,48 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
-  // Initialize auth state from cookies/localStorage on mount
-  useEffect(() => {
-    const initAuth = async () => {
-      try {
-        const storedToken = CookieUtils.get(TOKEN_NAME) || localStorage.getItem('token');
-        const storedUser = CookieUtils.get(USER_NAME) || localStorage.getItem('user');
+// Initialize auth state from cookies/localStorage on mount
+   useEffect(() => {
+     const initAuth = async () => {
+       try {
+         const storedToken = CookieUtils.get(TOKEN_NAME) || localStorage.getItem('token');
+         const storedUser = CookieUtils.get(USER_NAME) || localStorage.getItem('user');
 
-        if (storedToken && storedUser) {
-          const userData = typeof storedUser === 'string' ? JSON.parse(storedUser) : storedUser;
-          const normalizedUser = normalizeUser(userData);
-          setUser(normalizedUser);
-          // also persist normalized version so old bad data is cleaned
-          CookieUtils.set(USER_NAME, JSON.stringify(normalizedUser), 7);
-          localStorage.setItem('user', JSON.stringify(normalizedUser));
-          setToken(storedToken);
-          setIsAuthenticated(true);
+         if (storedToken && storedUser) {
+           let userData;
+           try {
+             userData = typeof storedUser === 'string' ? JSON.parse(storedUser) : storedUser;
+           } catch (e) {
+             console.warn('Failed to parse stored user data:', e);
+             clearAuth();
+             setLoading(false);
+             return;
+           }
+           
+           const normalizedUser = normalizeUser(userData);
+           setUser(normalizedUser);
+           CookieUtils.set(USER_NAME, JSON.stringify(normalizedUser), 7);
+           localStorage.setItem('user', JSON.stringify(normalizedUser));
+           setToken(storedToken);
+           setIsAuthenticated(true);
 
-          // Set default auth header
-          api.defaults.headers.common['Authorization'] = `Bearer ${storedToken}`;
-        }
-      } catch (error) {
-        console.error('Auth initialization error:', error);
-        clearAuth();
-      }
-      setLoading(false);
-    };
+           api.defaults.headers.common['Authorization'] = `Bearer ${storedToken}`;
+         }
+       } catch (error) {
+         console.error('Auth initialization error:', error);
+       }
+       setLoading(false);
+     };
 
-    initAuth();
-  }, []);
+     initAuth();
+
+     // Listen for token expiration events from axios interceptor
+     const handleTokenExpired = () => {
+       clearAuth();
+     };
+     window.addEventListener('auth:tokenExpired', handleTokenExpired);
+     return () => window.removeEventListener('auth:tokenExpired', handleTokenExpired);
+   }, []);
 
   // Login function - stores token in both cookie and fallback localStorage
   const login = useCallback(async (userData, authToken) => {

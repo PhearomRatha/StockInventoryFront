@@ -8,6 +8,7 @@ import {
 } from "@heroicons/react/24/outline";
 
 import { stockOutApi, productApi, customerApi } from "../../api";
+import { Select } from "../../components/UI";
 
 function StockOutPage() {
   const [form, setForm] = useState({
@@ -63,7 +64,10 @@ function StockOutPage() {
 
   // Form changes
   const handleChange = (e) => {
-    const { name, value } = e.target;
+    const name = e?.target?.name || e?.name;
+    const value = e?.target?.value !== undefined ? e.target.value : e?.value;
+    if (!name) return;
+
     let updatedForm = { ...form, [name]: value };
 
     if (name === "product_id") {
@@ -159,23 +163,31 @@ function StockOutPage() {
           <form className="space-y-4">
             {/* Customer */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Customer *</label>
               {loading.customers ? <p>Loading...</p> :
-                <select name="customer_id" value={form.customer_id} onChange={handleChange} className="w-full px-4 py-3 border rounded-xl">
-                  <option value="">Select Customer</option>
-                  {customers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                </select>
+                <Select
+                  label="Customer *"
+                  value={form.customer_id}
+                  onChange={(val) => handleChange({ name: "customer_id", value: val })}
+                  options={customers.map(c => ({ value: c.id, label: c.name }))}
+                  placeholder="Select Customer"
+                />
               }
             </div>
 
             {/* Product */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Product *</label>
               {loading.products ? <p>Loading...</p> :
-                <select name="product_id" value={form.product_id} onChange={handleChange} className="w-full px-4 py-3 border rounded-xl">
-                  <option value="">Select Product</option>
-                  {products.map(p => <option key={p.id} value={p.id}>{p.name} ({p.stock_quantity} in stock)</option>)}
-                </select>
+                <Select
+                  label="Product *"
+                  value={form.product_id}
+                  onChange={(val) => handleChange({ name: "product_id", value: val })}
+                  options={products.map(p => ({ 
+                    value: p.id, 
+                    label: p.name,
+                    sublabel: `${p.stock_quantity} in stock` 
+                  }))}
+                  placeholder="Select Product"
+                />
               }
             </div>
 
