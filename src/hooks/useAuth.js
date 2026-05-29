@@ -3,10 +3,10 @@ import AuthContext, {
   hasRole, 
   hasAnyRole, 
   hasPermission, 
+  hasLegacyPermission,
   canManageUser,
   ROLES,
-  ROLE_HIERARCHY,
-  PERMISSIONS
+  ROLE_HIERARCHY
 } from '../context/AuthContext';
 
 export const useAuth = () => {
@@ -36,10 +36,14 @@ export const useHasAnyRole = (allowedRoles) => {
 };
 
 /**
- * Hook to check if current user has specific permission
+ * Hook to check if current user has specific permission (legacy format like VIEW_USERS)
  */
 export const useHasPermission = (permission) => {
   const { user } = useAuth();
+  // Check if permission is legacy format (no dot) - use hasLegacyPermission
+  if (typeof permission === 'string' && !permission.includes('.')) {
+    return hasLegacyPermission(user, permission);
+  }
   return hasPermission(user, permission);
 };
 

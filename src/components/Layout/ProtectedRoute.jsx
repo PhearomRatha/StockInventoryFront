@@ -1,6 +1,6 @@
 import React from "react";
 import { Navigate, useLocation } from "react-router-dom";
-import { useAuth, hasAnyRole, ROLES } from "../../context/AuthContext";
+import { useAuth, hasAnyRole, hasLegacyPermission, ROLES } from "../../context/AuthContext";
 import { ElMessage } from "../../utils/message";
 
 /**
@@ -18,7 +18,7 @@ const ProtectedRoute = ({
   requiredPermission,
   requireAuth = true 
 }) => {
-  const { isAuthenticated, loading, user, hasPermission } = useAuth();
+  const { isAuthenticated, loading, user } = useAuth();
   const location = useLocation();
 
   // Show loading spinner while checking auth state
@@ -51,9 +51,9 @@ const ProtectedRoute = ({
     }
   }
 
-  // Check if user has required permission
+// Check if user has required permission
   if (requiredPermission) {
-    if (!hasPermission(user, requiredPermission)) {
+    if (!hasLegacyPermission(user, requiredPermission)) {
       // Show access denied message
       ElMessage.error("You don't have permission to access this page.");
       

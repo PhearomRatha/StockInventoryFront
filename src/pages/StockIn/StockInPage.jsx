@@ -23,7 +23,7 @@ function StockInPage() {
   const [products, setProducts] = useState([]);
   const [users, setUsers] = useState([]);
   const [stockInHistory, setStockInHistory] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedSupplier, setSelectedSupplier] = useState("All");
   const [selectedDate, setSelectedDate] = useState("");
@@ -119,6 +119,33 @@ function StockInPage() {
     0
   );
 
+  // 🔹 Skeleton Loader
+  if (loading)
+    return (
+      <div className="p-6 min-h-screen bg-gradient-to-br from-gray-50 to-slate-100">
+        <div className="animate-pulse space-y-6">
+          <div className="flex items-center gap-4 mb-8">
+            <div className="w-14 h-14 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl"></div>
+            <div className="space-y-2">
+              <div className="h-8 w-64 bg-gray-300 rounded"></div>
+              <div className="h-4 w-96 bg-gray-200 rounded"></div>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            {[1, 2, 3].map(i => (
+              <div key={i} className="h-28 bg-white rounded-2xl shadow-sm"></div>
+            ))}
+          </div>
+          <div className="bg-white rounded-2xl shadow-sm p-6">
+            <div className="h-10 w-48 bg-gray-300 rounded mb-6"></div>
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="h-16 bg-gray-200 rounded-lg mb-4"></div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+
   return (
     <div className="p-4 md:p-6 lg:p-8 bg-gradient-to-br from-gray-50 to-slate-100 min-h-screen">
       {/* Header */}
@@ -207,9 +234,7 @@ function StockInPage() {
             <input type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} className="px-4 py-3 border rounded-xl" />
           </div>
 
-          {loading ? (
-            <div>Loading...</div>
-          ) : filteredHistory.length === 0 ? (
+          {filteredHistory.length === 0 ? (
             <div className="py-20 text-center text-gray-500">
               <TruckIcon className="w-16 h-16 mx-auto mb-4" />
               <p>No stock in records yet.</p>
@@ -244,52 +269,33 @@ function StockInPage() {
         </div>
       </div>
 
-      {/* Success Modal */}
+{/* Success Modal */}
       {showSuccessModal && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black/40">
-          <div className="bg-white p-6 rounded-xl">
-            <p className="mb-4">{modalMessage}</p>
-            <button onClick={() => setShowSuccessModal(false)} className="bg-green-600 text-white px-4 py-2 rounded">OK</button>
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex justify-center items-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 animate-scaleIn text-center">
+            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <CheckCircleIcon className="w-8 h-8 text-green-600" />
+            </div>
+            <h2 className="text-2xl font-bold mb-2">Success!</h2>
+            <p className="text-gray-600 mb-6">{modalMessage}</p>
+            <button onClick={() => setShowSuccessModal(false)} className="w-full px-6 py-3 bg-green-600 text-white rounded-xl">Continue</button>
           </div>
         </div>
       )}
 
       {/* Error Modal */}
       {showErrorModal && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black/40">
-          <div className="bg-white p-6 rounded-xl">
-            <p className="mb-4">{modalMessage}</p>
-            <button onClick={() => setShowErrorModal(false)} className="bg-red-600 text-white px-4 py-2 rounded">OK</button>
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex justify-center items-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 animate-scaleIn text-center">
+            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <XMarkIcon className="w-8 h-8 text-red-600" />
+            </div>
+            <h2 className="text-2xl font-bold mb-2">Error!</h2>
+            <p className="text-gray-600 mb-6">{modalMessage}</p>
+            <button onClick={() => setShowErrorModal(false)} className="w-full px-6 py-3 bg-red-600 text-white rounded-xl">Close</button>
           </div>
         </div>
       )}
-      {/* Success Modal */}
-            {showSuccessModal && (
-              <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex justify-center items-center z-50 p-4">
-                <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 animate-scaleIn text-center">
-                  <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <CheckCircleIcon className="w-8 h-8 text-green-600" />
-                  </div>
-                  <h2 className="text-2xl font-bold mb-2">Success!</h2>
-                  <p className="text-gray-600 mb-6">{modalMessage}</p>
-                  <button onClick={() => setShowSuccessModal(false)} className="w-full px-6 py-3 bg-green-600 text-white rounded-xl">Continue</button>
-                </div>
-              </div>
-            )}
-      
-            {/* Error Modal */}
-            {showErrorModal && (
-              <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex justify-center items-center z-50 p-4">
-                <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 animate-scaleIn text-center">
-                  <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <XMarkIcon className="w-8 h-8 text-red-600" />
-                  </div>
-                  <h2 className="text-2xl font-bold mb-2">Error!</h2>
-                  <p className="text-gray-600 mb-6">{modalMessage}</p>
-                  <button onClick={() => setShowErrorModal(false)} className="w-full px-6 py-3 bg-red-600 text-white rounded-xl">Close</button>
-                </div>
-              </div>
-            )}
     </div>
   );
 }

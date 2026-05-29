@@ -5,12 +5,13 @@ import {
 } from "react-icons/fa";
 import { ChevronLeftIcon, ChevronRightIcon } from "@heroicons/react/24/outline";
 import { useAuth, ROLES } from "../../context/AuthContext";
+import { hasLegacyPermission } from "../../context/AuthContext";
 import { ElMessage } from "../../utils/message";
 import api from "../../plugin/axios";
 import ENDPOINTS from "../../api/endpoints";
 
 function RolesPage() {
-  const { user: currentUser, hasPermission } = useAuth();
+  const { user: currentUser } = useAuth();
   
   const [roles, setRoles] = useState([]);
   const [permissions, setPermissions] = useState([]);
@@ -264,7 +265,7 @@ function RolesPage() {
       <div className="max-w-7xl mx-auto">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-3xl font-bold text-gray-900">Role Management</h1>
-          {hasPermission(currentUser, 'CREATE_USERS') && (
+          {hasLegacyPermission(currentUser, 'CREATE_USERS') && (
             <button
               onClick={() => setShowCreateModal(true)}
               className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition"

@@ -4,7 +4,8 @@ import {
   FaUserPlus, FaSearch, FaFilter, FaKey 
 } from "react-icons/fa";
 import { ChevronLeftIcon, ChevronRightIcon } from "@heroicons/react/24/outline";
-import { useAuth, ROLES, hasPermission } from "../../context/AuthContext";
+import { useAuth, ROLES } from "../../context/AuthContext";
+import { canManageUser, hasLegacyPermission } from "../../context/AuthContext";
 import { ElMessage } from "../../utils/message";
 import { getUsers, createUser, updateUser, deleteUser, resetUserPassword, approveUser, rejectUser } from "../../api/adminApi";
 import api from "../../plugin/axios";
@@ -12,7 +13,7 @@ import ENDPOINTS from "../../api/endpoints";
 import { Select } from "../../components/UI";
 
 function UserManagement() {
-  const { user: currentUser, hasPermission, canManageUser } = useAuth();
+  const { user: currentUser } = useAuth();
   
   const [users, setUsers] = useState([]);
   const [roles, setRoles] = useState([]);
@@ -365,17 +366,17 @@ const getUserStatus = (user) => {
     return "Unknown";
   };
 
-  // Check if can perform action on user
-  const canEdit = (user) => canManageUser(currentUser, user);
-  const canDelete = (user) => canManageUser(currentUser, user) && user.id !== currentUser?.id;
-  const canResetPassword = (user) => hasPermission(currentUser, 'RESET_USER_PASSWORD') && user.id !== currentUser?.id;
+// Check if can perform action on user
+   const canEdit = (user) => canManageUser(currentUser, user);
+   const canDelete = (user) => canManageUser(currentUser, user) && user.id !== currentUser?.id;
+   const canResetPassword = (user) => hasLegacyPermission(currentUser, 'RESET_USER_PASSWORD') && user.id !== currentUser?.id;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-8">
       <div className="max-w-7xl mx-auto">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-3xl font-bold text-gray-900">User Management</h1>
-        {hasPermission(currentUser, 'users', 'create') && (
+        {hasLegacyPermission(currentUser, 'CREATE_USERS') && (
           <button
             onClick={() => setShowCreateModal(true)}
             className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition"

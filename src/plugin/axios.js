@@ -1,5 +1,5 @@
 import axios from 'axios'
-import { ElMessage } from 'element-plus'
+import { ElMessage } from '../utils/message.js'
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL,
@@ -59,6 +59,10 @@ api.interceptors.response.use(
 
       if (status === 403) {
         ElMessage.error(data.message || 'You do not have permission to perform this action.')
+      }
+
+      if (status === 423) {
+        ElMessage.error(data.message || 'Account is temporarily locked. Please try again later.')
       }
 
       if (status === 422) {

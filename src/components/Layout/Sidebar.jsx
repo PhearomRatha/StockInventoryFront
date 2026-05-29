@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from "react";
-import {
-  FiHome,
+import { FiHome,
   FiBox,
   FiUpload,
   FiDownload,
@@ -18,7 +17,7 @@ import {
 } from "react-icons/fi";
 import { Link, useLocation } from "react-router-dom";
 import { getStockReport } from "../../api/reportsApi";
-import { useAuth, hasAnyRole, ROLES } from "../../context/AuthContext";
+import { useAuth, hasLegacyPermission, ROLES } from "../../context/AuthContext";
 
 function Sidebar({ onClose }) {
   const { logout, user } = useAuth();
@@ -159,17 +158,15 @@ function Sidebar({ onClose }) {
     },
   ];
 
-  // Filter menu items based on user role
-  const { hasPermission } = useAuth();
-  
+// Filter menu items based on user role and permissions
   const getVisibleMenuItems = () => {
     return menuItems.filter(item => {
       // Check if user's role is in the allowed roles
       if (!item.roles.includes(role)) return false;
       
-      // Check if user has required permission
+      // Check if user has required permission (fetched from backend)
       if (item.permission) {
-        return hasPermission(user, item.permission);
+        return hasLegacyPermission(user, item.permission);
       }
       
       return true;

@@ -294,6 +294,8 @@ const Login = () => {
           } else {
             setLoginMessage({ text: err.response.data.message || 'Validation failed', type: 'error' });
           }
+        } else if (err.response.status === 423) {
+          setLoginMessage({ text: err.response.data.message || 'Account is temporarily locked. Please try again later.', type: 'error' });
         } else {
           setLoginMessage({ text: err.response?.data?.message || err.response?.data?.error || 'Invalid email or password.', type: 'error' });
         }

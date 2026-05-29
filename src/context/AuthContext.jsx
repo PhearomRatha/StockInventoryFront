@@ -9,282 +9,43 @@ export const useAuth = () => useContext(AuthContext);
 const TOKEN_NAME = 'auth_token';
 const USER_NAME = 'auth_user';
 
-// Role hierarchy and permissions
+// Role constants
 export const ROLES = {
   ADMIN: 'Admin',
   MANAGER: 'Manager',
-  STAFF: 'Staff'
+  STAFF: 'Staff',
+  CASHER: 'Casher'
 };
 
 // Role hierarchy level (higher number = more privileges)
 export const ROLE_HIERARCHY = {
   [ROLES.ADMIN]: -1,
   [ROLES.MANAGER]: 2,
-  [ROLES.STAFF]: 3
+  [ROLES.STAFF]: 3,
+  [ROLES.CASHER]: 4
 };
 
-// Permission definitions using module/action structure
-// Each module contains actions with boolean values or role-specific rules
-export const MODULE_PERMISSIONS = {
-  // User Management
-  users: {
-    view: {
-      [ROLES.ADMIN]: true,
-      [ROLES.MANAGER]: true,
-      [ROLES.STAFF]: false
-    },
-    create: {
-      [ROLES.ADMIN]: true,
-      [ROLES.MANAGER]: true,
-      [ROLES.STAFF]: false
-    },
-    edit: {
-      [ROLES.ADMIN]: true,
-      [ROLES.MANAGER]: 'staff', // Can only edit Staff
-      [ROLES.STAFF]: false
-    },
-    delete: {
-      [ROLES.ADMIN]: true,
-      [ROLES.MANAGER]: 'staff', // Can only delete Staff
-      [ROLES.STAFF]: false
-    },
-    resetPassword: {
-      [ROLES.ADMIN]: true,
-      [ROLES.MANAGER]: true,
-      [ROLES.STAFF]: false
-    }
-  },
-  
-  // Reports & Logs
-  reports: {
-    view: {
-      [ROLES.ADMIN]: true,
-      [ROLES.MANAGER]: true,
-      [ROLES.STAFF]: false
-    }
-  },
-  activity_logs: {
-    view: {
-      [ROLES.ADMIN]: true,
-      [ROLES.MANAGER]: true,
-      [ROLES.STAFF]: false
-    }
-  },
-  
-  // Categories & Suppliers
-  categories: {
-    manage: {
-      [ROLES.ADMIN]: true,
-      [ROLES.MANAGER]: true,
-      [ROLES.STAFF]: false
-    }
-  },
-  suppliers: {
-    manage: {
-      [ROLES.ADMIN]: true,
-      [ROLES.MANAGER]: true,
-      [ROLES.STAFF]: false
-    }
-  },
-  
-  // Products
-  products: {
-    create: {
-      [ROLES.ADMIN]: true,
-      [ROLES.MANAGER]: true,
-      [ROLES.STAFF]: false
-    },
-    edit: {
-      [ROLES.ADMIN]: true,
-      [ROLES.MANAGER]: true,
-      [ROLES.STAFF]: false
-    },
-    delete: {
-      [ROLES.ADMIN]: true,
-      [ROLES.MANAGER]: true,
-      [ROLES.STAFF]: false
-    },
-    view: {
-      [ROLES.ADMIN]: true,
-      [ROLES.MANAGER]: true,
-      [ROLES.STAFF]: true
-    }
-  },
-  
-  // Profile
-  profile: {
-    edit: {
-      [ROLES.ADMIN]: true,
-      [ROLES.MANAGER]: true,
-      [ROLES.STAFF]: true
-    },
-    changePassword: {
-      [ROLES.ADMIN]: true,
-      [ROLES.MANAGER]: true,
-      [ROLES.STAFF]: true
-    }
-  },
-  
-  // Roles (Admin only)
-  roles: {
-    create: {
-      [ROLES.ADMIN]: true,
-      [ROLES.MANAGER]: false,
-      [ROLES.STAFF]: false
-    },
-    edit: {
-      [ROLES.ADMIN]: true,
-      [ROLES.MANAGER]: false,
-      [ROLES.STAFF]: false
-    },
-    delete: {
-      [ROLES.ADMIN]: true,
-      [ROLES.MANAGER]: false,
-      [ROLES.STAFF]: false
-    },
-    view: {
-      [ROLES.ADMIN]: true,
-      [ROLES.MANAGER]: false,
-      [ROLES.STAFF]: false
-    },
-    managePermissions: {
-      [ROLES.ADMIN]: true,
-      [ROLES.MANAGER]: false,
-      [ROLES.STAFF]: false
-    }
-  },
-  
-  // Dashboard
-  dashboard: {
-    view: {
-      [ROLES.ADMIN]: true,
-      [ROLES.MANAGER]: true,
-      [ROLES.STAFF]: true
-    }
-  },
-  
-  // Sales
-  sales: {
-    view: {
-      [ROLES.ADMIN]: true,
-      [ROLES.MANAGER]: true,
-      [ROLES.STAFF]: true
-    },
-    create: {
-      [ROLES.ADMIN]: true,
-      [ROLES.MANAGER]: true,
-      [ROLES.STAFF]: true
-    },
-    edit: {
-      [ROLES.ADMIN]: true,
-      [ROLES.MANAGER]: true,
-      [ROLES.STAFF]: true
-    },
-    delete: {
-      [ROLES.ADMIN]: true,
-      [ROLES.MANAGER]: true,
-      [ROLES.STAFF]: true
-    }
-  },
-  
-  // Payments
-  payments: {
-    view: {
-      [ROLES.ADMIN]: true,
-      [ROLES.MANAGER]: true,
-      [ROLES.STAFF]: true
-    },
-    create: {
-      [ROLES.ADMIN]: true,
-      [ROLES.MANAGER]: true,
-      [ROLES.STAFF]: true
-    },
-    edit: {
-      [ROLES.ADMIN]: true,
-      [ROLES.MANAGER]: true,
-      [ROLES.STAFF]: true
-    },
-    delete: {
-      [ROLES.ADMIN]: true,
-      [ROLES.MANAGER]: true,
-      [ROLES.STAFF]: true
-    }
-  },
-  
-  // Customers
-  customers: {
-    view: {
-      [ROLES.ADMIN]: true,
-      [ROLES.MANAGER]: true,
-      [ROLES.STAFF]: true
-    },
-    create: {
-      [ROLES.ADMIN]: true,
-      [ROLES.MANAGER]: true,
-      [ROLES.STAFF]: true
-    },
-    edit: {
-      [ROLES.ADMIN]: true,
-      [ROLES.MANAGER]: true,
-      [ROLES.STAFF]: true
-    },
-    delete: {
-      [ROLES.ADMIN]: true,
-      [ROLES.MANAGER]: true,
-      [ROLES.STAFF]: true
-    }
-  },
-  
-  // Stock In
-  stock_ins: {
-    view: {
-      [ROLES.ADMIN]: true,
-      [ROLES.MANAGER]: true,
-      [ROLES.STAFF]: true
-    },
-    create: {
-      [ROLES.ADMIN]: true,
-      [ROLES.MANAGER]: true,
-      [ROLES.STAFF]: true
-    },
-    edit: {
-      [ROLES.ADMIN]: true,
-      [ROLES.MANAGER]: true,
-      [ROLES.STAFF]: true
-    },
-    delete: {
-      [ROLES.ADMIN]: true,
-      [ROLES.MANAGER]: true,
-      [ROLES.STAFF]: true
-    }
-  },
-  
-  // Stock Out
-  stock_outs: {
-    view: {
-      [ROLES.ADMIN]: true,
-      [ROLES.MANAGER]: true,
-      [ROLES.STAFF]: true
-    },
-    create: {
-      [ROLES.ADMIN]: true,
-      [ROLES.MANAGER]: true,
-      [ROLES.STAFF]: true
-    },
-    edit: {
-      [ROLES.ADMIN]: true,
-      [ROLES.MANAGER]: true,
-      [ROLES.STAFF]: true
-    },
-    delete: {
-      [ROLES.ADMIN]: true,
-      [ROLES.MANAGER]: true,
-      [ROLES.STAFF]: true
-    }
-  }
+// Legacy permission mapping for backward compatibility
+// Maps legacy permission names (e.g., VIEW_USERS) to module.action format
+// Based on backend Permission::MODULES and Permission::ACTIONS
+// For pages that require multiple permissions, we check the primary permission (view)
+const PERMISSION_MAP = {
+  VIEW_USERS: 'users.view',
+  CREATE_USERS: 'users.create',
+  EDIT_USERS: 'users.update',
+  DELETE_USERS: 'users.delete',
+  RESET_USER_PASSWORD: 'users.update',
+  VIEW_REPORTS: 'reports.view',
+  VIEW_ACTIVITY_LOGS: 'activity-logs.view',
+  MANAGE_CATEGORIES: 'categories.view',
+  MANAGE_SUPPLIERS: 'suppliers.view',
+  CREATE_PRODUCTS: 'products.create',
+  EDIT_PRODUCTS: 'products.update',
+  DELETE_PRODUCTS: 'products.delete',
+  VIEW_ALL_PRODUCTS: 'products.view',
+  EDIT_OWN_PROFILE: 'profile.edit',
+  CHANGE_OWN_PASSWORD: 'profile.edit'
 };
-
-export const PERMISSIONS = MODULE_PERMISSIONS;
 
 // ==================== Permission Helper Functions ====================
 
@@ -296,62 +57,25 @@ export const hasPermission = (user, moduleOrPerm, action) => {
     if (Array.isArray(user.permissions)) {
       return user.permissions.includes(moduleOrPerm);
     }
-    // fallback parse
-    const [m, a] = moduleOrPerm.split('.');
-    return hasPermission(user, m, a);
+    return false;
   }
 
   const module = moduleOrPerm;
   if (!action) return false;
 
-  // Prefer backend-provided permissions
+  // Check backend-provided permissions (array of "module.action" strings)
   if (Array.isArray(user.permissions)) {
     const permKey = `${module}.${action}`;
-    if (user.permissions.includes(permKey)) {
-      return true;
-    }
-  }
-
-  // Fallback hardcoded
-  if (!MODULE_PERMISSIONS[module] || !MODULE_PERMISSIONS[module][action]) return false;
-
-  const role = user.role;
-  const permissionConfig = MODULE_PERMISSIONS[module][action];
-
-  if (typeof permissionConfig[role] === 'boolean') {
-    return permissionConfig[role];
-  }
-
-  if (permissionConfig[role] === 'staff') {
-    return role === ROLES.MANAGER;
+    return user.permissions.includes(permKey);
   }
 
   return false;
 };
 
 export const hasLegacyPermission = (user, permission) => {
-  const permissionMap = {
-    VIEW_USERS: ['users', 'view'],
-    CREATE_USERS: ['users', 'create'],
-    EDIT_USERS: ['users', 'edit'],
-    DELETE_USERS: ['users', 'delete'],
-    RESET_USER_PASSWORD: ['users', 'resetPassword'],
-    VIEW_REPORTS: ['reports', 'view'],
-    VIEW_ACTIVITY_LOGS: ['activity_logs', 'view'],
-    MANAGE_CATEGORIES: ['categories', 'manage'],
-    MANAGE_SUPPLIERS: ['suppliers', 'manage'],
-    CREATE_PRODUCTS: ['products', 'create'],
-    EDIT_PRODUCTS: ['products', 'edit'],
-    DELETE_PRODUCTS: ['products', 'delete'],
-    VIEW_ALL_PRODUCTS: ['products', 'view'],
-    EDIT_OWN_PROFILE: ['profile', 'edit'],
-    CHANGE_OWN_PASSWORD: ['profile', 'changePassword']
-  };
-
-  const mapping = permissionMap[permission];
-  if (!mapping) return false;
-
-  return hasPermission(user, mapping[0], mapping[1]);
+  const moduleAction = PERMISSION_MAP[permission];
+  if (!moduleAction) return false;
+  return hasPermission(user, moduleAction);
 };
 
 export const canManageUser = (currentUser, targetUser) => {
@@ -407,48 +131,48 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
-// Initialize auth state from cookies/localStorage on mount
-   useEffect(() => {
-     const initAuth = async () => {
-       try {
-         const storedToken = CookieUtils.get(TOKEN_NAME) || localStorage.getItem('token');
-         const storedUser = CookieUtils.get(USER_NAME) || localStorage.getItem('user');
+  // Initialize auth state from cookies/localStorage on mount
+  useEffect(() => {
+    const initAuth = async () => {
+      try {
+        const storedToken = CookieUtils.get(TOKEN_NAME) || localStorage.getItem('token');
+        const storedUser = CookieUtils.get(USER_NAME) || localStorage.getItem('user');
 
-         if (storedToken && storedUser) {
-           let userData;
-           try {
-             userData = typeof storedUser === 'string' ? JSON.parse(storedUser) : storedUser;
-           } catch (e) {
-             console.warn('Failed to parse stored user data:', e);
-             clearAuth();
-             setLoading(false);
-             return;
-           }
-           
-           const normalizedUser = normalizeUser(userData);
-           setUser(normalizedUser);
-           CookieUtils.set(USER_NAME, JSON.stringify(normalizedUser), 7);
-           localStorage.setItem('user', JSON.stringify(normalizedUser));
-           setToken(storedToken);
-           setIsAuthenticated(true);
+        if (storedToken && storedUser) {
+          let userData;
+          try {
+            userData = typeof storedUser === 'string' ? JSON.parse(storedUser) : storedUser;
+          } catch (e) {
+            console.warn('Failed to parse stored user data:', e);
+            clearAuth();
+            setLoading(false);
+            return;
+          }
+          
+          const normalizedUser = normalizeUser(userData);
+          setUser(normalizedUser);
+          CookieUtils.set(USER_NAME, JSON.stringify(normalizedUser), 7);
+          localStorage.setItem('user', JSON.stringify(normalizedUser));
+          setToken(storedToken);
+          setIsAuthenticated(true);
 
-           api.defaults.headers.common['Authorization'] = `Bearer ${storedToken}`;
-         }
-       } catch (error) {
-         console.error('Auth initialization error:', error);
-       }
-       setLoading(false);
-     };
+          api.defaults.headers.common['Authorization'] = `Bearer ${storedToken}`;
+        }
+      } catch (error) {
+        console.error('Auth initialization error:', error);
+      }
+      setLoading(false);
+    };
 
-     initAuth();
+    initAuth();
 
-     // Listen for token expiration events from axios interceptor
-     const handleTokenExpired = () => {
-       clearAuth();
-     };
-     window.addEventListener('auth:tokenExpired', handleTokenExpired);
-     return () => window.removeEventListener('auth:tokenExpired', handleTokenExpired);
-   }, []);
+    // Listen for token expiration events from axios interceptor
+    const handleTokenExpired = () => {
+      clearAuth();
+    };
+    window.addEventListener('auth:tokenExpired', handleTokenExpired);
+    return () => window.removeEventListener('auth:tokenExpired', handleTokenExpired);
+  }, []);
 
   // Login function - stores token in both cookie and fallback localStorage
   const login = useCallback(async (userData, authToken) => {
@@ -525,6 +249,7 @@ export const AuthProvider = ({ children }) => {
       case ROLES.ADMIN:
       case ROLES.MANAGER:
       case ROLES.STAFF:
+      case ROLES.CASHER:
         return '/';
       default:
         return '/';
@@ -562,10 +287,10 @@ export const AuthProvider = ({ children }) => {
     hasRole,
     hasAnyRole,
     hasPermission,
+    hasLegacyPermission,
     canManageUser,
     ROLES,
-    ROLE_HIERARCHY,
-    PERMISSIONS
+    ROLE_HIERARCHY
   };
 
   return (
