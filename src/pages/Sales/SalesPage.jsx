@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { QRCodeCanvas } from "qrcode.react";
 import {
   PlusIcon,
@@ -23,6 +24,7 @@ import { useAuth } from "../../context/AuthContext";
 const fmt = (n) => Number(n || 0).toFixed(2);
 
 function SalesPage() {
+  const { t } = useTranslation();
   const { user } = useAuth();
 
   // ── data ──────────────────────────────────────────────────────────────────
@@ -478,17 +480,17 @@ function SalesPage() {
     salesApi.delete(id).then(() => { clearCache(); fetchSales(true); }).catch(console.error);
   };
 
-  // ══════════════════════════════════════════════════════════════════════════
-  // RENDER
-  // ══════════════════════════════════════════════════════════════════════════
-  return (
+  {/* ══════════════════════════════════════════════════════════════════════════ */}
+      {/* RENDER */}
+      {/* ══════════════════════════════════════════════════════════════════════════ */}
+      return (
     <div className="min-h-screen bg-gray-50 p-4 md:p-6 font-sans">
 
       {/* ── Header ─────────────────────────────────────────────────────── */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Sales</h1>
-          <p className="text-sm text-gray-500 mt-0.5">Point of sale &amp; transaction history</p>
+          <h1 className="text-2xl font-bold text-gray-900 tracking-tight">{t('sales.title')}</h1>
+          <p className="text-sm text-gray-500 mt-0.5">{t('sales.subtitle')}</p>
         </div>
         <div className="flex items-center gap-2">
           <button
@@ -496,33 +498,33 @@ function SalesPage() {
             className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-all ${cashierView ? "bg-indigo-600 text-white shadow-sm" : "bg-white border border-gray-200 text-gray-600 hover:bg-gray-50"}`}
           >
             <ShoppingCartIcon className="w-4 h-4" />
-            Cashier
+            {t('sales.cashier')}
           </button>
           <button
             onClick={() => setCashierView(false)}
             className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-all ${!cashierView ? "bg-indigo-600 text-white shadow-sm" : "bg-white border border-gray-200 text-gray-600 hover:bg-gray-50"}`}
           >
             <ListBulletIcon className="w-4 h-4" />
-            Sales list
+            {t('sales.salesList')}
           </button>
           {!cashierView && (
             <button
               onClick={openAddModal}
               className="flex items-center gap-1.5 px-3 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition-all shadow-sm"
             >
-              <PlusIcon className="w-4 h-4" /> New sale
+              <PlusIcon className="w-4 h-4" /> {t('sales.newSale')}
             </button>
           )}
         </div>
       </div>
 
-      {/* ── Stats ──────────────────────────────────────────────────────── */}
+{/* ── Stats ──────────────────────────────────────────────────────── */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
         {[
-          { label: "Paid sales", value: paidSales.length, color: "text-gray-900" },
-          { label: "Total revenue", value: `$${fmt(totalRevenue)}`, color: "text-indigo-600" },
-          { label: "Avg transaction", value: `$${averageSale}`, color: "text-gray-900" },
-          { label: "Pending", value: sales.filter(s => s.payment_status !== "paid").length, color: "text-amber-600" },
+          { label: t('sales.paidSales'), value: paidSales.length, color: "text-gray-900" },
+          { label: t('sales.totalRevenue'), value: `$${fmt(totalRevenue)}`, color: "text-indigo-600" },
+          { label: t('sales.avgTransaction'), value: `$${averageSale}`, color: "text-gray-900" },
+          { label: t('sales.pending'), value: sales.filter(s => s.payment_status !== "paid").length, color: "text-amber-600" },
         ].map((s) => (
           <div key={s.label} className="bg-white rounded-xl border border-gray-100 p-4 shadow-sm">
             <p className="text-xs text-gray-400 font-medium uppercase tracking-wide mb-1">{s.label}</p>
@@ -562,7 +564,7 @@ function SalesPage() {
               {searchedProducts.length === 0 ? (
                 <div className="py-16 text-center">
                   <CubeIcon className="w-12 h-12 text-gray-200 mx-auto mb-3" />
-                  <p className="text-gray-400 text-sm">Search for products above</p>
+                  <p className="text-gray-400 text-sm">{t('sales.searchForProducts', 'Search for products above')}</p>
                 </div>
               ) : (
                 <>
@@ -634,17 +636,17 @@ function SalesPage() {
             {/* Cart items */}
             <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden flex-1">
               <div className="p-5 border-b border-gray-100 flex items-center justify-between">
-                <h2 className="font-semibold text-gray-900">Cart</h2>
+                <h2 className="font-semibold text-gray-900">{t('sales.cart', 'Cart')}</h2>
                 {cart.length > 0 && (
-                  <button onClick={() => setCart([])} className="text-xs text-red-400 hover:text-red-600 transition">Clear all</button>
+                  <button onClick={() => setCart([])} className="text-xs text-red-400 hover:text-red-600 transition">{t('products.clearAll')}</button>
                 )}
               </div>
 
               {cart.length === 0 ? (
                 <div className="py-12 text-center">
                   <ShoppingCartIcon className="w-10 h-10 text-gray-200 mx-auto mb-2" />
-                  <p className="text-sm text-gray-400">Cart is empty</p>
-                  <p className="text-xs text-gray-300 mt-1">Tap a product to add it</p>
+                  <p className="text-sm text-gray-400">{t('products.cartIsEmpty')}</p>
+                  <p className="text-xs text-gray-300 mt-1">{t('products.tapToAdd')}</p>
                 </div>
               ) : (
                 <div className="p-4 space-y-2 max-h-64 overflow-y-auto">
@@ -677,13 +679,13 @@ function SalesPage() {
               {cart.length > 0 && (
                 <div className="p-4 border-t border-gray-100 space-y-1">
                   <div className="flex justify-between text-sm text-gray-500">
-                    <span>Subtotal</span><span>${fmt(cart.reduce((s, i) => s + i.price * i.quantity, 0))}</span>
+                    <span>{t('sales.subtotal')}</span><span>${fmt(cart.reduce((s, i) => s + i.price * i.quantity, 0))}</span>
                   </div>
                   <div className="flex justify-between text-sm text-green-600">
-                    <span>Discounts</span><span>−${fmt(cart.reduce((s, i) => s + i.price * i.quantity * i.discount_percent / 100, 0))}</span>
+                    <span>{t('sales.discounts')}</span><span>−${fmt(cart.reduce((s, i) => s + i.price * i.quantity * i.discount_percent / 100, 0))}</span>
                   </div>
                   <div className="flex justify-between font-bold text-base text-gray-900 pt-1 border-t border-gray-100">
-                    <span>Total</span><span className="text-indigo-600">${fmt(calcTotal(cart))}</span>
+                    <span>{t('sales.total')}</span><span className="text-indigo-600">${fmt(calcTotal(cart))}</span>
                   </div>
                 </div>
               )}
@@ -692,11 +694,11 @@ function SalesPage() {
 
             {/* Customer */}
             <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
-              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Customer</p>
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">{t('sales.customerLabel')}</p>
               <div className="relative">
                 <input
                   type="text"
-                  placeholder="Search customer..."
+                  placeholder={t('sales.searchCustomers')}
                   value={customerSearch}
                   onChange={(e) => { setCustomerSearch(e.target.value); setShowCustomerDropdown(true); setSelectedCustomerId(null); }}
                   onFocus={() => setShowCustomerDropdown(true)}
@@ -713,7 +715,7 @@ function SalesPage() {
                         {c.name}
                       </div>
                     )) : (
-                      <div className="px-3 py-2 text-sm text-gray-400">No customers found</div>
+                      <div className="px-3 py-2 text-sm text-gray-400">{t('sales.noCustomersFound', 'No customers found')}</div>
                     )}
                   </div>
                 )}
@@ -723,7 +725,7 @@ function SalesPage() {
 
             {/* Payment method */}
             <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
-              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Payment method</p>
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">{t('sales.paymentMethod')}</p>
               <div className="grid grid-cols-2 gap-2">
                 {["Cash", "Bakong"].map((m) => (
                   <button
@@ -731,7 +733,7 @@ function SalesPage() {
                     onClick={() => setPaymentMethod(m)}
                     className={`py-2.5 rounded-xl text-sm font-medium border transition-all ${paymentMethod === m ? "bg-indigo-600 text-white border-indigo-600 shadow-sm" : "border-gray-200 text-gray-600 hover:bg-gray-50"}`}
                   >
-                    {m === "Cash" ? "💵 Cash" : "📱 Bakong QR"}
+                    {m === "Cash" ? t('sales.cash') : t('sales.bakongQR')}
                   </button>
                 ))}
               </div>
@@ -744,7 +746,7 @@ function SalesPage() {
               className="w-full py-3.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold rounded-2xl transition-all shadow-sm text-sm flex items-center justify-center gap-2"
             >
               <ReceiptPercentIcon className="w-5 h-5" />
-              {submitting ? "Processing..." : `Checkout · $${fmt(calcTotal(cart))}`}
+              {submitting ? t('sales.processing') : `${t('sales.checkout')} · $${fmt(calcTotal(cart))}`}
             </button>
           </div>
         </div>
@@ -757,7 +759,7 @@ function SalesPage() {
               <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
               <input
                 type="text"
-                placeholder="Search by customer or product..."
+                placeholder={t('sales.searchPlaceholder')}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className="w-full pl-9 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
@@ -768,7 +770,7 @@ function SalesPage() {
               onChange={(e) => setSelectedCustomer(e.target.value)}
               className="px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-white"
             >
-              <option value="All">All customers</option>
+              <option value="All">{t('sales.allCustomers')}</option>
               {customers.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
             </select>
           </div>
@@ -778,11 +780,11 @@ function SalesPage() {
               <thead className="bg-gray-50 border-b border-gray-100">
                 <tr>
                   {[
-                    { label: "Date", col: "created_at" },
-                    { label: "Customer" },
-                    { label: "Amount", col: "total_amount" },
-                    { label: "Payment" },
-                    { label: "Status" },
+                    { label: t('sales.date'), col: "created_at" },
+                    { label: t('sales.customer') },
+                    { label: t('sales.amount'), col: "total_amount" },
+                    { label: t('sales.payment') },
+                    { label: t('sales.status') },
                     { label: "" },
                   ].map(({ label, col }) => (
                     <th
@@ -796,46 +798,46 @@ function SalesPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
-                {loading ? (
-                  <tr><td colSpan={6} className="py-16 text-center">
-                    <div className="w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto" />
-                  </td></tr>
-                ) : paginatedSales.length === 0 ? (
-                  <tr><td colSpan={6} className="py-16 text-center text-gray-400 text-sm">No sales found</td></tr>
-                ) : paginatedSales.map((s) => (
-                  <tr key={s.id} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-5 py-3.5 text-gray-600">
-                      {new Date(s.created_at).toLocaleDateString('en-US', { month: 'numeric', day: 'numeric', year: 'numeric' })} {' '}
-                      {new Date(s.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                    </td>
-                    <td className="px-5 py-3.5 font-medium text-gray-900">{typeof s.customer === "object" ? (s.customer?.name || "_") : (s.customer || "_")}</td>
-                    <td className="px-5 py-3.5 font-semibold text-gray-900">${fmt(s.total_amount)}</td>
-                    <td className="px-5 py-3.5 text-gray-500">{s.payment_method}</td>
-                    <td className="px-5 py-3.5">
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${s.payment_status === "paid" ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700"}`}>
-                        {s.payment_status}
-                      </span>
-                    </td>
-                    <td className="px-5 py-3.5 text-right">
-                      <button onClick={() => openEditModal(s)} className="text-gray-400 hover:text-indigo-600 mr-2 transition"><PencilIcon className="w-4 h-4" /></button>
-                      <button onClick={() => handleDelete(s.id)} className="text-gray-400 hover:text-red-500 transition"><TrashIcon className="w-4 h-4" /></button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            {totalPages > 1 && (
-              <div className="flex justify-between items-center px-5 py-3 border-t border-gray-100">
-                <span className="text-xs text-gray-400">Page {currentPage} of {totalPages}</span>
-                <div className="flex gap-1">
-                  <button onClick={() => setCurrentPage(p => Math.max(p - 1, 1))} disabled={currentPage === 1} className="p-1.5 border border-gray-200 rounded-lg disabled:opacity-40 hover:bg-gray-50 transition"><ChevronLeftIcon className="w-4 h-4" /></button>
-                  <button onClick={() => setCurrentPage(p => Math.min(p + 1, totalPages))} disabled={currentPage === totalPages} className="p-1.5 border border-gray-200 rounded-lg disabled:opacity-40 hover:bg-gray-50 transition"><ChevronRightIcon className="w-4 h-4" /></button>
-                </div>
-              </div>
-            )}
-          </div>
-        </>
-      )}
+{loading ? (
+                   <tr><td colSpan={6} className="py-16 text-center">
+                     <div className="w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto" />
+                   </td></tr>
+                 ) : paginatedSales.length === 0 ? (
+                   <tr><td colSpan={6} className="py-16 text-center text-gray-400 text-sm">{t('sales.noSalesFound')}</td></tr>
+                 ) : paginatedSales.map((s) => (
+                   <tr key={s.id} className="hover:bg-gray-50 transition-colors">
+                     <td className="px-5 py-3.5 text-gray-600">
+                       {new Date(s.created_at).toLocaleDateString('en-US', { month: 'numeric', day: 'numeric', year: 'numeric' })} {' '}
+                       {new Date(s.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                     </td>
+                     <td className="px-5 py-3.5 font-medium text-gray-900">{typeof s.customer === "object" ? (s.customer?.name || t('sales.unknown')) : (s.customer || t('sales.unknown'))}</td>
+                     <td className="px-5 py-3.5 font-semibold text-gray-900">${fmt(s.total_amount)}</td>
+                     <td className="px-5 py-3.5 text-gray-500">{s.payment_method}</td>
+                     <td className="px-5 py-3.5">
+                       <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${s.payment_status === "paid" ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700"}`}>
+                         {s.payment_status}
+                       </span>
+                     </td>
+                     <td className="px-5 py-3.5 text-right">
+                       <button onClick={() => openEditModal(s)} className="text-gray-400 hover:text-indigo-600 mr-2 transition" title={t('common.edit')}><PencilIcon className="w-4 h-4" /></button>
+                       <button onClick={() => handleDelete(s.id)} className="text-gray-400 hover:text-red-500 transition" title={t('common.delete')}><TrashIcon className="w-4 h-4" /></button>
+                     </td>
+                   </tr>
+                 ))}
+               </tbody>
+             </table>
+             {totalPages > 1 && (
+               <div className="flex justify-between items-center px-5 py-3 border-t border-gray-100">
+                 <span className="text-xs text-gray-400">{t('pagination.page', { currentPage, totalPages })}</span>
+                 <div className="flex gap-1">
+                   <button onClick={() => setCurrentPage(p => Math.max(p - 1, 1))} disabled={currentPage === 1} className="p-1.5 border border-gray-200 rounded-lg disabled:opacity-40 hover:bg-gray-50 transition"><ChevronLeftIcon className="w-4 h-4" /></button>
+                   <button onClick={() => setCurrentPage(p => Math.min(p + 1, totalPages))} disabled={currentPage === totalPages} className="p-1.5 border border-gray-200 rounded-lg disabled:opacity-40 hover:bg-gray-50 transition"><ChevronRightIcon className="w-4 h-4" /></button>
+                 </div>
+               </div>
+             )}
+           </div>
+         </>
+       )}
 
       {/* ── Add / Edit Modal ────────────────────────────────────────────── */}
       {showModal && (
@@ -843,8 +845,8 @@ function SalesPage() {
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
             <div className="sticky top-0 bg-white border-b border-gray-100 px-6 py-4 flex items-center justify-between rounded-t-2xl z-10">
               <div>
-                <h2 className="text-lg font-bold text-gray-900">{isEdit ? "Edit sale" : "New sale"}</h2>
-                <p className="text-sm text-gray-400">{isEdit ? "Update sale details" : "Fill in the sale information"}</p>
+                <h2 className="text-lg font-bold text-gray-900">{isEdit ? t('sales.editSale') : t('sales.newSale')}</h2>
+                <p className="text-sm text-gray-400">{isEdit ? t('sales.updateSaleDetails') : t('sales.fillSaleInfo')}</p>
               </div>
               <button onClick={() => setShowModal(false)} className="p-2 hover:bg-gray-100 rounded-lg transition"><XMarkIcon className="w-5 h-5 text-gray-400" /></button>
             </div>
@@ -852,11 +854,11 @@ function SalesPage() {
             <form onSubmit={handleModalSubmit} className="p-6 space-y-6">
               {/* Customer */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Customer *</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{t('sales.customerLabel')} *</label>
                 <div className="relative">
                   <input
                     type="text"
-                    placeholder="Search customers..."
+                    placeholder={t('sales.searchCustomers')}
                     value={modalCustomerSearch}
                     onChange={(e) => { setModalCustomerSearch(e.target.value); setCurrentSale(s => ({ ...s, customer_id: "" })); }}
                     className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
@@ -870,7 +872,7 @@ function SalesPage() {
                         className={`px-4 py-2 text-sm cursor-pointer hover:bg-indigo-50 ${currentSale.customer_id === c.id ? "bg-indigo-50 text-indigo-700 font-medium" : ""}`}>
                         {c.name}
                       </div>
-                    )) : <div className="px-4 py-2 text-sm text-gray-400">No customers found</div>}
+                    )) : <div className="px-4 py-2 text-sm text-gray-400">{t('sales.noCustomersFound')}</div>}
                   </div>
                 )}
                 {errors.customer && <p className="text-xs text-red-500 mt-1">{errors.customer}</p>}
@@ -879,11 +881,11 @@ function SalesPage() {
               {isEdit && (
                 <>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Invoice number</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">{t('sales.invoiceNumber')}</label>
                     <input type="text" value={currentSale.invoice_number || ""} readOnly className="w-full px-3 py-2.5 border border-gray-100 rounded-xl text-sm bg-gray-50 text-gray-500" />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Total amount *</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">{t('sales.totalAmount')} *</label>
                     <div className="relative">
                       <CurrencyDollarIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                       <input
@@ -903,12 +905,12 @@ function SalesPage() {
                 <>
                   {/* Add items */}
                   <div>
-                    <h3 className="text-sm font-semibold text-gray-700 mb-3">Add items to cart</h3>
+                    <h3 className="text-sm font-semibold text-gray-700 mb-3">{t('sales.addItemsToCart')}</h3>
                     <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 mb-3">
                       <div className="sm:col-span-2">
-                        <label className="block text-xs text-gray-500 mb-1">Product</label>
+                        <label className="block text-xs text-gray-500 mb-1">{t('sales.product')}</label>
                         <div className="relative">
-                          <input type="text" placeholder="Search..." value={modalProductSearch}
+                          <input type="text" placeholder={t('common.search')} value={modalProductSearch}
                             onChange={(e) => { setModalProductSearch(e.target.value); setNewItem(i => ({ ...i, product_id: "" })); }}
                             className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
                           />
@@ -925,15 +927,15 @@ function SalesPage() {
                                 }
                               }}
                                 className={`px-3 py-2 text-sm cursor-pointer hover:bg-indigo-50 ${p.stock_quantity === 0 ? "opacity-40 cursor-not-allowed" : ""}`}>
-                                {p.name} — ${p.price} <span className="text-gray-400">(Stock: {p.stock_quantity})</span>
+                                {p.name} — ${p.price} <span className="text-gray-400">({t('sales.stock')}: {p.stock_quantity})</span>
                               </div>
-                            )) : <div className="px-3 py-2 text-sm text-gray-400">No products found</div>}
+                            )) : <div className="px-3 py-2 text-sm text-gray-400">{t('sales.noProductsFound')}</div>}
                           </div>
                         )}
                         {errors.product && <p className="text-xs text-red-500 mt-1">{errors.product}</p>}
                       </div>
                       <div>
-                        <label className="block text-xs text-gray-500 mb-1">Qty</label>
+                        <label className="block text-xs text-gray-500 mb-1">{t('sales.qty')}</label>
                         <input type="number" value={newItem.quantity} min={1} max={newItem.maxQuantity}
                           onChange={(e) => { const v = Math.min(Math.max(1, Number(e.target.value)), newItem.maxQuantity); setNewItem(i => ({ ...i, quantity: v })); }}
                           className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
@@ -941,7 +943,7 @@ function SalesPage() {
                         {errors.quantity && <p className="text-xs text-red-500 mt-1">{errors.quantity}</p>}
                       </div>
                       <div>
-                        <label className="block text-xs text-gray-500 mb-1">Discount %</label>
+                        <label className="block text-xs text-gray-500 mb-1">{t('sales.discPercent')}</label>
                         <input type="number" step="0.01" value={newItem.discount_percent} min={0} max={100}
                           onChange={(e) => setNewItem(i => ({ ...i, discount_percent: e.target.value }))}
                           className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
@@ -950,88 +952,88 @@ function SalesPage() {
                       </div>
                     </div>
                     <button type="button" onClick={addModalItem} className="px-4 py-2 bg-indigo-600 text-white text-sm rounded-xl hover:bg-indigo-700 transition font-medium">
-                      + Add to cart
+                      + {t('sales.addToCart')}
                     </button>
                   </div>
 
-                  {/* Cart table */}
-                  {modalCart.length > 0 && (
-                    <div className="bg-gray-50 rounded-xl p-4">
-                      <table className="w-full text-sm">
-                        <thead>
-                          <tr className="text-xs text-gray-400 uppercase tracking-wide">
-                            <th className="text-left pb-2">Product</th>
-                            <th className="text-left pb-2">Qty</th>
-                            <th className="text-left pb-2">Price</th>
-                            <th className="text-left pb-2">Disc%</th>
-                            <th className="text-left pb-2">Subtotal</th>
-                            <th className="pb-2" />
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-gray-100">
-                          {modalCart.map((item, idx) => {
-                            const sub = item.price * item.quantity;
-                            const disc = sub * (item.discount_percent / 100);
-                            return (
-                              <tr key={idx}>
-                                <td className="py-2">{item.name}</td>
-                                <td className="py-2">{item.quantity}</td>
-                                <td className="py-2">${fmt(item.price)}</td>
-                                <td className="py-2">{item.discount_percent}%</td>
-                                <td className="py-2 font-medium">${fmt(sub - disc)}</td>
-                                <td className="py-2">
-                                  <button type="button" onClick={() => removeFromCart(idx, setModalCart, modalCart)} className="text-red-400 hover:text-red-600 text-xs transition">Remove</button>
-                                </td>
-                              </tr>
-                            );
-                          })}
-                        </tbody>
-                        <tfoot>
-                          <tr>
-                            <td colSpan={4} className="pt-3 text-right text-sm font-semibold text-gray-700">Total:</td>
-                            <td className="pt-3 text-sm font-bold text-indigo-600">${fmt(calcTotal(modalCart))}</td>
-                            <td />
-                          </tr>
-                        </tfoot>
-                      </table>
-                    </div>
-                  )}
-                  {errors.cart && <p className="text-xs text-red-500">{errors.cart}</p>}
+{/* Cart table */}
+                   {modalCart.length > 0 && (
+                     <div className="bg-gray-50 rounded-xl p-4">
+                       <table className="w-full text-sm">
+                         <thead>
+                           <tr className="text-xs text-gray-400 uppercase tracking-wide">
+                             <th className="text-left pb-2">{t('sales.product')}</th>
+                             <th className="text-left pb-2">{t('sales.qty')}</th>
+                             <th className="text-left pb-2">{t('sales.price')}</th>
+                             <th className="text-left pb-2">{t('sales.discPercent')}</th>
+                             <th className="text-left pb-2">{t('sales.subtotal')}</th>
+                             <th className="pb-2" />
+                           </tr>
+                         </thead>
+                         <tbody className="divide-y divide-gray-100">
+                           {modalCart.map((item, idx) => {
+                             const sub = item.price * item.quantity;
+                             const disc = sub * (item.discount_percent / 100);
+                             return (
+                               <tr key={idx}>
+                                 <td className="py-2">{item.name}</td>
+                                 <td className="py-2">{item.quantity}</td>
+                                 <td className="py-2">${fmt(item.price)}</td>
+                                 <td className="py-2">{item.discount_percent}%</td>
+                                 <td className="py-2 font-medium">${fmt(sub - disc)}</td>
+                                 <td className="py-2">
+                                   <button type="button" onClick={() => removeFromCart(idx, setModalCart, modalCart)} className="text-red-400 hover:text-red-600 text-xs transition">{t('common.remove')}</button>
+                                 </td>
+                               </tr>
+                             );
+                           })}
+                         </tbody>
+                         <tfoot>
+                           <tr>
+                             <td colSpan={4} className="pt-3 text-right text-sm font-semibold text-gray-700">{t('sales.total')}:</td>
+                             <td className="pt-3 text-sm font-bold text-indigo-600">${fmt(calcTotal(modalCart))}</td>
+                             <td />
+                           </tr>
+                         </tfoot>
+                       </table>
+                     </div>
+                   )}
+                   {errors.cart && <p className="text-xs text-red-500">{errors.cart}</p>}
 
-                  {/* Payment method */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Payment method *</label>
-                    <select
-                      value={currentSale.payment_method || "Cash"}
-                      onChange={(e) => { setCurrentSale(s => ({ ...s, payment_method: e.target.value })); setErrors(e => ({ ...e, payment_method: "" })); }}
-                      className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-white"
-                    >
-                      <option value="Cash">Cash</option>
-                      <option value="Bakong">Bakong</option>
-                    </select>
-                    {errors.payment_method && <p className="text-xs text-red-500 mt-1">{errors.payment_method}</p>}
-                  </div>
-                </>
-              )}
+                   {/* Payment method */}
+                   <div>
+                     <label className="block text-sm font-medium text-gray-700 mb-2">{t('sales.paymentMethod')} *</label>
+                     <select
+                       value={currentSale.payment_method || "Cash"}
+                       onChange={(e) => { setCurrentSale(s => ({ ...s, payment_method: e.target.value })); setErrors(e => ({ ...e, payment_method: "" })); }}
+                       className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-white"
+                     >
+                       <option value="Cash">{t('sales.cash')}</option>
+                       <option value="Bakong">{t('sales.bakong')}</option>
+                     </select>
+                     {errors.payment_method && <p className="text-xs text-red-500 mt-1">{errors.payment_method}</p>}
+                   </div>
+                 </>
+               )}
 
-              <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
-                <button type="button" onClick={() => setShowModal(false)} className="px-5 py-2.5 border border-gray-200 text-gray-600 rounded-xl text-sm hover:bg-gray-50 transition font-medium">Cancel</button>
-                <button type="submit" disabled={submitting} className="px-5 py-2.5 bg-indigo-600 text-white rounded-xl text-sm hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition font-medium">
-                  {submitting ? "Processing..." : isEdit ? "Update sale" : "Create sale"}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+               <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
+                 <button type="button" onClick={() => setShowModal(false)} className="px-5 py-2.5 border border-gray-200 text-gray-600 rounded-xl text-sm hover:bg-gray-50 transition font-medium">{t('common.cancel')}</button>
+                 <button type="submit" disabled={submitting} className="px-5 py-2.5 bg-indigo-600 text-white rounded-xl text-sm hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition font-medium">
+                   {submitting ? t('sales.processing') : isEdit ? t('sales.updateSale') : t('sales.createSale')}
+                 </button>
+               </div>
+             </form>
+           </div>
+         </div>
+       )}
 
       {/* ── Generating QR loader ────────────────────────────────────────── */}
       {generatingQR && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl shadow-2xl p-8 text-center w-72">
             <div className="w-12 h-12 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-            <p className="font-semibold text-gray-900">Generating QR code…</p>
-            <p className="text-sm text-gray-400 mt-1">Please wait</p>
+            <p className="font-semibold text-gray-900">{t('sales.generatingQR')}</p>
+            <p className="text-sm text-gray-400 mt-1">{t('sales.pleaseWait')}</p>
           </div>
         </div>
       )}
@@ -1040,16 +1042,16 @@ function SalesPage() {
       {qrCode && !generatingQR && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl shadow-2xl p-8 text-center w-full max-w-sm">
-            <h2 className="text-lg font-bold text-gray-900 mb-1">Bakong payment</h2>
-            <p className="text-sm text-gray-400 mb-5">Scan this QR code to complete payment</p>
+            <h2 className="text-lg font-bold text-gray-900 mb-1">{t('sales.bakongPayment')}</h2>
+            <p className="text-sm text-gray-400 mb-5">{t('sales.scanQR')}</p>
             <QRCodeCanvas value={qrCode} size={256} level="H" includeMargin className="mx-auto mb-6 bg-white p-4 rounded" />
             {paymentError && <p className="text-xs text-red-500 mb-3 bg-red-50 rounded-lg px-3 py-2">{paymentError}</p>}
             <div className="flex gap-3">
               <button onClick={verifyPayment} disabled={verifying} className="flex-1 py-2.5 bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white rounded-xl text-sm font-medium transition">
-                {verifying ? "Verifying…" : "Verify payment"}
+                {verifying ? t('sales.verifying') : t('sales.verifyPayment')}
               </button>
               <button onClick={() => { setQrCode(null); setCurrentSaleId(null); setCurrentMd5(null); setPaymentError(null); }} className="px-4 py-2.5 border border-gray-200 text-gray-600 rounded-xl text-sm hover:bg-gray-50 transition font-medium">
-                Close
+                {t('common.close')}
               </button>
             </div>
           </div>
@@ -1063,7 +1065,7 @@ function SalesPage() {
             <CheckCircleIcon className="w-12 h-12 text-green-500 mx-auto mb-4" />
             <p className="font-semibold text-gray-900 mb-4">{successMessage}</p>
             <button onClick={() => setShowSuccessModal(false)} className="px-6 py-2 bg-indigo-600 text-white rounded-xl text-sm font-medium hover:bg-indigo-700 transition">
-              OK
+              {t('common.ok')}
             </button>
           </div>
         </div>

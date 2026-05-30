@@ -12,11 +12,13 @@ import {
   ChevronRightIcon,
   CubeIcon,
 } from "@heroicons/react/24/outline";
+import { useTranslation } from "react-i18next";
 
 import { Select } from "../../components/UI";
 import { categoryApi } from "../../api";
 
 function CategoryPage() {
+  const { t } = useTranslation();
   const [categories, setCategories] = useState([]);
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState("created_at");
@@ -98,18 +100,18 @@ function CategoryPage() {
     }
   };
 
-  // Validate form fields
+// Validate form fields
   const validateForm = () => {
     const newErrors = {};
     
     if (!currentCategory.name || currentCategory.name.trim() === "") {
-      newErrors.name = "Category name is required";
+      newErrors.name = t("categories.categoryNameRequired");
     } else if (currentCategory.name.trim().length > 255) {
-      newErrors.name = "Category name must not exceed 255 characters";
+      newErrors.name = t("categories.categoryNameMaxLength");
     }
     
     if (currentCategory.description && currentCategory.description.length > 1000) {
-      newErrors.description = "Description must not exceed 1000 characters";
+      newErrors.description = t("categories.descriptionMaxLength");
     }
     
     setErrors(newErrors);
@@ -187,9 +189,9 @@ function CategoryPage() {
             <TagIcon className="w-7 h-7 text-white" />
           </div>
           <div>
-            <h1 className="text-3xl md:text-4xl font-bold text-gray-900">Categories</h1>
+            <h1 className="text-3xl md:text-4xl font-bold text-gray-900">{t("categories.title")}</h1>
             <p className="text-gray-600 mt-1 text-sm md:text-base">
-              Manage your product categories and organize your inventory
+              {t("categories.subtitle")}
             </p>
           </div>
         </div>
@@ -197,7 +199,7 @@ function CategoryPage() {
           onClick={openAddModal}
           className="flex items-center gap-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-6 py-3.5 rounded-xl hover:shadow-lg transition-all duration-300 font-medium shadow-md"
         >
-          <PlusIcon className="w-5 h-5" /> Add New Category
+          <PlusIcon className="w-5 h-5" /> {t("categories.addNewCategory")}
         </button>
       </div>
 
@@ -206,7 +208,7 @@ function CategoryPage() {
         <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-500 font-medium">Total Categories</p>
+              <p className="text-sm text-gray-500 font-medium">{t("categories.totalCategories")}</p>
               <p className="text-3xl font-bold text-gray-900 mt-2">{totalCategories}</p>
             </div>
             <div className="w-12 h-12 bg-indigo-50 rounded-xl flex items-center justify-center">
@@ -218,7 +220,7 @@ function CategoryPage() {
         <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-500 font-medium">Active Categories</p>
+              <p className="text-sm text-gray-500 font-medium">{t("categories.activeCategories")}</p>
               <p className="text-3xl font-bold text-emerald-600 mt-2">{totalCategories}</p>
             </div>
             <div className="w-12 h-12 bg-emerald-50 rounded-xl flex items-center justify-center">
@@ -235,7 +237,7 @@ function CategoryPage() {
             <MagnifyingGlassIcon className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
             <input
               type="text"
-              placeholder="Search categories by name or description..."
+              placeholder={t("categories.searchPlaceholder")}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="w-full pl-12 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
@@ -248,8 +250,8 @@ function CategoryPage() {
                 value={sortBy}
                 onChange={handleSort}
                 options={[
-                  { value: "created_at", label: "Sort by Date" },
-                  { value: "name", label: "Sort by Name" }
+                  { value: "created_at", label: t("categories.sortByDate") },
+                  { value: "name", label: t("categories.sortByName") }
                 ]}
                 icon={(props) => <ArrowsUpDownIcon {...props} />}
               />
@@ -264,7 +266,7 @@ function CategoryPage() {
           <table className="w-full min-w-[600px]">
             <thead className="bg-gradient-to-r from-gray-50 to-slate-50 border-b">
               <tr>
-                {["Name", "Description", "Actions"].map(
+                {[t("categories.categoryName"), t("categories.description"), t("common.actions")].map(
                   (h) => (
                     <th
                       key={h}
@@ -294,21 +296,21 @@ function CategoryPage() {
                       </div>
                     </td>
                     <td className="py-4 px-6">
-                      <div className="text-gray-600">{c.description || "No description"}</div>
+                      <div className="text-gray-600">{c.description || t("common.noDescription") || "No description"}</div>
                     </td>
                     <td className="py-4 px-6">
                       <div className="flex gap-2">
                         <button
                           onClick={() => openEditModal(c)}
                           className="p-2 text-gray-600 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all duration-200"
-                          title="Edit"
+                          title={t("common.edit")}
                         >
                           <PencilIcon className="w-5 h-5" />
                         </button>
                         <button
                           onClick={() => handleDelete(c.id)}
                           className="p-2 text-gray-600 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all duration-200"
-                          title="Delete"
+                          title={t("common.delete")}
                         >
                           <TrashIcon className="w-5 h-5" />
                         </button>
@@ -321,13 +323,13 @@ function CategoryPage() {
                   <td colSpan={3} className="py-20 text-center">
                     <div className="flex flex-col items-center justify-center">
                       <TagIcon className="w-16 h-16 text-gray-300 mb-4" />
-                      <p className="text-gray-500 text-lg font-medium">No categories found</p>
-                      <p className="text-gray-400 mt-1">Try adjusting your search</p>
+                      <p className="text-gray-500 text-lg font-medium">{t("categories.noCategoriesFound")}</p>
+                      <p className="text-gray-400 mt-1">{t("categories.tryAdjustingSearch")}</p>
                       <button
                         onClick={openAddModal}
                         className="mt-4 px-4 py-2 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition"
                       >
-                        Add Your First Category
+                        {t("categories.addFirstCategory")}
                       </button>
                     </div>
                   </td>

@@ -33,7 +33,16 @@ export const stockInApi = {
     ensureDBInitialized();
     const products = getCollection('products');
     const suppliers = getCollection('suppliers');
-    const now = new Date().toISOString();
+    const now = new Date();
+    // If date is provided without time, add random time to it
+    let dateWithTime = data.date;
+    if (data.date && !data.date.includes('T')) {
+      const randomDate = new Date(data.date);
+      randomDate.setHours(Math.floor(Math.random() * 24), Math.floor(Math.random() * 60), Math.floor(Math.random() * 60));
+      dateWithTime = randomDate.toISOString();
+    } else {
+      dateWithTime = now.toISOString();
+    }
     const product = products.find(p => p.id == data.product_id);
     const supplier = suppliers.find(s => s.id == data.supplier_id);
     const newItem = addItem('stock_ins', {
@@ -42,9 +51,9 @@ export const stockInApi = {
       supplier_name: supplier?.name,
       cost: product?.cost,
       total_amount: (Number(product?.cost || 0)) * Number(data.quantity),
-      received_date: data.date || now,
-      date: data.date || now,
-      created_at: now
+      received_date: dateWithTime,
+      date: dateWithTime,
+      created_at: now.toISOString()
     });
     updateProductStock(data.product_id, Number(data.quantity));
     return successResponse(newItem, 'Stock in created');

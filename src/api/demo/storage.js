@@ -59,36 +59,42 @@ export const initializeDemoDB = () => {
    const currentYear = now.getFullYear();
    const currentMonth = now.getMonth();
    
-   const monthsAgo = (m) => {
-     const d = new Date(currentYear, currentMonth - m, 1);
+ const monthsAgo = (m) => {
+       const d = new Date(currentYear, currentMonth - m, 1);
+       return d;
+     };
+     
+ const addRandomTime = (date) => {
+     const d = new Date(date);
+     d.setHours(Math.floor(Math.random() * 24), Math.floor(Math.random() * 60), Math.floor(Math.random() * 60));
      return d;
    };
-   
-   const categories = demoData.categories;
-   const suppliers = demoData.suppliers.map((s, i) => ({ 
-     ...s, 
-     created_at: monthsAgo(2 - (i % 3)).toISOString()
-   }));
-   const customers = demoData.customers.map((c, i) => ({ 
-     ...c, 
-     created_at: monthsAgo(0).toISOString()
-   }));
-   const products = demoData.products.map((p, i) => ({ 
-     ...p, 
-     created_at: monthsAgo(0).toISOString()
-   }));
-   const sales = demoData.sales.map((s, i) => ({ 
-     ...s, 
-     created_at: monthsAgo(0).toISOString()
-   }));
-   const stockIns = demoData.stock_ins.map((s, i) => ({ 
-     ...s, 
-     created_at: monthsAgo(0).toISOString()
-   }));
- const stockOuts = demoData.stock_outs.map((s, i) => ({ 
-     ...s, 
-     created_at: monthsAgo(0).toISOString()
-   }));
+    
+    const categories = demoData.categories;
+    const suppliers = demoData.suppliers.map((s, i) => ({ 
+      ...s, 
+      created_at: addRandomTime(monthsAgo(2 - (i % 3))).toISOString()
+    }));
+    const customers = demoData.customers.map((c, i) => ({ 
+      ...c, 
+      created_at: addRandomTime(monthsAgo(0)).toISOString()
+    }));
+    const products = demoData.products.map((p, i) => ({ 
+      ...p, 
+      created_at: addRandomTime(monthsAgo(0)).toISOString()
+    }));
+    const sales = demoData.sales.map((s, i) => ({ 
+      ...s, 
+      created_at: addRandomTime(monthsAgo(0)).toISOString()
+    }));
+    const stockIns = demoData.stock_ins.map((s, i) => ({ 
+      ...s, 
+      created_at: addRandomTime(monthsAgo(0)).toISOString()
+    }));
+    const stockOuts = demoData.stock_outs.map((s, i) => ({ 
+      ...s, 
+      created_at: addRandomTime(monthsAgo(0)).toISOString()
+    }));
    
     const payments = demoData.payments.map((p, i) => ({ 
       ...p, 
@@ -124,23 +130,23 @@ export const initializeDemoDB = () => {
      created_at: monthsAgo(1).toISOString()
    }));
    
-   const oldStockIns = Array.from({ length: 6 }, (_, i) => ({
-     id: 100 + i,
-     product_id: (i % 10) + 1,
-     quantity: 15 + i * 3,
-     supplier_id: (i % 5) + 1,
-     supplier: { id: (i % 5) + 1, name: ["Apple Inc", "Samsung Ltd", "Nike Supplies", "IKEA Wholesale", "Amazon Business"][i % 5] },
-     created_at: monthsAgo(1).toISOString()
-   }));
-   
-   const oldStockOuts = Array.from({ length: 6 }, (_, i) => ({
-     id: 100 + i,
-     product_id: (i % 10) + 1,
-     quantity: 3 + i,
-     customer_id: 100 + i,
-     customer: { id: 100 + i, name: `Customer ${i + 1}` },
-     created_at: monthsAgo(1).toISOString()
-   }));
+const oldStockIns = Array.from({ length: 6 }, (_, i) => ({
+      id: 100 + i,
+      product_id: (i % 10) + 1,
+      quantity: 15 + i * 3,
+      supplier_id: (i % 5) + 1,
+      supplier: { id: (i % 5) + 1, name: ["Apple Inc", "Samsung Ltd", "Nike Supplies", "IKEA Wholesale", "Amazon Business"][i % 5] },
+      created_at: addRandomTime(monthsAgo(1)).toISOString()
+    }));
+    
+    const oldStockOuts = Array.from({ length: 6 }, (_, i) => ({
+      id: 100 + i,
+      product_id: (i % 10) + 1,
+      quantity: 3 + i,
+      customer_id: 100 + i,
+      customer: { id: 100 + i, name: `Customer ${i + 1}` },
+      created_at: addRandomTime(monthsAgo(1)).toISOString()
+    }));
    
 const initialData = {
       products: [...products, ...oldProducts],

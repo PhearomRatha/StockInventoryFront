@@ -178,11 +178,11 @@ const SignupPage = () => {
 
             <div className="form-item">
               <label>Password</label>
-              <div className="input-wrapper">
+              <div className="input-wrapper input-with-toggle">
                 <span className="input-icon"><FiLock /></span>
                 <input
                   type={showPassword ? 'text' : 'password'}
-                  className={`el-input__inner ${formErrors.password ? 'input-error' : ''}`}
+                  className={`el-input__inner input-with-toggle ${formErrors.password ? 'input-error' : ''}`}
                   placeholder="Create a password"
                   value={formData.password}
                   onChange={(e) => handleInputChange('password', e.target.value)}
@@ -191,8 +191,9 @@ const SignupPage = () => {
                   type="button"
                   className="toggle-password"
                   onClick={() => setShowPassword(!showPassword)}
+                  aria-label={showPassword ? "Hide password" : "Show password"}
                 >
-                  {showPassword ? <FiEyeOff /> : <FiEye />}
+                  {showPassword ? <FiEyeOff style={{ width: 20, height: 20, color: '#111827' }} /> : <FiEye style={{ width: 20, height: 20, color: '#111827' }} />}
                 </button>
               </div>
               {formData.password && (

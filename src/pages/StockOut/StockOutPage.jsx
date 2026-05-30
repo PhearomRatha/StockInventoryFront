@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import {
   PlusIcon,
   TrashIcon,
@@ -7,10 +8,19 @@ import {
   CheckCircleIcon,
 } from "@heroicons/react/24/outline";
 
-import { stockOutApi, productApi, customerApi } from "../../api";
+import { stockOutApi } from "../../api";
 import { Select } from "../../components/UI";
 
+const formatDateTime = (dateStr) => {
+  if (!dateStr) return '-';
+  const date = new Date(dateStr);
+  const datePart = date.toLocaleDateString();
+  const timePart = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  return `${datePart} ${timePart}`;
+};
+
 function StockOutPage() {
+  const { t } = useTranslation();
   const [form, setForm] = useState({
     customer_id: "",
     product_id: "",
@@ -43,19 +53,19 @@ function StockOutPage() {
     try {
       setLoading({ products: true, customers: true, users: true, stockOuts: true });
       const result = await stockOutApi.getDashboard();
-      
+
       if (result.success) {
         setProducts(result.data?.products || []);
         setCustomers(result.data?.customers || []);
         setUsers(result.data?.users || []);
         setStockOuts(result.data?.stockOuts || result.data?.stock_outs || []);
       } else {
-        setModalMessage(result.message || "Failed to load dashboard data.");
+        setModalMessage(result.message || t("stockOut.failedRecord"));
         setShowErrorModal(true);
       }
     } catch (err) {
       console.error("Load error:", err);
-      setModalMessage("Failed to load initial data. Please check your connection.");
+      setModalMessage(t("stockOut.failedRecord"));
       setShowErrorModal(true);
     } finally {
       setLoading({ products: false, customers: false, users: false, stockOuts: false });
@@ -72,7 +82,6 @@ function StockOutPage() {
 
     if (name === "product_id") {
       const selectedProduct = products.find((p) => p.id === Number(value));
-      // Note: price comes from backend, not calculated on frontend
     }
 
     const qty = Number(updatedForm.quantity);
@@ -85,7 +94,7 @@ function StockOutPage() {
   // Submit stock-out
   const handleSubmit = async () => {
     if (!form.customer_id || !form.product_id || !form.quantity) {
-      setModalMessage("Please fill all required fields!");
+      setModalMessage(t("stockOut.fillRequired"));
       setShowErrorModal(true);
       return;
     }
@@ -101,7 +110,7 @@ function StockOutPage() {
     const result = await stockOutApi.create(payload);
 
     if (result.success) {
-      setModalMessage("Stock out recorded successfully!");
+      setModalMessage(t("stockOut.stockOutRecorded"));
       setShowSuccessModal(true);
       loadDashboardData();
       setForm({
@@ -112,23 +121,23 @@ function StockOutPage() {
         notes: "",
       });
     } else {
-      setModalMessage(result.message || "Failed to record stock out");
+      setModalMessage(result.message || t("stockOut.failedRecord"));
       setShowErrorModal(true);
     }
   };
 
   // Delete stock-out
   const handleDelete = async (id) => {
-    if (!window.confirm("Are you sure you want to delete this record?")) return;
+    if (!window.confirm(t("common.confirm"))) return;
 
     const result = await stockOutApi.delete(id);
 
     if (result.success) {
       setStockOuts(stockOuts.filter((s) => s.id !== id));
-      setModalMessage("Stock out record deleted successfully!");
+      setModalMessage(t("stockOut.stockOutRecorded"));
       setShowSuccessModal(true);
     } else {
-      setModalMessage(result.message || "Failed to delete stock out record");
+      setModalMessage(result.message || t("stockOut.failedRecord"));
       setShowErrorModal(true);
     }
   };
@@ -142,9 +151,9 @@ function StockOutPage() {
             <ShoppingCartIcon className="w-7 h-7 text-white" />
           </div>
           <div>
-            <h1 className="text-3xl md:text-4xl font-bold text-gray-900">Stock Out</h1>
+            <h1 className="text-3xl md:text-4xl font-bold text-gray-900">{t("stockOut.title")}</h1>
             <p className="text-gray-600 mt-1 text-sm md:text-base">
-              Record inventory reductions and track stock movements
+              {t("stockOut.subtitle")}
             </p>
           </div>
         </div>
@@ -157,60 +166,60 @@ function StockOutPage() {
             <div className="w-10 h-10 bg-gradient-to-br from-red-500 to-pink-600 rounded-xl flex items-center justify-center">
               <PlusIcon className="w-6 h-6 text-white" />
             </div>
-            <h2 className="text-xl font-bold text-gray-900">New Stock Out</h2>
+            <h2 className="text-xl font-bold text-gray-900">{t("stockOut.newStockOut")}</h2>
           </div>
 
           <form className="space-y-4">
             {/* Customer */}
             <div>
-              {loading.customers ? <p>Loading...</p> :
+              {loading.customers ? <p>{t("customers.loading")}</p> :
                 <Select
-                  label="Customer *"
+                  label={t("stockOut.customer") + " *"}
                   value={form.customer_id}
                   onChange={(val) => handleChange({ name: "customer_id", value: val })}
                   options={customers.map(c => ({ value: c.id, label: c.name }))}
-                  placeholder="Select Customer"
+                  placeholder={t("stockOut.selectCustomer")}
                 />
               }
             </div>
 
             {/* Product */}
             <div>
-              {loading.products ? <p>Loading...</p> :
+              {loading.products ? <p>{t("customers.loading")}</p> :
                 <Select
-                  label="Product *"
+                  label={t("stockOut.product") + " *"}
                   value={form.product_id}
                   onChange={(val) => handleChange({ name: "product_id", value: val })}
-                  options={products.map(p => ({ 
-                    value: p.id, 
+                  options={products.map(p => ({
+                    value: p.id,
                     label: p.name,
-                    sublabel: `${p.stock_quantity} in stock` 
+                    sublabel: `${p.stock_quantity} in stock`
                   }))}
-                  placeholder="Select Product"
+                  placeholder={t("stockOut.selectProduct")}
                 />
               }
             </div>
 
             {/* Quantity */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Quantity *</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">{t("stockIn.quantity")} *</label>
               <input type="number" min="1" name="quantity" value={form.quantity} onChange={handleChange} className="w-full px-4 py-3 border rounded-xl" />
             </div>
 
             {/* Date */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Date *</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">{t("stockIn.date")} *</label>
               <input type="date" name="date" value={form.date} onChange={handleChange} className="w-full px-4 py-3 border rounded-xl" />
             </div>
 
             {/* Notes */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Notes</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">{t("stockIn.notes")}</label>
               <textarea name="notes" value={form.notes} onChange={handleChange} className="w-full px-4 py-3 border rounded-xl" rows="3"></textarea>
             </div>
 
             <button type="button" onClick={handleSubmit} className="w-full bg-gradient-to-r from-red-600 to-pink-600 text-white px-6 py-3 rounded-xl">
-              Record Stock Out
+              {t("stockOut.recordStockOut")}
             </button>
           </form>
         </div>
@@ -221,21 +230,21 @@ function StockOutPage() {
             <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-cyan-600 rounded-xl flex items-center justify-center">
               <ShoppingCartIcon className="w-6 h-6 text-white" />
             </div>
-            <h2 className="text-xl font-bold text-gray-900">Stock Out History</h2>
+            <h2 className="text-xl font-bold text-gray-900">{t("stockOut.stockOutHistory")}</h2>
           </div>
 
-          {loading.stockOuts ? <p>Loading...</p> :
+          {loading.stockOuts ? <p>{t("customers.loading")}</p> :
             stockOuts.length === 0 ? (
               <div className="py-20 text-center text-gray-500">
                 <ShoppingCartIcon className="w-16 h-16 mx-auto mb-4" />
-                <p>No stock out records yet.</p>
+                <p>{t("stockOut.noStockOuts")}</p>
               </div>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full min-w-[800px]">
                   <thead className="bg-gray-50 border-b">
                     <tr>
-                      {["Customer","Product","Qty","Unit Price","Total","Date","Notes","Actions"].map(h => (
+                      {[t("stockOut.customer"), t("stockOut.product"), t("stockOut.qty"), t("stockOut.unitPrice"), t("stockOut.total"), t("stockOut.date"), t("stockIn.notes"), t("common.actions")].map(h => (
                         <th key={h} className="py-4 px-6 text-left text-xs font-semibold text-gray-700">{h}</th>
                       ))}
                     </tr>
@@ -248,7 +257,9 @@ function StockOutPage() {
                         <td className="py-4 px-6 font-semibold">{s.quantity}</td>
                         <td className="py-4 px-6 font-semibold">${Number(s.unit_price || 0).toFixed(2)}</td>
                         <td className="py-4 px-6 font-semibold">${Number(s.total_amount || 0).toFixed(2)}</td>
-                        <td className="py-4 px-6 text-sm text-gray-500">{new Date(s.date || s.sold_date).toLocaleDateString()}</td>
+                        <td className="py-4 px-6 text-sm text-gray-500">
+                          {formatDateTime(s.date || s.sold_date)}
+                        </td>
                         <td className="py-4 px-6 text-gray-600">{s.notes || s.remarks || '-'}</td>
                         <td className="py-4 px-6">
                           <button onClick={() => handleDelete(s.id)} className="p-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg">
@@ -272,9 +283,9 @@ function StockOutPage() {
             <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
               <CheckCircleIcon className="w-8 h-8 text-green-600" />
             </div>
-            <h2 className="text-2xl font-bold mb-2">Success!</h2>
+            <h2 className="text-2xl font-bold mb-2">{t("common.success")}</h2>
             <p className="text-gray-600 mb-6">{modalMessage}</p>
-            <button onClick={() => setShowSuccessModal(false)} className="w-full px-6 py-3 bg-green-600 text-white rounded-xl">Continue</button>
+            <button onClick={() => setShowSuccessModal(false)} className="w-full px-6 py-3 bg-green-600 text-white rounded-xl">{t("common.continue")}</button>
           </div>
         </div>
       )}
@@ -286,9 +297,9 @@ function StockOutPage() {
             <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
               <XMarkIcon className="w-8 h-8 text-red-600" />
             </div>
-            <h2 className="text-2xl font-bold mb-2">Error!</h2>
+            <h2 className="text-2xl font-bold mb-2">{t("common.error")}</h2>
             <p className="text-gray-600 mb-6">{modalMessage}</p>
-            <button onClick={() => setShowErrorModal(false)} className="w-full px-6 py-3 bg-red-600 text-white rounded-xl">Close</button>
+            <button onClick={() => setShowErrorModal(false)} className="w-full px-6 py-3 bg-red-600 text-white rounded-xl">{t("common.close")}</button>
           </div>
         </div>
       )}

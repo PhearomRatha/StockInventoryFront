@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
+import { useTranslation } from "react-i18next";
 import {
   DocumentTextIcon,
   MagnifyingGlassIcon,
@@ -12,6 +13,7 @@ import { activityLogApi, customerApi } from "../../api";
 import ModalSelect from "../../components/UI/ModalSelect";
 
 function ActivityLogPage() {
+  const { t } = useTranslation();
   const [logs, setLogs] = useState([]);
   const [users, setUsers] = useState([]);
   const [search, setSearch] = useState("");
@@ -33,38 +35,38 @@ function ActivityLogPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const logsPerPage = 10;
 
-const fetchLogs = useCallback(async () => {
-      setLoading(true);
-      try {
-        const hasFilters = selectedUsers.length > 0 || selectedModules.length > 0 || selectedActions.length > 0 || startDate || endDate;
-        
-        let logsRes;
-        if (hasFilters) {
-          logsRes = await activityLogApi.filter({
-            user_id: selectedUsers.length > 0 ? selectedUsers : undefined,
-            module: selectedModules.length > 0 ? selectedModules : undefined,
-            action: selectedActions.length > 0 ? selectedActions : undefined
-          });
-        } else {
-          logsRes = await activityLogApi.getAll();
-        }
-        
-        let logsData = logsRes.success ? (logsRes.data?.data || logsRes.data || []) : [];
-        setLogs(Array.isArray(logsData) ? logsData : []);
-        
-        const usersRes = await customerApi.getAll();
-        const usersData = usersRes.success ? (usersRes.data?.data || usersRes.data || []) : [];
-        setUsers(Array.isArray(usersData) ? usersData : []);
-      } catch (error) {
-        console.error('Error fetching logs:', error);
-      } finally {
-        setLoading(false);
-      }
-    }, [selectedUsers, selectedModules, selectedActions, startDate, endDate]);
+  const fetchLogs = useCallback(async () => {
+    setLoading(true);
+    try {
+      const hasFilters = selectedUsers.length > 0 || selectedModules.length > 0 || selectedActions.length > 0 || startDate || endDate;
 
-   useEffect(() => {
-     fetchLogs();
-   }, [fetchLogs]);
+      let logsRes;
+      if (hasFilters) {
+        logsRes = await activityLogApi.filter({
+          user_id: selectedUsers.length > 0 ? selectedUsers : undefined,
+          module: selectedModules.length > 0 ? selectedModules : undefined,
+          action: selectedActions.length > 0 ? selectedActions : undefined
+        });
+      } else {
+        logsRes = await activityLogApi.getAll();
+      }
+
+      let logsData = logsRes.success ? (logsRes.data?.data || logsRes.data || []) : [];
+      setLogs(Array.isArray(logsData) ? logsData : []);
+
+      const usersRes = await customerApi.getAll();
+      const usersData = usersRes.success ? (usersRes.data?.data || usersRes.data || []) : [];
+      setUsers(Array.isArray(usersData) ? usersData : []);
+    } catch (error) {
+      console.error('Error fetching logs:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, [selectedUsers, selectedModules, selectedActions, startDate, endDate]);
+
+  useEffect(() => {
+    fetchLogs();
+  }, [fetchLogs]);
 
   const handleSort = (newSortBy) => {
     if (sortBy === newSortBy) {
@@ -75,33 +77,33 @@ const fetchLogs = useCallback(async () => {
     }
   };
 
-const dateFilteredLogs = logs.filter(log => {
-     if (!startDate && !endDate) return true;
-     const logDate = new Date(log.created_at).toISOString().split('T')[0];
-     if (startDate && logDate < startDate) return false;
-     if (endDate && logDate > endDate) return false;
-     return true;
-   });
+  const dateFilteredLogs = logs.filter(log => {
+    if (!startDate && !endDate) return true;
+    const logDate = new Date(log.created_at).toISOString().split('T')[0];
+    if (startDate && logDate < startDate) return false;
+    if (endDate && logDate > endDate) return false;
+    return true;
+  });
 
-   const filteredLogs = dateFilteredLogs
-     .filter((log) =>
-       (log.description || "").toLowerCase().includes(search.toLowerCase())
-     )
-     .sort((a, b) => {
-       const multiplier = sortOrder === "asc" ? 1 : -1;
-       if (sortBy === "created_at")
-         return multiplier * new Date(a.created_at) - new Date(b.created_at);
-       if (sortBy === "user") {
-         const userA = typeof a.user === 'object' ? a.user?.name || '' : (a.user || '');
-         const userB = typeof b.user === 'object' ? b.user?.name || '' : (b.user || '');
-         return multiplier * userA.localeCompare(userB);
-       }
-       if (sortBy === "id") return multiplier * (a.id - b.id);
-       if (sortBy === "action") return multiplier * (a.action || '').localeCompare(b.action || '');
-       if (sortBy === "module") return multiplier * (a.module || '').localeCompare(b.module || '');
-       if (sortBy === "record_id") return multiplier * (a.record_id - b.record_id);
-       return 0;
-     });
+  const filteredLogs = dateFilteredLogs
+    .filter((log) =>
+      (log.description || "").toLowerCase().includes(search.toLowerCase())
+    )
+    .sort((a, b) => {
+      const multiplier = sortOrder === "asc" ? 1 : -1;
+      if (sortBy === "created_at")
+        return multiplier * new Date(a.created_at) - new Date(b.created_at);
+      if (sortBy === "user") {
+        const userA = typeof a.user === 'object' ? a.user?.name || '' : (a.user || '');
+        const userB = typeof b.user === 'object' ? b.user?.name || '' : (b.user || '');
+        return multiplier * userA.localeCompare(userB);
+      }
+      if (sortBy === "id") return multiplier * (a.id - b.id);
+      if (sortBy === "action") return multiplier * (a.action || '').localeCompare(b.action || '');
+      if (sortBy === "module") return multiplier * (a.module || '').localeCompare(b.module || '');
+      if (sortBy === "record_id") return multiplier * (a.record_id - b.record_id);
+      return 0;
+    });
 
   const totalPages = Math.ceil(filteredLogs.length / logsPerPage);
   const paginatedLogs = filteredLogs.slice(
@@ -109,15 +111,14 @@ const dateFilteredLogs = logs.filter(log => {
     currentPage * logsPerPage
   );
 
-// Statistics
-   const totalLogs = dateFilteredLogs.length;
-   const todayLogs = dateFilteredLogs.filter(
-     (log) =>
-       new Date(log.created_at).toDateString() === new Date().toDateString()
-   ).length;
-   const uniqueUsers = new Set(dateFilteredLogs.map((log) => log.user_id)).size;
+  // Statistics
+  const totalLogs = dateFilteredLogs.length;
+  const todayLogs = dateFilteredLogs.filter(
+    (log) =>
+      new Date(log.created_at).toDateString() === new Date().toDateString()
+  ).length;
+  const uniqueUsers = new Set(dateFilteredLogs.map((log) => log.user_id)).size;
 
-  // 🔹 Skeleton Loader
   if (loading)
     return (
       <div className="p-6 min-h-screen bg-gradient-to-br from-gray-50 to-slate-100">
@@ -157,10 +158,10 @@ const dateFilteredLogs = logs.filter(log => {
           </div>
           <div>
             <h1 className="text-3xl md:text-4xl font-bold text-gray-900">
-              Activity Logs
+              {t("activityLogs.title")}
             </h1>
             <p className="text-gray-600 mt-1 text-sm md:text-base">
-              Monitor user activities and system events
+              {t("activityLogs.subtitle")}
             </p>
           </div>
         </div>
@@ -171,7 +172,7 @@ const dateFilteredLogs = logs.filter(log => {
         <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-500 font-medium">Total Logs</p>
+              <p className="text-sm text-gray-500 font-medium">{t("activityLogs.totalLogs")}</p>
               <p className="text-3xl font-bold text-gray-900 mt-2">
                 {totalLogs}
               </p>
@@ -185,7 +186,7 @@ const dateFilteredLogs = logs.filter(log => {
         <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-500 font-medium">Today's Logs</p>
+              <p className="text-sm text-gray-500 font-medium">{t("activityLogs.todaysLogs")}</p>
               <p className="text-3xl font-bold text-emerald-600 mt-2">
                 {todayLogs}
               </p>
@@ -199,7 +200,7 @@ const dateFilteredLogs = logs.filter(log => {
         <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-500 font-medium">Active Users</p>
+              <p className="text-sm text-gray-500 font-medium">{t("activityLogs.activeUsers")}</p>
               <p className="text-3xl font-bold text-blue-600 mt-2">
                 {uniqueUsers}
               </p>
@@ -216,7 +217,7 @@ const dateFilteredLogs = logs.filter(log => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              User
+              {t("activityLogs.user")}
             </label>
             <button
               type="button"
@@ -224,9 +225,9 @@ const dateFilteredLogs = logs.filter(log => {
               className="modal-select-trigger"
             >
               <span className={selectedUsers.length === 0 ? "trigger-placeholder" : ""}>
-                {selectedUsers.length === 0 
-                  ? "Select Users" 
-                  : selectedUsers.length === 1 
+                {selectedUsers.length === 0
+                  ? t("activityLogs.selectUsers")
+                  : selectedUsers.length === 1
                     ? users.find(u => u.id === selectedUsers[0])?.name || "1 user selected"
                     : `${selectedUsers.length} users selected`
                 }
@@ -237,7 +238,7 @@ const dateFilteredLogs = logs.filter(log => {
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Module
+              {t("activityLogs.module")}
             </label>
             <button
               type="button"
@@ -245,9 +246,9 @@ const dateFilteredLogs = logs.filter(log => {
               className="modal-select-trigger"
             >
               <span className={selectedModules.length === 0 ? "trigger-placeholder" : ""}>
-                {selectedModules.length === 0 
-                  ? "Select Modules" 
-                  : selectedModules.length === 1 
+                {selectedModules.length === 0
+                  ? t("activityLogs.selectModules")
+                  : selectedModules.length === 1
                     ? selectedModules[0].replace('_', ' ')
                     : `${selectedModules.length} modules selected`
                 }
@@ -258,7 +259,7 @@ const dateFilteredLogs = logs.filter(log => {
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Action
+              {t("activityLogs.action")}
             </label>
             <button
               type="button"
@@ -266,9 +267,9 @@ const dateFilteredLogs = logs.filter(log => {
               className="modal-select-trigger"
             >
               <span className={selectedActions.length === 0 ? "trigger-placeholder" : ""}>
-                {selectedActions.length === 0 
-                  ? "Select Actions" 
-                  : selectedActions.length === 1 
+                {selectedActions.length === 0
+                  ? t("activityLogs.selectActions")
+                  : selectedActions.length === 1
                     ? selectedActions[0]
                     : `${selectedActions.length} actions selected`
                 }
@@ -279,7 +280,7 @@ const dateFilteredLogs = logs.filter(log => {
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Date Range
+              {t("activityLogs.dateRange")}
             </label>
             <div className="flex gap-2">
               <input
@@ -303,45 +304,45 @@ const dateFilteredLogs = logs.filter(log => {
       <ModalSelect
         isOpen={userModalOpen}
         onClose={() => setUserModalOpen(false)}
-        title="Select Users"
+        title={t("activityLogs.selectUsers")}
         options={users.map(u => ({ value: u.id, label: u.name }))}
         selectedValues={selectedUsers}
         onSelectMultiple={setSelectedUsers}
         multiSelect={true}
-        placeholder="Search users..."
+        placeholder={t("customers.searchPlaceholder")}
       />
       <ModalSelect
         isOpen={moduleModalOpen}
         onClose={() => setModuleModalOpen(false)}
-        title="Select Modules"
+        title={t("activityLogs.selectModules")}
         options={[
-          { value: "products", label: "Products" },
-          { value: "sales", label: "Sales" },
-          { value: "stock_ins", label: "Stock Ins" },
-          { value: "stock_outs", label: "Stock Outs" },
-          { value: "suppliers", label: "Suppliers" },
-          { value: "customers", label: "Customers" },
-          { value: "users", label: "Users" },
-          { value: "sales_payment", label: "Sales Payment" },
+          { value: "products", label: t("navigation.products") },
+          { value: "sales", label: t("navigation.sales") },
+          { value: "stock_ins", label: t("reports.stockIns") },
+          { value: "stock_outs", label: t("reports.stockOuts") },
+          { value: "suppliers", label: t("navigation.suppliers") },
+          { value: "customers", label: t("navigation.customers") },
+          { value: "users", label: t("navigation.userManagement") },
+          { value: "sales_payment", label: t("reports.salesPayment") || "Sales Payment" },
         ]}
         selectedValues={selectedModules}
         onSelectMultiple={setSelectedModules}
         multiSelect={true}
-        placeholder="Search modules..."
+        placeholder={t("customers.searchPlaceholder")}
       />
       <ModalSelect
         isOpen={actionModalOpen}
         onClose={() => setActionModalOpen(false)}
-        title="Select Actions"
+        title={t("activityLogs.selectActions")}
         options={[
-          { value: "created", label: "Created" },
-          { value: "updated", label: "Updated" },
-          { value: "deleted", label: "Deleted" },
+          { value: "created", label: t("activityLogs.created") },
+          { value: "updated", label: t("activityLogs.updated") },
+          { value: "deleted", label: t("activityLogs.deleted") },
         ]}
         selectedValues={selectedActions}
         onSelectMultiple={setSelectedActions}
         multiSelect={true}
-        placeholder="Search actions..."
+        placeholder={t("customers.searchPlaceholder")}
       />
 
       {/* Search */}
@@ -350,7 +351,7 @@ const dateFilteredLogs = logs.filter(log => {
           <MagnifyingGlassIcon className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
           <input
             type="text"
-            placeholder="Search logs by description..."
+            placeholder={t("activityLogs.searchPlaceholder")}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full pl-12 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
@@ -363,23 +364,20 @@ const dateFilteredLogs = logs.filter(log => {
         <div className="overflow-x-auto">
           <table className="w-full min-w-[800px]">
             <thead className="bg-gradient-to-r from-gray-50 to-slate-50 border-b">
-<tr>
-                 {[                  "No",
-                   "User",
-                   "Action",
-                   "Module",
-                   "Record ID",
-                   "Description",
-                   "Date",
-                 ].map((h) => {
-                   const sortKey = h === "Date" ? "created_at" : h === "No" ? "id" : h === "Record ID" ? "record_id" : h.toLowerCase();
-                   const isSortable = !["Description"].includes(h);
-                   return (
-                     <th
-                       key={h}
-                       className={`py-4 px-6 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider ${isSortable ? 'cursor-pointer hover:bg-gray-100' : ''}`}
-                       onClick={isSortable ? () => handleSort(sortKey) : undefined}
-                     >
+              <tr>
+                {[
+                  t("activityLogs.no") || "No",
+                  t("activityLogs.user"),
+                  t("activityLogs.action"),
+                  t("activityLogs.module"),
+                  t("activityLogs.recordId"),
+                  t("activityLogs.description"),
+                  t("activityLogs.date"),
+                ].map((h) => {
+                  const sortKey = h === t("activityLogs.date") ? "created_at" : h === t("activityLogs.no") || "No" ? "id" : h === t("activityLogs.recordId") ? "record_id" : h.toLowerCase();
+                  const isSortable = ![t("activityLogs.description")].includes(h);
+                  return (
+                    <th key={h} className={`py-4 px-6 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider ${isSortable ? 'cursor-pointer hover:bg-gray-100' : ''}`} onClick={isSortable ? () => handleSort(sortKey) : undefined}>
                       {h}
                     </th>
                   );
@@ -418,7 +416,7 @@ const dateFilteredLogs = logs.filter(log => {
                         log.action === 'verified' ? 'bg-purple-100 text-purple-800' :
                         'bg-gray-100 text-gray-800'
                       }`}>
-                        {log.action}
+                        {log.action === 'created' ? t("activityLogs.created") : log.action === 'updated' ? t("activityLogs.updated") : log.action === 'deleted' ? t("activityLogs.deleted") : log.action}
                       </span>
                     </td>
                     <td className="py-4 px-6">
@@ -433,7 +431,7 @@ const dateFilteredLogs = logs.filter(log => {
                         log.module === 'sales_payment' ? 'bg-violet-100 text-violet-800' :
                         'bg-gray-100 text-gray-800'
                       }`}>
-                        {log.module.replace('_', ' ')}
+                        {log.module.replace(/_/g, ' ')}
                       </span>
                     </td>
                     <td className="py-4 px-6">
@@ -447,7 +445,7 @@ const dateFilteredLogs = logs.filter(log => {
                           `${log.user?.name || 'System'} performed ${log.action} on ${log.module}`}
                       </div>
                     </td>
-<td className="py-4 px-6">
+                    <td className="py-4 px-6">
                       <div className="text-sm text-gray-500">
                         {log.created_at ? new Date(log.created_at).toLocaleString() : 'N/A'}
                       </div>
@@ -460,10 +458,10 @@ const dateFilteredLogs = logs.filter(log => {
                     <div className="flex flex-col items-center justify-center">
                       <DocumentTextIcon className="w-16 h-16 text-gray-300 mb-4" />
                       <p className="text-gray-500 text-lg font-medium">
-                        No activity logs found
+                        {t("activityLogs.noLogsFound")}
                       </p>
                       <p className="text-gray-400 mt-1">
-                        Activity logs are automatically recorded from user actions
+                        {t("activityLogs.logsRecorded")}
                       </p>
                     </div>
                   </td>
@@ -478,9 +476,7 @@ const dateFilteredLogs = logs.filter(log => {
       {totalPages > 1 && (
         <div className="flex justify-between items-center mt-6">
           <div className="text-sm text-gray-500">
-            Showing {(currentPage - 1) * logsPerPage + 1} to{" "}
-            {Math.min(currentPage * logsPerPage, filteredLogs.length)} of{" "}
-            {filteredLogs.length} logs
+            {t("common.showing", { start: (currentPage - 1) * logsPerPage + 1, end: Math.min(currentPage * logsPerPage, filteredLogs.length), total: filteredLogs.length })}
           </div>
           <div className="flex items-center gap-2">
             <button
@@ -489,7 +485,7 @@ const dateFilteredLogs = logs.filter(log => {
               className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition"
             >
               <ChevronLeftIcon className="w-4 h-4" />
-              Previous
+              {t("common.previous")}
             </button>
             <div className="flex gap-1">
               {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
@@ -525,7 +521,7 @@ const dateFilteredLogs = logs.filter(log => {
               disabled={currentPage === totalPages}
               className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition"
             >
-              Next
+              {t("common.next")}
               <ChevronRightIcon className="w-4 h-4" />
             </button>
           </div>

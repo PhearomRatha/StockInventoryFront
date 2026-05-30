@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback } from "react";
+import { useTranslation } from "react-i18next";
 import {
   ShoppingCartIcon,
   CreditCardIcon,
@@ -47,6 +48,8 @@ const clearCache = () => {
 const PIE_COLORS = ['#6366f1', '#0ea5e9', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#14b8a6'];
 
 export default function Dashboard() {
+  const { t } = useTranslation();
+
   const [totals, setTotals] = useState({
     total_customers: 0, total_products: 0, total_suppliers: 0, total_sales: 0,
     stockin_this_month: 0, stockout_this_month: 0,
@@ -79,7 +82,6 @@ export default function Dashboard() {
 
     try {
       const result = await dashboardApi.getOverview();
-      // getResponse wraps response with {success, data, message} OR demo API returns {data: ..., status: 200}
       const payload = result?.success === true ? result.data : (result?.data ?? result);
       if (!payload && result?.success === false) {
         throw new Error(result.message || 'Failed to fetch dashboard');
@@ -109,13 +111,13 @@ export default function Dashboard() {
           percent_stockout: overview.stock_out_change || 0,
         };
 
-const chartDataParsed = {
-           sales_overview: payload.sales_overview || [],
-           stock_movement: payload.stock_movement || [],
-           stock_movement_change: payload.stock_movement_change || {},
-           customer_growth: payload.customer_growth || [],
-           category_distribution: payload.category_distribution || [],
-         };
+        const chartDataParsed = {
+          sales_overview: payload.sales_overview || [],
+          stock_movement: payload.stock_movement || [],
+          stock_movement_change: payload.stock_movement_change || {},
+          customer_growth: payload.customer_growth || [],
+          category_distribution: payload.category_distribution || [],
+        };
 
         const dataToCache = {
           totals: totalsData,
@@ -131,37 +133,36 @@ const chartDataParsed = {
         setCache(dataToCache);
       } else {
         console.warn('Dashboard unexpected format:', payload);
-        setError('Failed to load dashboard data. Please try again.');
+        setError(t('dashboard.failedToLoad'));
       }
     } catch (ex) {
       console.error('Dashboard fetch error:', ex);
-      const msg = ex?.response?.data?.message || ex?.message || 'Failed to load dashboard';
+      const msg = ex?.response?.data?.message || ex?.message || t('dashboard.failedToLoad');
       setError(msg);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
-    // Clear old cache to ensure fresh data with updated dates
     localStorage.removeItem(CACHE_KEY);
     localStorage.removeItem(CACHE_TIME_KEY);
     fetchDashboardData();
   }, [fetchDashboardData]);
 
   const cardData = [
-    { title: "Total Customers", total: totals.total_customers, percent: totals.percent_customers, icon: <ShoppingCartIcon className="w-6 h-6 text-white" />, bg: "from-blue-500 to-blue-600" },
-    { title: "Total Products", total: totals.total_products, percent: totals.percent_products, icon: <CreditCardIcon className="w-6 h-6 text-white" />, bg: "from-green-500 to-emerald-600" },
-    { title: "Total Suppliers", total: totals.total_suppliers, percent: totals.percent_suppliers, icon: <TruckIcon className="w-6 h-6 text-white" />, bg: "from-indigo-500 to-indigo-600" },
-    { title: "Total Sales", total: totals.total_sales, percent: totals.percent_sales, icon: <CurrencyDollarIcon className="w-6 h-6 text-white" />, bg: "from-red-500 to-red-600" },
-    { title: "Stock In", total: totals.stockin_this_month, percent: totals.percent_stockin, icon: <TruckIcon className="w-6 h-6 text-white" />, bg: "from-yellow-400 to-yellow-500" },
-    { title: "Stock Out", total: totals.stockout_this_month, percent: totals.percent_stockout, icon: <ArrowTrendingUpIcon className="w-6 h-6 text-white" />, bg: "from-pink-400 to-pink-500" },
+    { title: t('dashboard.totalCustomers'), total: totals.total_customers, percent: totals.percent_customers, icon: <ShoppingCartIcon className="w-6 h-6 text-white" />, bg: "from-blue-500 to-blue-600" },
+    { title: t('dashboard.totalProducts'), total: totals.total_products, percent: totals.percent_products, icon: <CreditCardIcon className="w-6 h-6 text-white" />, bg: "from-green-500 to-emerald-600" },
+    { title: t('dashboard.totalSuppliers'), total: totals.total_suppliers, percent: totals.percent_suppliers, icon: <TruckIcon className="w-6 h-6 text-white" />, bg: "from-indigo-500 to-indigo-600" },
+    { title: t('dashboard.totalSales'), total: totals.total_sales, percent: totals.percent_sales, icon: <CurrencyDollarIcon className="w-6 h-6 text-white" />, bg: "from-red-500 to-red-600" },
+    { title: t('dashboard.stockIn'), total: totals.stockin_this_month, percent: totals.percent_stockin, icon: <TruckIcon className="w-6 h-6 text-white" />, bg: "from-yellow-400 to-yellow-500" },
+    { title: t('dashboard.stockOut'), total: totals.stockout_this_month, percent: totals.percent_stockout, icon: <ArrowTrendingUpIcon className="w-6 h-6 text-white" />, bg: "from-pink-400 to-pink-500" },
   ];
 
   if (loading) {
     return (
       <div className="p-6 bg-gray-50 min-h-screen font-sans">
-        <h1 className="text-3xl font-semibold mb-8 text-gray-800">Dashboard Overview</h1>
+        <h1 className="text-3xl font-semibold mb-8 text-gray-800">{t('dashboard.title')}</h1>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {[...Array(6)].map((_, i) => (
             <div key={i} className="bg-white rounded-2xl p-6 shadow-lg animate-pulse">
@@ -179,10 +180,10 @@ const chartDataParsed = {
   if (error) {
     return (
       <div className="p-6 bg-gray-50 min-h-screen font-sans">
-        <h1 className="text-3xl font-semibold mb-8 text-gray-800">Dashboard Overview</h1>
+        <h1 className="text-3xl font-semibold mb-8 text-gray-800">{t('dashboard.title')}</h1>
         <div className="bg-red-50 border border-red-200 rounded-2xl p-6 text-center">
           <p className="text-red-600 mb-4">{error}</p>
-          <button onClick={fetchDashboardData} className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition">Retry</button>
+          <button onClick={fetchDashboardData} className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition">{t('dashboard.retry')}</button>
         </div>
       </div>
     );
@@ -190,7 +191,7 @@ const chartDataParsed = {
 
   return (
     <div className="p-6 bg-gray-50 min-h-screen font-sans">
-      <h1 className="text-3xl font-semibold mb-8 text-gray-800">Dashboard Overview</h1>
+      <h1 className="text-3xl font-semibold mb-8 text-gray-800">{t('dashboard.title')}</h1>
 
       {/* Statistic Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
@@ -200,12 +201,12 @@ const chartDataParsed = {
               <div>
                 <p className="text-sm text-gray-600">{card.title}</p>
                 <p className="text-2xl font-bold text-gray-900">
-                  {card.title.includes("Sales") ? `$${Number(card.total).toLocaleString()}` : Number(card.total).toLocaleString()}
+                  {card.title.includes(t('dashboard.totalSales')) ? `$${Number(card.total).toLocaleString()}` : Number(card.total).toLocaleString()}
                 </p>
                 <div className="flex items-center gap-1 mt-2">
                   <ArrowTrendingUpIcon className={`w-4 h-4 ${card.percent >= 0 ? "text-green-500" : "text-red-500"}`} />
                   <span className={`text-sm font-medium ${card.percent >= 0 ? "text-green-600" : "text-red-600"}`}>{Number(card.percent).toFixed(1)}%</span>
-                  <span className="text-sm text-gray-500">from last month</span>
+                  <span className="text-sm text-gray-500">{t('dashboard.fromLastMonth')}</span>
                 </div>
               </div>
               <div className={`w-12 h-12 bg-gradient-to-br ${card.bg} rounded-xl flex items-center justify-center`}>{card.icon}</div>
@@ -220,7 +221,7 @@ const chartDataParsed = {
         {/* 1. Sales Overview - Line Chart */}
         <div className="bg-white rounded-2xl p-6 shadow-lg border">
           <h2 className="text-xl font-semibold text-gray-800 mb-4 flex items-center gap-2">
-            <ChartBarIcon className="w-5 h-5" /> Sales Overview
+            <ChartBarIcon className="w-5 h-5" /> {t('dashboard.salesOverview')}
           </h2>
           <ResponsiveContainer width="100%" height={300}>
             <LineChart data={chartData.sales_overview}>
@@ -237,7 +238,7 @@ const chartDataParsed = {
         {/* 2. Customer Growth - Line Chart */}
         <div className="bg-white rounded-2xl p-6 shadow-lg border">
           <h2 className="text-xl font-semibold text-gray-800 mb-4 flex items-center gap-2">
-            <UsersIcon className="w-5 h-5" /> Customer Growth
+            <UsersIcon className="w-5 h-5" /> {t('dashboard.customerGrowth')}
           </h2>
           <ResponsiveContainer width="100%" height={300}>
             <LineChart data={chartData.customer_growth}>
@@ -255,13 +256,13 @@ const chartDataParsed = {
         <div className="bg-white rounded-2xl p-6 shadow-lg border">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-semibold text-gray-800 flex items-center gap-2">
-              <ChartBarIcon className="w-5 h-5" /> Stock In vs Stock Out
+              <ChartBarIcon className="w-5 h-5" /> {t('dashboard.stockMovement')}
             </h2>
             {chartData.stock_movement_change && (
               <div className="text-sm text-gray-500">
-                <span className="text-green-600">+{chartData.stock_movement_change.stock_in_percent}% In</span>
+                <span className="text-green-600">+{chartData.stock_movement_change.stock_in_percent}% {t('stock.in')}</span>
                 <span className="mx-2">·</span>
-                <span className="text-red-600">+{chartData.stock_movement_change.stock_out_percent}% Out</span>
+                <span className="text-red-600">+{chartData.stock_movement_change.stock_out_percent}% {t('stock.out')}</span>
               </div>
             )}
           </div>
@@ -281,31 +282,31 @@ const chartDataParsed = {
         {/* 4. Product Distribution - Pie Chart */}
         <div className="bg-white rounded-2xl p-6 shadow-lg border">
           <h2 className="text-xl font-semibold text-gray-800 mb-4 flex items-center gap-2">
-            <CubeIcon className="w-5 h-5" /> Product Distribution by Category
+            <CubeIcon className="w-5 h-5" /> {t('dashboard.productDistribution')}
           </h2>
           {chartData.category_distribution.length > 0 ? (
             <ResponsiveContainer width="100%" height={300}>
               <PieChart>
-<Pie
-                    data={chartData.category_distribution}
-                    dataKey="percentage"
-                    nameKey="category"
-                    cx="50%"
-                    cy="50%"
-                    outerRadius={100}
-                    label={({ category, percentage }) => `${category} (${parseFloat(percentage).toFixed(1)}%)`}
-                    labelLine={{ stroke: '#9ca3af' }}
-                  >
-                    {chartData.category_distribution.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color || PIE_COLORS[index % PIE_COLORS.length]} />
-                    ))}
-                  </Pie>
+                <Pie
+                  data={chartData.category_distribution}
+                  dataKey="percentage"
+                  nameKey="category"
+                  cx="50%"
+                  cy="50%"
+                  outerRadius={100}
+                  label={({ category, percentage }) => `${category} (${parseFloat(percentage).toFixed(1)}%)`}
+                  labelLine={{ stroke: '#9ca3af' }}
+                >
+                  {chartData.category_distribution.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color || PIE_COLORS[index % PIE_COLORS.length]} />
+                  ))}
+                </Pie>
                 <Tooltip contentStyle={{ borderRadius: 8, border: '1px solid #e5e7eb' }} />
                 <Legend />
               </PieChart>
             </ResponsiveContainer>
           ) : (
-            <div className="h-[300px] flex items-center justify-center text-gray-400">No product distribution data available</div>
+            <div className="h-[300px] flex items-center justify-center text-gray-400">{t('dashboard.noProductDistribution')}</div>
           )}
         </div>
       </div>
@@ -314,25 +315,25 @@ const chartDataParsed = {
       <div className="bg-white rounded-2xl shadow-lg border overflow-hidden">
         <div className="p-6 border-b border-gray-100">
           <h2 className="text-xl font-semibold text-gray-800 flex items-center gap-2">
-            <ArrowTrendingUpIcon className="w-5 h-5" /> Recent Sales
+            <ArrowTrendingUpIcon className="w-5 h-5" /> {t('dashboard.recentSales')}
           </h2>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead className="bg-gray-50">
               <tr>
-                <th className="py-3 px-4 text-left text-xs font-semibold text-gray-600">Invoice</th>
-                <th className="py-3 px-4 text-left text-xs font-semibold text-gray-600">Customer</th>
-                <th className="py-3 px-4 text-left text-xs font-semibold text-gray-600">Total</th>
-                <th className="py-3 px-4 text-left text-xs font-semibold text-gray-600">Status</th>
-                <th className="py-3 px-4 text-left text-xs font-semibold text-gray-600">Date</th>
+                <th className="py-3 px-4 text-left text-xs font-semibold text-gray-600">{t('dashboard.invoice')}</th>
+                <th className="py-3 px-4 text-left text-xs font-semibold text-gray-600">{t('dashboard.customer')}</th>
+                <th className="py-3 px-4 text-left text-xs font-semibold text-gray-600">{t('dashboard.total')}</th>
+                <th className="py-3 px-4 text-left text-xs font-semibold text-gray-600">{t('dashboard.status')}</th>
+                <th className="py-3 px-4 text-left text-xs font-semibold text-gray-600">{t('dashboard.date')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
               {recentSales.map((sale) => (
                 <tr key={sale.id} className="hover:bg-gray-50">
                   <td className="py-3 px-4 text-sm font-medium text-gray-900">#{sale.invoice_number || sale.id}</td>
-                  <td className="py-3 px-4 text-sm text-gray-600">{sale.customer?.name || 'Unknown Customer'}</td>
+                  <td className="py-3 px-4 text-sm text-gray-600">{sale.customer?.name || t('sales.unknownCustomer')}</td>
                   <td className="py-3 px-4 text-sm font-bold text-gray-900">${Number(sale.total || 0).toLocaleString()}</td>
                   <td className="py-3 px-4">
                     <span className={`px-2 py-1 text-xs rounded-full ${sale.payment_status === 'PAID' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>

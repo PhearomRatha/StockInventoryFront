@@ -33,7 +33,16 @@ export const stockOutApi = {
     ensureDBInitialized();
     const products = getCollection('products');
     const customers = getCollection('customers');
-    const now = new Date().toISOString();
+    const now = new Date();
+    // If date is provided without time, add random time to it
+    let dateWithTime = data.date;
+    if (data.date && !data.date.includes('T')) {
+      const randomDate = new Date(data.date);
+      randomDate.setHours(Math.floor(Math.random() * 24), Math.floor(Math.random() * 60), Math.floor(Math.random() * 60));
+      dateWithTime = randomDate.toISOString();
+    } else {
+      dateWithTime = now.toISOString();
+    }
     const maxId = getCollection('stock_outs').length > 0 ? Math.max(...getCollection('stock_outs').map(s => s.id || 0)) : 0;
     const product = products.find(p => p.id == data.product_id);
     const customer = customers.find(c => c.id == data.customer_id);
@@ -44,9 +53,9 @@ export const stockOutApi = {
       customer_name: customer?.name,
       unit_price: product?.price,
       total_amount: totalAmount,
-      sold_date: data.date || now,
-      date: data.date || now,
-      created_at: now
+      sold_date: dateWithTime,
+      date: dateWithTime,
+      created_at: now.toISOString()
     });
     updateProductStock(data.product_id, -Number(data.quantity));
     return successResponse(newItem, 'Stock out created');

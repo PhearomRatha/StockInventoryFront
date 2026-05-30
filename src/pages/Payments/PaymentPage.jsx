@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import {
   PlusIcon,
   PencilIcon,
@@ -19,6 +20,7 @@ import {
 import { paymentApi, salesApi, stockInApi } from "../../api";
 
 function PaymentPage() {
+  const { t } = useTranslation();
   const [payments, setPayments] = useState([]);
   const [sales, setSales] = useState([]);
   const [stockIns, setStockIns] = useState([]);
@@ -36,35 +38,35 @@ function PaymentPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const paymentsPerPage = 8;
 
-// Fetch payments, sales, stockIns, dashboard
-const fetchPayments = async () => {
-     setLoading(true);
-     try {
-       const [paymentsRes, salesRes, stockInsRes, dashboardRes] = await Promise.all([
-         paymentApi.getAll(),
-         salesApi.getAll(),
-         stockInApi.getAll(),
-         paymentApi.getDashboard()
-       ]);
-       
-       const paymentsData = paymentsRes.success ? (paymentsRes.data?.data || paymentsRes.data || []) : [];
-       setPayments(Array.isArray(paymentsData) ? paymentsData : []);
-       
-       const salesData = salesRes.success ? (salesRes.data?.data || salesRes.data || []) : [];
-       setSales(Array.isArray(salesData) ? salesData : []);
-       
-       const stockInsData = stockInsRes.success ? (stockInsRes.data?.data || stockInsRes.data || []) : [];
-       setStockIns(Array.isArray(stockInsData) ? stockInsData : []);
-       
-       if (dashboardRes.success) {
-         setDashboard(dashboardRes.data || {});
-       }
-     } catch (error) {
-       console.error('Error fetching payments:', error);
-     } finally {
-       setLoading(false);
-     }
-   };
+  // Fetch payments, sales, stockIns, dashboard
+  const fetchPayments = async () => {
+    setLoading(true);
+    try {
+      const [paymentsRes, salesRes, stockInsRes, dashboardRes] = await Promise.all([
+        paymentApi.getAll(),
+        salesApi.getAll(),
+        stockInApi.getAll(),
+        paymentApi.getDashboard()
+      ]);
+
+      const paymentsData = paymentsRes.success ? (paymentsRes.data?.data || paymentsRes.data || []) : [];
+      setPayments(Array.isArray(paymentsData) ? paymentsData : []);
+
+      const salesData = salesRes.success ? (salesRes.data?.data || salesRes.data || []) : [];
+      setSales(Array.isArray(salesData) ? salesData : []);
+
+      const stockInsData = stockInsRes.success ? (stockInsRes.data?.data || stockInsRes.data || []) : [];
+      setStockIns(Array.isArray(stockInsData) ? stockInsData : []);
+
+      if (dashboardRes.success) {
+        setDashboard(dashboardRes.data || {});
+      }
+    } catch (error) {
+      console.error('Error fetching payments:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     fetchPayments();
@@ -135,7 +137,7 @@ const fetchPayments = async () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     const payload = {
       reference_type: currentPayment.reference_type || '',
       reference_id: currentPayment.reference_id || currentPayment.sale_id || '',
@@ -166,7 +168,7 @@ const fetchPayments = async () => {
   const todayExpense = dashboard.today_expense || 0;
   const netIncome = todayIncome - todayExpense;
 
-  // 🔹 Skeleton Loader
+  // Skeleton Loader
   if (loading)
     return (
       <div className="p-6 min-h-screen bg-gradient-to-br from-gray-50 to-slate-100">
@@ -202,9 +204,9 @@ const fetchPayments = async () => {
             <CubeTransparentIcon className="w-7 h-7 text-white" />
           </div>
           <div>
-            <h1 className="text-3xl md:text-4xl font-bold text-gray-900">Payments</h1>
+            <h1 className="text-3xl md:text-4xl font-bold text-gray-900">{t("payments.title")}</h1>
             <p className="text-gray-600 mt-1 text-sm md:text-base">
-              Manage your payment records and track transactions
+              {t("payments.subtitle")}
             </p>
           </div>
         </div>
@@ -212,7 +214,7 @@ const fetchPayments = async () => {
           onClick={openAddModal}
           className="flex items-center gap-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-6 py-3.5 rounded-xl hover:shadow-lg transition-all duration-300 font-medium shadow-md"
         >
-          <PlusIcon className="w-5 h-5" /> Add New Payment
+          <PlusIcon className="w-5 h-5" /> {t("payments.addNewPayment")}
         </button>
       </div>
 
@@ -221,7 +223,7 @@ const fetchPayments = async () => {
         <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-500 font-medium">Today's Income</p>
+              <p className="text-sm text-gray-500 font-medium">{t("payments.todaysIncome")}</p>
               <p className="text-3xl font-bold text-emerald-600 mt-2">${todayIncome.toFixed(2)}</p>
             </div>
             <div className="w-12 h-12 bg-emerald-50 rounded-xl flex items-center justify-center">
@@ -233,7 +235,7 @@ const fetchPayments = async () => {
         <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-500 font-medium">Today's Expense</p>
+              <p className="text-sm text-gray-500 font-medium">{t("payments.todaysExpense")}</p>
               <p className="text-3xl font-bold text-rose-600 mt-2">${todayExpense.toFixed(2)}</p>
             </div>
             <div className="w-12 h-12 bg-rose-50 rounded-xl flex items-center justify-center">
@@ -245,7 +247,7 @@ const fetchPayments = async () => {
         <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-500 font-medium">Net Income</p>
+              <p className="text-sm text-gray-500 font-medium">{t("payments.netIncome")}</p>
               <p className={`text-3xl font-bold mt-2 ${netIncome >= 0 ? 'text-green-600' : 'text-red-600'}`}>${netIncome.toFixed(2)}</p>
             </div>
             <div className="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center">
@@ -262,7 +264,7 @@ const fetchPayments = async () => {
             <MagnifyingGlassIcon className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
             <input
               type="text"
-              placeholder="Search payments by reference or paid to/from..."
+              placeholder={t("payments.searchPlaceholder")}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="w-full pl-12 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
@@ -277,9 +279,9 @@ const fetchPayments = async () => {
                 onChange={(e) => setSelectedType(e.target.value)}
                 className="pl-10 pr-8 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent appearance-none bg-white"
               >
-                <option value="All">All Types</option>
-                <option value="income">Income</option>
-                <option value="expense">Expense</option>
+                <option value="All">{t("payments.allTypes")}</option>
+                <option value="income">{t("payments.income")}</option>
+                <option value="expense">{t("payments.expense")}</option>
               </select>
             </div>
 
@@ -290,8 +292,8 @@ const fetchPayments = async () => {
                 onChange={(e) => handleSort(e.target.value)}
                 className="pl-10 pr-8 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent appearance-none bg-white"
               >
-                <option value="payment_date">Sort by Date</option>
-                <option value="amount">Sort by Amount</option>
+                <option value="payment_date">{t("payments.sortByDate")}</option>
+                <option value="amount">{t("payments.sortByAmount")}</option>
               </select>
             </div>
           </div>
@@ -306,11 +308,8 @@ const fetchPayments = async () => {
               <tr>
                 {["Reference", "Type", "Amount", "Method", "Paid To/From", "Date", "Status", "Actions"].map(
                   (h) => (
-                    <th
-                      key={h}
-                      className="py-4 px-6 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider"
-                    >
-                      {h}
+                    <th key={h} className="py-4 px-6 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                      {t(`payments.${h.toLowerCase().replace(/[\/\\s]/g, '_')}`)}
                     </th>
                   )
                 )}
@@ -368,14 +367,14 @@ const fetchPayments = async () => {
                         <button
                           onClick={() => openEditModal(p)}
                           className="p-2 text-gray-600 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all duration-200"
-                          title="Edit"
+                          title={t("common.edit")}
                         >
                           <PencilIcon className="w-5 h-5" />
                         </button>
                         <button
                           onClick={() => handleDelete(p.id)}
                           className="p-2 text-gray-600 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all duration-200"
-                          title="Delete"
+                          title={t("common.delete")}
                         >
                           <TrashIcon className="w-5 h-5" />
                         </button>
@@ -388,13 +387,13 @@ const fetchPayments = async () => {
                   <td colSpan={8} className="py-20 text-center">
                     <div className="flex flex-col items-center justify-center">
                       <CubeIcon className="w-16 h-16 text-gray-300 mb-4" />
-                      <p className="text-gray-500 text-lg font-medium">No payments found</p>
-                      <p className="text-gray-400 mt-1">Try adjusting your search or filters</p>
+                      <p className="text-gray-500 text-lg font-medium">{t("payments.noPaymentsFound")}</p>
+                      <p className="text-gray-400 mt-1">{t("payments.tryAdjusting")}</p>
                       <button
                         onClick={openAddModal}
                         className="mt-4 px-4 py-2 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition"
                       >
-                        Add Your First Payment
+                        {t("payments.addFirstPayment")}
                       </button>
                     </div>
                   </td>
@@ -420,7 +419,7 @@ const fetchPayments = async () => {
               className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition"
             >
               <ChevronLeftIcon className="w-4 h-4" />
-              Previous
+              {t("common.previous")}
             </button>
             <div className="flex gap-1">
               {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
@@ -454,7 +453,7 @@ const fetchPayments = async () => {
               disabled={currentPage === totalPages}
               className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition"
             >
-              Next
+              {t("common.next")}
               <ChevronRightIcon className="w-4 h-4" />
             </button>
           </div>
@@ -469,7 +468,7 @@ const fetchPayments = async () => {
             <div className="sticky top-0 bg-white border-b border-gray-100 p-6 flex justify-between items-center rounded-t-2xl">
               <div>
                 <h2 className="text-2xl font-bold text-gray-900">
-                  {isEdit ? "Edit Payment" : "Add New Payment"}
+                  {isEdit ? t("payments.updatePayment") : t("payments.createPayment")}
                 </h2>
                 <p className="text-gray-600 mt-1">
                   {isEdit ? "Update payment details" : "Fill in the payment information"}
@@ -490,7 +489,7 @@ const fetchPayments = async () => {
                 <div className="space-y-5">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Reference Type *
+                      {t("payments.referenceType")} *
                     </label>
                     <select
                       value={currentPayment.reference_type || ""}
@@ -504,15 +503,15 @@ const fetchPayments = async () => {
                       className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition appearance-none bg-white"
                       required
                     >
-                      <option value="">Select type</option>
-                      <option value="sale">Sale</option>
-                      <option value="purchase">Purchase</option>
+                      <option value="">{t("payments.selectType")}</option>
+                      <option value="sale">{t("payments.sale")}</option>
+                      <option value="purchase">{t("payments.purchase")}</option>
                     </select>
                   </div>
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Reference ID *
+                      {t("payments.referenceId")} *
                     </label>
                     <select
                       value={currentPayment.reference_id || ""}
@@ -525,7 +524,7 @@ const fetchPayments = async () => {
                       className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition appearance-none bg-white"
                       required
                     >
-                      <option value="">Select reference</option>
+                      <option value="">{t("payments.selectReference")}</option>
                       {currentPayment.reference_type === 'sale' &&
                         sales.map((s) => (
                           <option key={s.id} value={s.id}>
@@ -543,7 +542,7 @@ const fetchPayments = async () => {
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Amount *
+                      {t("payments.amount")} *
                     </label>
                     <div className="relative">
                       <CurrencyDollarIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
@@ -563,7 +562,7 @@ const fetchPayments = async () => {
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Payment Type *
+                      {t("payments.paymentType")} *
                     </label>
                     <select
                       value={currentPayment.payment_type || ""}
@@ -576,9 +575,9 @@ const fetchPayments = async () => {
                       className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition appearance-none bg-white"
                       required
                     >
-                      <option value="">Select type</option>
-                      <option value="income">Income</option>
-                      <option value="expense">Expense</option>
+                      <option value="">{t("payments.selectType")}</option>
+                      <option value="income">{t("payments.income")}</option>
+                      <option value="expense">{t("payments.expense")}</option>
                     </select>
                   </div>
                 </div>
@@ -587,7 +586,7 @@ const fetchPayments = async () => {
                 <div className="space-y-5">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Payment Method *
+                      {t("payments.paymentMethod")} *
                     </label>
                     <select
                       value={currentPayment.payment_method || ""}
@@ -600,15 +599,15 @@ const fetchPayments = async () => {
                       className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition appearance-none bg-white"
                       required
                     >
-                      <option value="">Select method</option>
-                      <option value="Cash">Cash</option>
-                      <option value="Bakong">Bakong</option>
+                      <option value="">{t("payments.selectMethod")}</option>
+                      <option value="Cash">{t("payments.cash")}</option>
+                      <option value="Bakong">{t("payments.bakong")}</option>
                     </select>
                   </div>
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Paid To/From *
+                      {t("payments.paidToFrom")} *
                     </label>
                     <input
                       type="text"
@@ -620,14 +619,14 @@ const fetchPayments = async () => {
                         })
                       }
                       className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition"
-                      placeholder="Enter paid to/from"
+                      placeholder={t("payments.paidToFrom")}
                       required
                     />
                   </div>
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Payment Date *
+                      {t("payments.paymentDate")} *
                     </label>
                     <input
                       type="date"
@@ -645,7 +644,7 @@ const fetchPayments = async () => {
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Status
+                      {t("payments.status")}
                     </label>
                     <select
                       value={currentPayment.status || "pending"}
@@ -654,8 +653,8 @@ const fetchPayments = async () => {
                       }
                       className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition appearance-none bg-white"
                     >
-                      <option value="paid">Paid</option>
-                      <option value="pending">Pending</option>
+                      <option value="paid">{t("payments.paid")}</option>
+                      <option value="pending">{t("payments.pending")}</option>
                     </select>
                   </div>
                 </div>
@@ -668,13 +667,13 @@ const fetchPayments = async () => {
                   onClick={() => setShowModal(false)}
                   className="px-6 py-3 text-gray-700 font-medium rounded-xl border border-gray-300 hover:bg-gray-50 transition"
                 >
-                  Cancel
+                  {t("common.cancel")}
                 </button>
                 <button
                   type="submit"
                   className="px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-medium rounded-xl hover:shadow-lg transition-all duration-300 shadow-md"
                 >
-                  {isEdit ? "Update Payment" : "Create Payment"}
+                  {isEdit ? t("common.update") : t("common.create")}
                 </button>
               </div>
             </form>

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import {
   PlusIcon,
   CubeTransparentIcon,
@@ -35,7 +36,6 @@ const STORAGE_KEYS = {
   EDIT_SUPPLIER: 'edit_product_supplier_id'
 };
 
-// Simplified validation
 const validateProduct = (formData) => {
   const errors = {};
 
@@ -69,6 +69,7 @@ const validateProduct = (formData) => {
 };
 
 function ProductPage() {
+  const { t } = useTranslation();
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
@@ -486,11 +487,11 @@ function ProductPage() {
     <div className="p-4 md:p-6 lg:p-8 bg-gradient-to-br from-gray-50 to-slate-100 min-h-screen">
       {/* Header */}
       <PageHeader
-        title="Products"
-        subtitle="Manage your inventory, track stock levels, and analyze product performance"
+        title={t('products.title')}
+        subtitle={t('products.subtitle')}
         icon={CubeTransparentIcon}
         action={
-          <AddButton onClick={openAddModal} text="Add New Product" icon={PlusIcon} />
+          <AddButton onClick={openAddModal} text={t('products.addNew')} icon={PlusIcon} />
         }
       />
 
@@ -508,7 +509,7 @@ function ProductPage() {
           <SearchInput
             value={search}
             onChange={setSearch}
-            placeholder="Search products by name or SKU..."
+            placeholder={t('products.searchPlaceholder')}
             className="lg:w-96"
           />
 
@@ -517,7 +518,7 @@ function ProductPage() {
               value={selectedCategory}
               onChange={setSelectedCategory}
               options={[
-                { value: "All", label: "All Categories" },
+                { value: "All", label: t('products.allCategories') },
                 ...(Array.isArray(categories) ? categories.map((c) => ({ value: c.name, label: c.name })) : []),
               ]}
               icon={(props) => (
@@ -542,11 +543,11 @@ function ProductPage() {
               value={sortBy}
               onChange={handleSort}
               options={[
-                { value: "id", label: "Sort by ID" },
-                { value: "created_at", label: "Sort by Date" },
-                { value: "name", label: "Sort by Name" },
-                { value: "price", label: "Sort by Price" },
-                { value: "stock_quantity", label: "Sort by Stock" },
+                { value: "id", label: t('products.sortById') },
+                { value: "created_at", label: t('products.sortByDate') },
+                { value: "name", label: t('products.sortByName') },
+                { value: "price", label: t('products.sortByPrice') },
+                { value: "stock_quantity", label: t('products.sortByStock') },
               ]}
               icon={(props) => (
                 <svg
@@ -573,13 +574,13 @@ function ProductPage() {
       <DataTable
         columns={tableColumns}
         data={paginatedProducts}
-        emptyMessage="No products found"
+        emptyMessage={t('products.noSalesFound', 'No products found')}
         emptyAction={
           <button
             onClick={openAddModal}
             className="px-4 py-2 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition"
           >
-            Add Your First Product
+            {t('products.addFirstProduct')}
           </button>
         }
         minWidth="1200px"
@@ -599,14 +600,14 @@ function ProductPage() {
         <Modal
           isOpen={showModal}
           onClose={() => setShowModal(false)}
-          title={isEdit ? "Edit Product" : "Add New Product"}
+          title={isEdit ? t('products.editProduct') : t('products.addProduct')}
           size="lg"
           footer={
             <ModalFooter
               onCancel={() => setShowModal(false)}
               onSubmit={handleSubmit}
-              cancelText="Cancel"
-              submitText={isEdit ? "Update Product" : "Create Product"}
+              cancelText={t('common.cancel')}
+              submitText={isEdit ? t('products.updateProduct') : t('products.createProduct')}
               submitting={submitting}
             />
           }
@@ -615,7 +616,7 @@ function ProductPage() {
             {/* Product Name */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Product Name *
+                {t('products.productName')} *
               </label>
               <input
                 type="text"
@@ -627,7 +628,7 @@ function ProductPage() {
                     ? "border-red-300 focus:ring-red-200"
                     : "border-gray-300 focus:ring-indigo-500"
                 }`}
-                placeholder="Enter product name"
+                placeholder={t('products.enterProductName')}
               />
               {errors.name && touched.name && (
                 <p className="mt-1 text-sm text-red-600">{errors.name}</p>
@@ -638,25 +639,25 @@ function ProductPage() {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Select
-                  label="Category"
+                  label={t('products.category')}
                   value={formData.category_id}
                   onChange={(val) => handleFieldChange("category_id", val)}
                   options={categories.map((c) => ({ value: c.id, label: c.name }))}
                   required
                   error={touched.category_id ? errors.category_id : null}
-                  placeholder="Select Category"
+                  placeholder={t('products.selectCategoryPlaceholder')}
                 />
               </div>
 
               <div>
                 <Select
-                  label="Supplier"
+                  label={t('products.supplier')}
                   value={formData.supplier_id}
                   onChange={(val) => handleFieldChange("supplier_id", val)}
                   options={suppliers.map((s) => ({ value: s.id, label: s.name }))}
                   required
                   error={touched.supplier_id ? errors.supplier_id : null}
-                  placeholder="Select Supplier"
+                  placeholder={t('products.selectSupplierPlaceholder')}
                 />
               </div>
             </div>
@@ -665,7 +666,7 @@ function ProductPage() {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Cost *
+                  {t('products.cost')} *
                 </label>
                 <div className="relative">
                   <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500">
@@ -683,7 +684,7 @@ function ProductPage() {
                         ? "border-red-300 focus:ring-red-200"
                         : "border-gray-300 focus:ring-indigo-500"
                     }`}
-                    placeholder="0.00"
+                    placeholder={t('products.enterCost')}
                   />
                 </div>
                 {errors.cost && touched.cost && (
@@ -693,7 +694,7 @@ function ProductPage() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Stock Quantity *
+                  {t('products.stock')} *
                 </label>
                 <input
                   type="number"
@@ -710,7 +711,7 @@ function ProductPage() {
                       ? "border-red-300 focus:ring-red-200"
                       : "border-gray-300 focus:ring-indigo-500"
                   }`}
-                  placeholder="0"
+                  placeholder={t('products.enterStock')}
                 />
                 {errors.stock_quantity && touched.stock_quantity && (
                   <p className="mt-1 text-sm text-red-600">
@@ -723,7 +724,7 @@ function ProductPage() {
             {/* Image Upload */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Product Image
+                {t('products.productImage', 'Product Image')}
               </label>
               <div className="border-2 border-dashed border-gray-300 rounded-xl p-6 text-center hover:border-indigo-500 transition">
                 {imagePreview ? (
@@ -744,10 +745,10 @@ function ProductPage() {
                 ) : (
                   <div className="py-6">
                     <PhotoIcon className="w-10 h-10 text-gray-400 mx-auto mb-3" />
-                    <p className="text-gray-600 mb-2">Click to upload image</p>
-                    <p className="text-sm text-gray-500">PNG, JPG up to 5MB</p>
+                    <p className="text-gray-600 mb-2">{t('products.clickToUpload')}</p>
+                    <p className="text-sm text-gray-500">{t('products.pngJpg')}</p>
                     <label className="inline-block mt-3 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition cursor-pointer">
-                      Choose File
+                      {t('products.chooseFile')}
                       <input
                         type="file"
                         accept="image/jpeg,image/png,image/jpg"
@@ -769,7 +770,7 @@ function ProductPage() {
 
             {/* Note */}
             <p className="text-xs text-gray-500">
-              * SKU, barcode, price, and reorder level will be auto-generated.
+              {t('products.skuNote')}
             </p>
           </form>
         </Modal>

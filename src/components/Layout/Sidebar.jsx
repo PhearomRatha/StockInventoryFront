@@ -18,10 +18,12 @@ import { FiHome,
 import { Link, useLocation } from "react-router-dom";
 import { reportApi } from "../../api";
 import { useAuth, hasLegacyPermission, ROLES } from "../../context/AuthContext";
+import { useTranslation } from "react-i18next";
 
 function Sidebar({ onClose }) {
   const { logout, user, isAuthenticated, loading } = useAuth();
   const location = useLocation();
+  const { t } = useTranslation();
   const role = user?.role; // "Admin", "Manager", "Staff"
   const [lowStockAlert, setLowStockAlert] = useState(0);
 
@@ -67,21 +69,21 @@ const menuItems = [
      // Common items for all users
      {
        path: "/",
-       label: "Dashboard",
+       labelKey: "navigation.dashboard",
        icon: FiHome,
        roles: [ROLES.ADMIN, ROLES.MANAGER, ROLES.STAFF, ROLES.CASHER],
        priority: 1
      },
      {
        path: "/sales",
-       label: "Sales",
+       labelKey: "navigation.sales",
        icon: FiDollarSign,
        roles: [ROLES.ADMIN, ROLES.MANAGER, ROLES.STAFF, ROLES.CASHER],
        priority: 2
      },
      {
        path: "/products",
-       label: "Products",
+       labelKey: "navigation.products",
        icon: FiBox,
        roles: [ROLES.ADMIN, ROLES.MANAGER, ROLES.STAFF],
        permission: 'VIEW_ALL_PRODUCTS',
@@ -89,30 +91,30 @@ const menuItems = [
      },
     {
        path: "/stock-in",
-       label: "Stock In",
+       labelKey: "navigation.stockIn",
        icon: FiDownload,
        roles: [ROLES.ADMIN, ROLES.MANAGER, ROLES.STAFF],
        priority: 4
      },
      {
        path: "/stock-out",
-       label: "Stock Out",
+       labelKey: "navigation.stockOut",
        icon: FiUpload,
        roles: [ROLES.ADMIN, ROLES.MANAGER, ROLES.STAFF],
        priority: 5
      },
      {
        path: "/payments",
-       label: "Payments",
+       labelKey: "navigation.payments",
        icon: FiDollarSign,
        roles: [ROLES.ADMIN, ROLES.MANAGER, ROLES.STAFF],
        priority: 6
      },
-    
+   
     // Admin and Manager only
     {
       path: "/categories",
-      label: "Categories",
+      labelKey: "navigation.categories",
       icon: FiTag,
       roles: [ROLES.ADMIN, ROLES.MANAGER],
       permission: 'MANAGE_CATEGORIES',
@@ -120,7 +122,7 @@ const menuItems = [
     },
     {
       path: "/suppliers",
-      label: "Suppliers",
+      labelKey: "navigation.suppliers",
       icon: FiTruck,
       roles: [ROLES.ADMIN, ROLES.MANAGER],
       permission: 'MANAGE_SUPPLIERS',
@@ -128,7 +130,7 @@ const menuItems = [
     },
     {
       path: "/customer",
-      label: "Customers",
+      labelKey: "navigation.customers",
       icon: FiUsers,
       roles: [ROLES.ADMIN, ROLES.MANAGER, ROLES.STAFF],
       priority: 9
@@ -137,7 +139,7 @@ const menuItems = [
     // Reports and Activity Logs - Admin and Manager
     {
       path: "/reports",
-      label: "Reports",
+      labelKey: "navigation.reports",
       icon: FiBarChart2,
       roles: [ROLES.ADMIN, ROLES.MANAGER],
       permission: 'VIEW_REPORTS',
@@ -145,7 +147,7 @@ const menuItems = [
     },
     {
       path: "/activity-logs",
-      label: "Activity Logs",
+      labelKey: "navigation.activityLogs",
       icon: FiFileText,
       roles: [ROLES.ADMIN, ROLES.MANAGER],
       permission: 'VIEW_ACTIVITY_LOGS',
@@ -155,7 +157,7 @@ const menuItems = [
     // User Management - Admin only
     {
       path: "/users",
-      label: "User Management",
+      labelKey: "navigation.userManagement",
       icon: FiUsers,
       roles: [ROLES.ADMIN],
       permission: 'VIEW_USERS',
@@ -223,9 +225,9 @@ const menuItems = [
           <div className="mt-4 p-3 bg-red-500/20 border border-red-500/30 rounded-lg">
             <div className="flex items-center gap-2">
               <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
-              <span className="text-red-300 text-sm font-medium">
-                {lowStockAlert} item{lowStockAlert > 1 ? 's' : ''} need attention
-              </span>
+<span className="text-red-300 text-sm font-medium">
+                 {lowStockAlert} {t('stock.itemsNeedAttention', { count: lowStockAlert })}
+               </span>
             </div>
           </div>
         )}
@@ -238,37 +240,40 @@ const menuItems = [
             display: none;
           }
         `}</style>
-        {visibleMenuItems.map((item) => (
-          <Link
-            key={item.path}
-            to={item.path}
-            className={`flex items-center gap-3 p-3 rounded-xl transition-all duration-300 group ${
-              isActive(item.path)
-                ? "bg-gradient-to-r from-blue-500/20 to-purple-500/20 border border-blue-400/30 shadow-lg"
-                : "hover:bg-slate-700/50 hover:border hover:border-slate-600"
-            }`}
-          >
-            <div
-              className={`p-2 rounded-lg transition-all duration-300 ${
-                isActive(item.path) ? "bg-blue-500 shadow-md" : "bg-slate-700 group-hover:bg-blue-500"
-              }`}
-            >
-              <item.icon size={18} className="text-white" />
-            </div>
-            <span className="font-medium flex-1">{item.label}</span>
-            {((item.path === '/reports' || item.path === '/products') && lowStockAlert > 0 && role !== ROLES.CASHER) && (
-              <span className="bg-red-500 text-white text-xs rounded-full px-2 py-1">
-                {lowStockAlert}
-              </span>
-            )}
-            <FiChevronRight
-              size={16}
-              className={`text-gray-400 transition-transform duration-300 ${
-                isActive(item.path) ? "text-blue-300" : "group-hover:text-white"
-              }`}
-            />
-          </Link>
-        ))}
+{visibleMenuItems.map((item) => {
+           const label = item.labelKey ? t(item.labelKey) : item.label;
+           return (
+           <Link
+             key={item.path}
+             to={item.path}
+             className={`flex items-center gap-3 p-3 rounded-xl transition-all duration-300 group ${
+               isActive(item.path)
+                 ? "bg-gradient-to-r from-blue-500/20 to-purple-500/20 border border-blue-400/30 shadow-lg"
+                 : "hover:bg-slate-700/50 hover:border hover:border-slate-600"
+             }`}
+           >
+             <div
+               className={`p-2 rounded-lg transition-all duration-300 ${
+                 isActive(item.path) ? "bg-blue-500 shadow-md" : "bg-slate-700 group-hover:bg-blue-500"
+               }`}
+             >
+               <item.icon size={18} className="text-white" />
+             </div>
+             <span className="font-medium flex-1">{label}</span>
+             {((item.path === '/reports' || item.path === '/products') && lowStockAlert > 0 && role !== ROLES.CASHER) && (
+               <span className="bg-red-500 text-white text-xs rounded-full px-2 py-1">
+                 {lowStockAlert}
+               </span>
+             )}
+             <FiChevronRight
+               size={16}
+               className={`text-gray-400 transition-transform duration-300 ${
+                 isActive(item.path) ? "text-blue-300" : "group-hover:text-white"
+               }`}
+             />
+           </Link>
+           );
+         })}
       </nav>
 
       {/* Footer with Profile and Logout */}
@@ -278,7 +283,7 @@ const menuItems = [
           to="/profile"
           className="flex items-center gap-2 w-full justify-center bg-slate-700 hover:bg-slate-600 text-white px-4 py-2 rounded-lg transition"
         >
-          <FiUser size={18} /> View Profile
+          <FiUser size={18} /> {t('navigation.profile')}
         </Link>
         
         {/* Logout Button */}
@@ -289,10 +294,10 @@ const menuItems = [
           }}
           className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition w-full justify-center"
         >
-          <FiLogOut size={18} /> Logout
+          <FiLogOut size={18} /> {t('navigation.logout')}
         </button>
         <div className="text-center text-slate-400 text-sm">
-          <p>Inventory System</p>
+          <p>{t('navigation.inventorySystem')}</p>
         </div>
       </div>
     </div>

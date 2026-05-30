@@ -3,10 +3,11 @@ import { BrowserRouter, useLocation } from "react-router-dom";
 import Sidebar from "./components/Layout/Sidebar";
 import AppRoutes from "./routes/AppRoutes";
 import { Bars3Icon } from "@heroicons/react/24/outline";
-import { useAuth } from "./context/AuthContext";
 import { CssBaseline, ThemeProvider, createTheme } from "@mui/material";
 import SnackbarProvider from "./components/UI/SnackbarProvider";
+import LanguageSwitcher from "./components/UI/LanguageSwitcher";
 import "./utils/message";
+import { useTranslation } from "react-i18next";
 
 const theme = createTheme({
   palette: {
@@ -38,7 +39,7 @@ function App() {
 function AppContent() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const location = useLocation();
-  const { isAuthenticated } = useAuth();
+  const { t } = useTranslation();
   
   // Hide sidebar on auth pages
   const isAuthPage = location.pathname === '/login' || location.pathname === '/signup';
@@ -70,8 +71,15 @@ function AppContent() {
             >
               <Bars3Icon className="w-6 h-6" />
             </button>
-            <h1 className="text-lg font-semibold text-gray-900">Inventory System</h1>
-            <div className="w-10"></div>
+            <h1 className="text-lg font-semibold text-gray-900">{t('navigation.inventorySystem')}</h1>
+            <LanguageSwitcher />
+          </div>
+        )}
+        
+        {/* Desktop header */}
+        {!isAuthPage && (
+          <div className="hidden lg:flex items-center justify-end p-4 bg-white shadow-sm border-b">
+            <LanguageSwitcher />
           </div>
         )}
         

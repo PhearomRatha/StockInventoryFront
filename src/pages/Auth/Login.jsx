@@ -6,15 +6,15 @@ import api from '../../plugin/axios';
 import { useAuth } from '../../context/AuthContext';
 import { authApi, CookieUtils } from '../../api';
 import { ElMessage } from '../../utils/message';
+import { useTranslation } from 'react-i18next';
 
 const Login = () => {
-  const { login, loading } = useAuth();
+  const { login } = useAuth();
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
-  // Auth mode: 'login', 'register', 'approved'
   const [authMode, setAuthMode] = useState('login');
 
-  // Login state
   const [showPassword, setShowPassword] = useState(false);
   const [loginForm, setLoginForm] = useState({
     email: '',
@@ -24,7 +24,6 @@ const Login = () => {
   const [loginErrors, setLoginErrors] = useState({ email: '', password: '' });
   const [loginLoading, setLoginLoading] = useState(false);
 
-  // Register state
   const [registerForm, setRegisterForm] = useState({
     name: '',
     email: '',
@@ -36,20 +35,16 @@ const Login = () => {
   const [emailError, setEmailError] = useState('');
   const [passwordStrength, setPasswordStrength] = useState({ score: 0, label: '', color: '' });
 
-// Registration success state
   const [registrationSuccess, setRegistrationSuccess] = useState(false);
 
-  // Clear temporary storage on mount (GuestRoute handles auth redirect)
   useEffect(() => {
     localStorage.removeItem('signupEmail');
     localStorage.removeItem('signupPassword');
   }, []);
 
-  // Login handlers
   const handleLoginChange = useCallback((e) => {
     const { name, value } = e.target;
     setLoginForm(prev => ({ ...prev, [name]: value }));
-    // Clear error when user starts typing
     if (value) {
       setLoginErrors(prev => ({ ...prev, [name]: '' }));
     }
@@ -59,19 +54,13 @@ const Login = () => {
     setShowPassword(prev => !prev);
   }, []);
 
-  // Helper function to check user account status
   const checkAccountStatus = (user) => {
-    if (!user) return { blocked: true, message: 'Account not found. Please register first or contact admin.', type: 'error' };
-
-    // Demo users are always allowed
+    if (!user) return { blocked: true, message: t('login.accountNotFound'), type: 'error' };
     if (user.is_demo === true) {
       return { blocked: false };
     }
-
-    // Support: string status (ACTIVE/INACTIVE), boolean status (true/false), or numeric status (0/1)
     const statusValue = user.status;
     let status;
-
     if (typeof statusValue === 'string') {
       status = statusValue.toUpperCase() === 'ACTIVE' ? 1 : 0;
     } else if (typeof statusValue === 'boolean') {
@@ -79,25 +68,21 @@ const Login = () => {
     } else {
       status = statusValue ?? 1;
     }
-
-    // Status: 0 = Pending/Inactive, 1 = Active
     if (status === 0) {
-      return { blocked: true, message: 'Your account is pending approval or inactive. Please contact support.', type: 'warning' };
+      return { blocked: true, message: t('login.pendingApproval'), type: 'warning' };
     }
-
     return { blocked: false };
   };
 
   const handleLoginSubmit = async (e) => {
     e.preventDefault();
 
-    // Validate using JavaScript - show errors under fields
     const errors = {};
     if (!loginForm.email) {
-      errors.email = 'Email is required';
+      errors.email = t('login.emailRequired');
     }
     if (!loginForm.password) {
-      errors.password = 'Password is required';
+      errors.password = t('login.passwordRequired');
     }
 
     if (errors.email || errors.password) {
@@ -115,24 +100,20 @@ const Login = () => {
       let user = null;
       let token = null;
 
-      // Format: { data: { user, token }, status: 200 }
       if (res?.data?.user && res?.data?.token) {
         user = res.data.user;
         token = res.data.token;
-      }
-      // Format: { status: 200, data: { user, token } }
-      else if (res?.status === 200 && res?.data?.user && res?.data?.token) {
+      } else if (res?.status === 200 && res?.data?.user && res?.data?.token) {
         user = res.data.user;
         token = res.data.token;
       }
 
       if (!user || !token) {
-        setLoginMessage({ text: 'Login failed. Please check your credentials.', type: 'error' });
+        setLoginMessage({ text: t('login.loginFailed'), type: 'error' });
         setLoginLoading(false);
         return;
       }
 
-      // Check account status using helper function
       const statusCheck = checkAccountStatus(user);
       if (statusCheck.blocked) {
         setLoginMessage({ text: statusCheck.message, type: statusCheck.type });
@@ -140,7 +121,6 @@ const Login = () => {
         return;
       }
 
-      // Store user with is_demo flag for demo detection
       const userWithDemo = user.is_demo === undefined ? { ...user, is_demo: true } : user;
 
       CookieUtils.set('auth_token', token, 7);
@@ -152,43 +132,39 @@ const Login = () => {
 
       login(userWithDemo, token);
 
-      ElMessage.success('Login successful! Redirecting...');
+      ElMessage.success(t('login.loginSuccess'));
       setLoginLoading(false);
 
-      // Small delay to ensure state is propagated before navigation
       setTimeout(() => navigate('/', { replace: true }), 100);
     } catch (err) {
       console.error('Login error:', err);
 
-      // Handle demo API error format
       if (!err.response && err.message) {
-        setLoginMessage({ text: err.message || 'Login failed. Please check your credentials.', type: 'error' });
+        setLoginMessage({ text: err.message || t('login.loginFailed'), type: 'error' });
       } else if (err.response) {
-        // Handle validation errors
         if (err.response.status === 422) {
           const validationErrors = err.response.data.errors;
           if (validationErrors) {
             const errorMessages = Object.values(validationErrors).flat().join(', ');
             setLoginMessage({ text: errorMessages, type: 'error' });
           } else {
-            setLoginMessage({ text: err.response.data.message || 'Validation failed', type: 'error' });
+            setLoginMessage({ text: err.response.data.message || t('login.validationFailed'), type: 'error' });
           }
         } else if (err.response.status === 423) {
-          setLoginMessage({ text: err.response.data.message || 'Account is temporarily locked. Please try again later.', type: 'error' });
+          setLoginMessage({ text: err.response.data.message || t('login.accountLocked'), type: 'error' });
         } else if (err.response.status === 403) {
-          setLoginMessage({ text: err.response.data.message || 'Your account is not active. Please contact support.', type: 'warning' });
+          setLoginMessage({ text: err.response.data.message || t('login.accountNotActive'), type: 'warning' });
         } else {
-          setLoginMessage({ text: err.response?.data?.message || err.response?.data?.error || 'Invalid email or password.', type: 'error' });
+          setLoginMessage({ text: err.response?.data?.message || err.response?.data?.error || t('login.invalidCredentials'), type: 'error' });
         }
       } else {
-        setLoginMessage({ text: 'Cannot reach backend. Check CORS, HTTPS, or network.', type: 'error' });
+        setLoginMessage({ text: t('login.networkError'), type: 'error' });
       }
 
       setLoginLoading(false);
     }
   };
 
-  // Register handlers
   const validateEmail = useCallback((email) => {
     const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return re.test(email);
@@ -201,42 +177,49 @@ const Login = () => {
     if (/[0-9]/.test(password)) score++;
     if (/[^A-Za-z0-9]/.test(password)) score++;
     
+    const strengthLabels = {
+      0: t('passwordStrength.veryWeak'),
+      1: t('passwordStrength.weak'),
+      2: t('passwordStrength.fair'),
+      3: t('passwordStrength.good'),
+      4: t('passwordStrength.strong')
+    };
     const strengthData = {
-      0: { label: 'Very Weak', color: '#ef4444' },
-      1: { label: 'Weak', color: '#f97316' },
-      2: { label: 'Fair', color: '#eab308' },
-      3: { label: 'Good', color: '#22c55e' },
-      4: { label: 'Strong', color: '#10b981' }
+      0: { label: strengthLabels[0], color: '#ef4444' },
+      1: { label: strengthLabels[1], color: '#f97316' },
+      2: { label: strengthLabels[2], color: '#eab308' },
+      3: { label: strengthLabels[3], color: '#22c55e' },
+      4: { label: strengthLabels[4], color: '#10b981' }
     };
     return { score, ...strengthData[score] };
-  }, []);
+  }, [t]);
 
   const handleRegisterChange = useCallback((field, value) => {
     setRegisterForm(prev => ({ ...prev, [field]: value }));
     
     if (field === 'email') {
-      setEmailError(validateEmail(value) ? '' : 'Please enter a valid email address');
+      setEmailError(validateEmail(value) ? '' : t('login.validEmailRequired'));
     }
     if (field === 'password') {
       setPasswordStrength(checkPasswordStrength(value));
     }
-  }, [validateEmail, checkPasswordStrength]);
+  }, [validateEmail, t, checkPasswordStrength]);
 
   const validateRegisterForm = useCallback(() => {
     if (!registerForm.name || !registerForm.email || !registerForm.password) {
-      ElMessage.error('Please fill in all required fields');
+      ElMessage.error(t('register.fillRequired'));
       return false;
     }
     if (registerForm.password !== registerForm.password_confirmation) {
-      ElMessage.error('Passwords do not match');
+      ElMessage.error(t('register.passwordsMatch'));
       return false;
     }
     if (registerForm.password.length < 6) {
-      ElMessage.error('Password must be at least 6 characters');
+      ElMessage.error(t('register.passwordMinLength'));
       return false;
     }
     return true;
-  }, [registerForm]);
+  }, [registerForm, t]);
 
   const handleRegisterSubmit = async () => {
     if (!validateRegisterForm()) return;
@@ -251,11 +234,11 @@ const Login = () => {
       });
 
       if (response?.status === 200 && response?.data?.user) {
-        ElMessage.success('Registration successful! Please wait for admin approval.');
+        ElMessage.success(t('register.registrationSuccess'));
         setRegistrationSuccess(true);
         setAuthMode('approved');
       } else {
-        ElMessage.error(response?.data?.message || 'Registration failed');
+        ElMessage.error(response?.data?.message || t('register.registrationFailed'));
       }
     } catch (error) {
       console.error('Registration error:', error);
@@ -266,7 +249,6 @@ const Login = () => {
     }
   };
 
-  // Switch to login
   const switchToLogin = useCallback(() => {
     setAuthMode('login');
     setRegistrationSuccess(false);
@@ -276,12 +258,11 @@ const Login = () => {
     setAuthMode('register');
   }, []);
 
-  // Render login form
   const renderLoginForm = () => (
     <>
       <div className="auth-header">
-        <h1>Welcome Back</h1>
-        <p>Please sign in to your account</p>
+        <h1>{t('login.welcomeBack')}</h1>
+        <p>{t('login.signIn')}</p>
       </div>
 
       {loginMessage.text && (
@@ -293,7 +274,7 @@ const Login = () => {
         </div>
       )}
 
-{loginLoading ? (
+      {loginLoading ? (
         <div className="loading-skeleton">
           <div className="skeleton-input"></div>
           <div className="skeleton-input"></div>
@@ -302,7 +283,7 @@ const Login = () => {
       ) : (
         <form onSubmit={handleLoginSubmit} className="login-form">
           <div className="form-item">
-            <label>Email Address</label>
+            <label>{t('login.emailAddress')}</label>
             <div className="input-wrapper">
               <span className="input-icon"><UserIcon /></span>
               <input
@@ -310,7 +291,7 @@ const Login = () => {
                 name="email"
                 value={loginForm.email}
                 onChange={handleLoginChange}
-                placeholder="Enter your email"
+                placeholder={t('login.enterEmail')}
                 className={loginErrors.email ? 'input-error' : ''}
               />
             </div>
@@ -318,15 +299,15 @@ const Login = () => {
           </div>
 
           <div className="form-item">
-            <label>Password</label>
-            <div className="input-wrapper">
+            <label>{t('login.password')}</label>
+            <div className="input-wrapper input-with-toggle">
               <span className="input-icon"><LockClosedIcon /></span>
               <input
                 type={showPassword ? "text" : "password"}
                 name="password"
                 value={loginForm.password}
                 onChange={handleLoginChange}
-                placeholder="Enter your password"
+                placeholder={t('login.enterPassword')}
                 className={loginErrors.password ? 'input-error' : ''}
               />
               <button
@@ -334,14 +315,14 @@ const Login = () => {
                 className="toggle-password"
                 onClick={toggleLoginPassword}
               >
-                {showPassword ? <EyeSlashIcon /> : <EyeIcon />}
+                {showPassword ? <EyeSlashIcon style={{ width: 20, height: 20, color: '#111827' }} /> : <EyeIcon style={{ width: 20, height: 20, color: '#111827' }} />}
               </button>
             </div>
             {loginErrors.password && <span className="field-error">{loginErrors.password}</span>}
           </div>
 
           <div className="forgot-password">
-            <a href="/forgot-password">Forgot password?</a>
+            <a href="/forgot-password">{t('login.forgotPassword')}</a>
           </div>
 
           <button
@@ -349,23 +330,22 @@ const Login = () => {
             className="login-btn"
             disabled={loginLoading}
           >
-            Sign In
+            {t('login.signInButton')}
           </button>
         </form>
       )}
 
       <div className="auth-footer">
-        <p>Don't have an account? <button type="button" className="link-btn" onClick={switchToRegister}>Register</button></p>
+        <p>{t('login.dontHaveAccount')} <button type="button" className="link-btn" onClick={switchToRegister}>{t('login.register')}</button></p>
       </div>
     </>
   );
 
-  // Render register form
   const renderRegisterForm = () => (
     <>
       <div className="auth-header">
-        <h1>Create Account</h1>
-        <p>Fill in your details to sign up</p>
+        <h1>{t('register.createAccount')}</h1>
+        <p>{t('register.fillDetails')}</p>
       </div>
 
       {registrationSuccess ? (
@@ -373,25 +353,25 @@ const Login = () => {
           <div className="success-icon">
             <FiCheckCircle size={48} style={{ color: '#10b981' }} />
           </div>
-          <h2>Registration Successful!</h2>
-          <p>Your account has been created. Please wait for admin approval or sign in with your credentials.</p>
+          <h2>{t('registrationPending.title')}</h2>
+          <p>{t('registrationPending.accountCreated')}</p>
           <button
             type="button"
             className="login-btn"
             onClick={switchToLogin}
           >
-            Go to Login
+            {t('registrationPending.goToLogin')}
           </button>
         </div>
       ) : (
         <div className="register-form">
           <div className="form-item">
-            <label>Full Name</label>
+            <label>{t('register.fullName')}</label>
             <div className="input-wrapper">
               <span className="input-icon"><FiUser /></span>
               <input
                 type="text"
-                placeholder="Enter your full name"
+                placeholder={t('register.fullName')}
                 value={registerForm.name}
                 onChange={(e) => handleRegisterChange('name', e.target.value)}
               />
@@ -399,13 +379,13 @@ const Login = () => {
           </div>
 
           <div className="form-item">
-            <label>Email Address</label>
+            <label>{t('register.emailAddress')}</label>
             <div className="input-wrapper">
               <span className="input-icon"><FiMail /></span>
               <input
                 type="email"
                 className={emailError ? 'input-error' : ''}
-                placeholder="Enter your email"
+                placeholder={t('register.emailAddress')}
                 value={registerForm.email}
                 onChange={(e) => handleRegisterChange('email', e.target.value)}
               />
@@ -414,12 +394,12 @@ const Login = () => {
           </div>
 
           <div className="form-item">
-            <label>Password</label>
-            <div className="input-wrapper">
+            <label>{t('register.createPassword')}</label>
+            <div className="input-wrapper input-with-toggle">
               <span className="input-icon"><FiLock /></span>
               <input
                 type={showRegisterPassword ? "text" : "password"}
-                placeholder="Create a password"
+                placeholder={t('register.createPassword')}
                 value={registerForm.password}
                 onChange={(e) => handleRegisterChange('password', e.target.value)}
               />
@@ -428,7 +408,7 @@ const Login = () => {
                 className="toggle-password"
                 onClick={() => setShowRegisterPassword(prev => !prev)}
               >
-                {showRegisterPassword ? <FiEyeOff /> : <FiEye />}
+                {showRegisterPassword ? <FiEyeOff style={{ width: 20, height: 20, color: '#111827' }} /> : <FiEye style={{ width: 20, height: 20, color: '#111827' }} />}
               </button>
             </div>
             {registerForm.password && (
@@ -450,13 +430,13 @@ const Login = () => {
           </div>
 
           <div className="form-item">
-            <label>Confirm Password</label>
+            <label>{t('register.confirmPassword')}</label>
             <div className="input-wrapper">
               <span className="input-icon"><FiLock /></span>
               <input
                 type="password"
                 className={registerForm.password_confirmation && registerForm.password !== registerForm.password_confirmation ? 'input-error' : ''}
-                placeholder="Confirm your password"
+                placeholder={t('register.confirmPassword')}
                 value={registerForm.password_confirmation}
                 onChange={(e) => handleRegisterChange('password_confirmation', e.target.value)}
               />
@@ -470,7 +450,7 @@ const Login = () => {
               )}
             </div>
             {registerForm.password_confirmation && registerForm.password !== registerForm.password_confirmation && (
-              <span className="field-error">Passwords do not match</span>
+              <span className="field-error">{t('register.passwordsMatch')}</span>
             )}
           </div>
 
@@ -480,9 +460,9 @@ const Login = () => {
             onClick={handleRegisterSubmit}
             disabled={registerLoading || !!emailError || (registerForm.password && registerForm.password !== registerForm.password_confirmation)}
           >
-            {registerLoading ? 'Creating Account...' : (
+            {registerLoading ? t('register.creatingAccount') : (
               <>
-                Create Account <FiArrowRight style={{ marginLeft: '8px' }} />
+                {t('register.registerButton')} <FiArrowRight style={{ marginLeft: '8px' }} />
               </>
             )}
           </button>
@@ -490,57 +470,55 @@ const Login = () => {
       )}
 
       <div className="auth-footer">
-        <p>Already have an account? <button type="button" className="link-btn" onClick={switchToLogin}>Sign in</button></p>
+        <p>{t('register.alreadyHaveAccount')} <button type="button" className="link-btn" onClick={switchToLogin}>{t('register.signIn')}</button></p>
       </div>
     </>
   );
 
-// Render approved status (after registration)
-   const renderApprovedStatus = () => (
-     <>
-       <div className="auth-header">
-         <h1>Registration Submitted</h1>
-         <p>Your account is pending approval</p>
-       </div>
+  const renderApprovedStatus = () => (
+    <>
+      <div className="auth-header">
+        <h1>{t('registrationPending.title')}</h1>
+        <p>{t('registrationPending.pendingApproval')}</p>
+      </div>
 
-       <div className="registration-pending">
-         <div className="success-icon">
-           <FiCheckCircle size={48} style={{ color: '#eab308' }} />
-         </div>
-         <h2>Waiting for Approval</h2>
-         <p>Your account has been created and is pending administrator approval. You will be notified once your account is approved.</p>
-         <button
-           type="button"
-           className="login-btn"
-           onClick={switchToLogin}
-         >
-           Go to Login
-         </button>
-       </div>
+      <div className="registration-pending">
+        <div className="success-icon">
+          <FiCheckCircle size={48} style={{ color: '#eab308' }} />
+        </div>
+        <h2>{t('registrationPending.waitingForApproval')}</h2>
+        <p>{t('registrationPending.accountCreated')}</p>
+        <button
+          type="button"
+          className="login-btn"
+          onClick={switchToLogin}
+        >
+          {t('registrationPending.goToLogin')}
+        </button>
+      </div>
 
-       <div className="auth-footer">
-         <p>Already have an account? <button type="button" className="link-btn" onClick={switchToLogin}>Sign in</button></p>
-       </div>
-     </>
-   );
+      <div className="auth-footer">
+        <p>{t('register.alreadyHaveAccount')} <button type="button" className="link-btn" onClick={switchToLogin}>{t('register.signIn')}</button></p>
+      </div>
+    </>
+  );
 
-   // Render main content based on auth mode
-   const renderContent = () => {
-     switch (authMode) {
-       case 'register':
-         return renderRegisterForm();
-       case 'approved':
-         return renderApprovedStatus();
-       case 'login':
-       default:
-         return renderLoginForm();
-     }
-   };
+  const renderContent = () => {
+    switch (authMode) {
+      case 'register':
+        return renderRegisterForm();
+      case 'approved':
+        return renderApprovedStatus();
+      case 'login':
+      default:
+        return renderLoginForm();
+    }
+  };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full">
-        <div className="bg-white rounded-2xl shadow-xl p-8">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 px-4 sm:px-6 lg:px-8">
+      <div className="w-full max-w-md my-4">
+        <div className="bg-white rounded-2xl shadow-xl p-6 sm:p-8">
           {renderContent()}
         </div>
       </div>

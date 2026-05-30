@@ -6,6 +6,7 @@ import 'element-plus/dist/index.css'
 import App from './App.jsx'
 import { AuthProvider } from './context/AuthContext.jsx'
 import axios from 'axios'
+import './i18n/index.js'
 
 // Configure axios defaults
 axios.defaults.withCredentials = true;
