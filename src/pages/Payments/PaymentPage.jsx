@@ -164,8 +164,8 @@ function PaymentPage() {
   };
 
   // Statistics
-  const todayIncome = dashboard.today_income || 0;
-  const todayExpense = dashboard.today_expense || 0;
+const todayIncome = Number(dashboard.today_income) || 0;
+   const todayExpense = Number(dashboard.today_expense) || 0;
   const netIncome = todayIncome - todayExpense;
 
   // Skeleton Loader
