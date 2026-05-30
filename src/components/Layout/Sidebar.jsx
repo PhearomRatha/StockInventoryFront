@@ -201,7 +201,7 @@ const menuItems = [
           </button>
         </div>
         <h1 className="text-2xl font-bold text-center bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
-          Inventory
+         Smart Inventory POS
         </h1>
         <div className="w-16 h-1 bg-gradient-to-r from-blue-500 to-purple-500 mx-auto mt-2 rounded-full"></div>
 

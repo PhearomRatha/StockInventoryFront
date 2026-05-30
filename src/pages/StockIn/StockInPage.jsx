@@ -31,7 +31,6 @@ function StockInPage() {
   });
   const [suppliers, setSuppliers] = useState([]);
   const [products, setProducts] = useState([]);
-  const [users, setUsers] = useState([]);
   const [stockInHistory, setStockInHistory] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -59,7 +58,6 @@ function StockInPage() {
       if (overviewRes.success) {
         setSuppliers(overviewRes.data?.suppliers || []);
         setProducts(overviewRes.data?.products || []);
-        setUsers(overviewRes.data?.users || []);
         setStockInHistory(overviewRes.data?.stock_history || []);
       }
     } catch (err) {

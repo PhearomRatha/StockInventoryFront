@@ -29,14 +29,10 @@ function StockOutPage() {
     notes: "",
   });
 
-  const [products, setProducts] = useState([]);
   const [customers, setCustomers] = useState([]);
-  const [users, setUsers] = useState([]);
   const [stockOuts, setStockOuts] = useState([]);
   const [loading, setLoading] = useState({
-    products: true,
     customers: true,
-    users: true,
     stockOuts: true,
   });
 
@@ -51,13 +47,11 @@ function StockOutPage() {
 
   const loadDashboardData = async () => {
     try {
-      setLoading({ products: true, customers: true, users: true, stockOuts: true });
+      setLoading({ customers: true, stockOuts: true });
       const result = await stockOutApi.getDashboard();
 
       if (result.success) {
-        setProducts(result.data?.products || []);
         setCustomers(result.data?.customers || []);
-        setUsers(result.data?.users || []);
         setStockOuts(result.data?.stockOuts || result.data?.stock_outs || []);
       } else {
         setModalMessage(result.message || t("stockOut.failedRecord"));
@@ -68,7 +62,7 @@ function StockOutPage() {
       setModalMessage(t("stockOut.failedRecord"));
       setShowErrorModal(true);
     } finally {
-      setLoading({ products: false, customers: false, users: false, stockOuts: false });
+      setLoading({ customers: false, stockOuts: false });
     }
   };
 
@@ -79,10 +73,6 @@ function StockOutPage() {
     if (!name) return;
 
     let updatedForm = { ...form, [name]: value };
-
-    if (name === "product_id") {
-      const selectedProduct = products.find((p) => p.id === Number(value));
-    }
 
     const qty = Number(updatedForm.quantity);
     const price = Number(updatedForm.unit_price || 0);
