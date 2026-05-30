@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { FiUser, FiLock, FiMail, FiArrowRight, FiEye, FiEyeOff, FiCheck, FiX, FiClock } from 'react-icons/fi';
 import { authApi } from '../../api';
-import { TextField, Button, InputAdornment, IconButton, Box, Typography } from '@mui/material';
 import { ElMessage } from '../../utils/message';
 
 const SignupPage = () => {
@@ -140,327 +139,125 @@ const SignupPage = () => {
           </div>
         </div>
       ) : (
-      <div className="signup-card">
-        <div className="signup-header">
-          <h1>Create Account</h1>
-          <p>Fill in your details to sign up</p>
-        </div>
-
-        <div className="signup-form">
-          <div className="form-item">
-            <label>Full Name</label>
-            <div className="input-wrapper">
-              <span className="input-icon"><FiUser /></span>
-              <input
-                type="text"
-                className={`el-input__inner ${formErrors.name ? 'input-error' : ''}`}
-                placeholder="Enter your full name"
-                value={formData.name}
-                onChange={(e) => handleInputChange('name', e.target.value)}
-              />
-            </div>
-            {formErrors.name && <span className="field-error">{formErrors.name}</span>}
+        <div className="signup-card">
+          <div className="signup-header">
+            <h1>Create Account</h1>
+            <p>Fill in your details to sign up</p>
           </div>
 
-          <div className="form-item">
-            <label>Email Address</label>
-            <div className="input-wrapper">
-              <span className="input-icon"><FiMail /></span>
-              <input
-                type="email"
-                className={`el-input__inner ${(emailError || formErrors.email) ? 'input-error' : ''}`}
-                placeholder="Enter your email"
-                value={formData.email}
-                onChange={(e) => handleInputChange('email', e.target.value)}
-              />
-            </div>
-            {(emailError || formErrors.email) && <span className="field-error">{formErrors.email || emailError}</span>}
-          </div>
-
-          <div className="form-item">
-            <label>Password</label>
-            <div className="input-wrapper">
-              <span className="input-icon"><FiLock /></span>
-              <input
-                type={showPassword ? 'text' : 'password'}
-                className={`el-input__inner ${formErrors.password ? 'input-error' : ''}`}
-                placeholder="Create a password"
-                value={formData.password}
-                onChange={(e) => handleInputChange('password', e.target.value)}
-              />
-              <button
-                type="button"
-                className="toggle-password"
-                onClick={() => setShowPassword(!showPassword)}
-              >
-                {showPassword ? <FiEyeOff /> : <FiEye />}
-              </button>
-            </div>
-            {formData.password && (
-              <div className="password-strength">
-                <div className="strength-bar">
-                  <div 
-                    className="strength-fill" 
-                    style={{ 
-                      width: `${(passwordStrength.score + 1) * 20}%`,
-                      backgroundColor: passwordStrength.color 
-                    }}
-                  ></div>
-                </div>
-                <span className="strength-text" style={{ color: passwordStrength.color }}>
-                  {passwordStrength.label}
-                </span>
+          <div className="signup-form">
+            <div className="form-item">
+              <label>Full Name</label>
+              <div className="input-wrapper">
+                <span className="input-icon"><FiUser /></span>
+                <input
+                  type="text"
+                  className={`el-input__inner ${formErrors.name ? 'input-error' : ''}`}
+                  placeholder="Enter your full name"
+                  value={formData.name}
+                  onChange={(e) => handleInputChange('name', e.target.value)}
+                />
               </div>
-            )}
-            {formErrors.password && <span className="field-error">{formErrors.password}</span>}
-          </div>
+              {formErrors.name && <span className="field-error">{formErrors.name}</span>}
+            </div>
 
-          <div className="form-item">
-            <label>Confirm Password</label>
-            <div className="input-wrapper">
-              <span className="input-icon"><FiLock /></span>
-              <input
-                type="password"
-                className={`el-input__inner ${(formErrors.password_confirmation || (formData.password_confirmation && formData.password !== formData.password_confirmation)) ? 'input-error' : ''}`}
-                placeholder="Confirm your password"
-                value={formData.password_confirmation}
-                onChange={(e) => handleInputChange('password_confirmation', e.target.value)}
-              />
-              {formData.password_confirmation && (
-                <span className="password-match">
-                  {formData.password === formData.password_confirmation ? 
-                    <FiCheck style={{ color: '#10b981' }} /> : 
-                    <FiX style={{ color: '#ef4444' }} />
-                  }
-                </span>
+            <div className="form-item">
+              <label>Email Address</label>
+              <div className="input-wrapper">
+                <span className="input-icon"><FiMail /></span>
+                <input
+                  type="email"
+                  className={`el-input__inner ${(emailError || formErrors.email) ? 'input-error' : ''}`}
+                  placeholder="Enter your email"
+                  value={formData.email}
+                  onChange={(e) => handleInputChange('email', e.target.value)}
+                />
+              </div>
+              {(emailError || formErrors.email) && <span className="field-error">{formErrors.email || emailError}</span>}
+            </div>
+
+            <div className="form-item">
+              <label>Password</label>
+              <div className="input-wrapper">
+                <span className="input-icon"><FiLock /></span>
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  className={`el-input__inner ${formErrors.password ? 'input-error' : ''}`}
+                  placeholder="Create a password"
+                  value={formData.password}
+                  onChange={(e) => handleInputChange('password', e.target.value)}
+                />
+                <button
+                  type="button"
+                  className="toggle-password"
+                  onClick={() => setShowPassword(!showPassword)}
+                >
+                  {showPassword ? <FiEyeOff /> : <FiEye />}
+                </button>
+              </div>
+              {formData.password && (
+                <div className="password-strength">
+                  <div className="strength-bar">
+                    <div 
+                      className="strength-fill" 
+                      style={{ 
+                        width: `${(passwordStrength.score + 1) * 20}%`,
+                        backgroundColor: passwordStrength.color 
+                      }}
+                    />
+                  </div>
+                  <span className="strength-text" style={{ color: passwordStrength.color }}>
+                    {passwordStrength.label}
+                  </span>
+                </div>
+              )}
+              {formErrors.password && <span className="field-error">{formErrors.password}</span>}
+            </div>
+
+            <div className="form-item">
+              <label>Confirm Password</label>
+              <div className="input-wrapper">
+                <span className="input-icon"><FiLock /></span>
+                <input
+                  type="password"
+                  className={`el-input__inner ${(formErrors.password_confirmation || (formData.password_confirmation && formData.password !== formData.password_confirmation)) ? 'input-error' : ''}`}
+                  placeholder="Confirm your password"
+                  value={formData.password_confirmation}
+                  onChange={(e) => handleInputChange('password_confirmation', e.target.value)}
+                />
+                {formData.password_confirmation && (
+                  <span className="password-match">
+                    {formData.password === formData.password_confirmation ? 
+                      <FiCheck style={{ color: '#10b981' }} /> : 
+                      <FiX style={{ color: '#ef4444' }} />
+                    }
+                  </span>
+                )}
+              </div>
+              {(formErrors.password_confirmation || (formData.password_confirmation && formData.password !== formData.password_confirmation)) && (
+                <span className="field-error">{formErrors.password_confirmation || 'Passwords do not match'}</span>
               )}
             </div>
-            {(formErrors.password_confirmation || (formData.password_confirmation && formData.password !== formData.password_confirmation)) && (
-              <span className="field-error">{formErrors.password_confirmation || 'Passwords do not match'}</span>
-            )}
+
+            <button
+              type="button"
+              className="submit-btn"
+              onClick={handleRegister}
+              disabled={loading || !!emailError || !!formErrors.name || !!formErrors.email || !!formErrors.password || !!formErrors.password_confirmation || (formData.password && formData.password !== formData.password_confirmation)}
+            >
+              {loading ? 'Creating Account...' : (
+                <>
+                  Create Account <FiArrowRight style={{ marginLeft: '8px' }} />
+                </>
+              )}
+            </button>
           </div>
 
-          <button
-            type="button"
-            className="el-button el-button--primary el-button--large submit-btn"
-            onClick={handleRegister}
-            disabled={loading || !!emailError || !!formErrors.name || !!formErrors.email || !!formErrors.password || !!formErrors.password_confirmation || (formData.password && formData.password !== formData.password_confirmation)}
-          >
-            {loading ? 'Creating Account...' : (
-              <>
-                Create Account <FiArrowRight style={{ marginLeft: '8px' }} />
-              </>
-            )}
-          </button>
+          <div className="signup-footer">
+            <p>Already have an account? <a href="/login">Sign in</a></p>
+          </div>
         </div>
-
-        <div className="signup-footer">
-          <p>Already have an account? <a href="/login">Sign in</a></p>
-        </div>
-      </div>
-
-      <style>{`
-        .signup-container {
-          min-height: 100vh;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-          padding: 20px;
-        }
-        .signup-card {
-          background: white;
-          border-radius: 16px;
-          padding: 40px;
-          width: 100%;
-          max-width: 420px;
-          box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-        }
-        .signup-header {
-          text-align: center;
-          margin-bottom: 32px;
-        }
-        .signup-header h1 {
-          font-size: 28px;
-          font-weight: 700;
-          color: #1a1a2e;
-          margin-bottom: 8px;
-        }
-        .signup-header p {
-          color: #6b7280;
-          font-size: 14px;
-        }
-        .success-header {
-          text-align: center;
-          margin-bottom: 32px;
-        }
-        .success-icon {
-          width: 64px;
-          height: 64px;
-          background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-          border-radius: 50%;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          margin: 0 auto 16px;
-          color: white;
-          font-size: 32px;
-        }
-        .success-header h1 {
-          font-size: 28px;
-          font-weight: 700;
-          color: #1a1a2e;
-          margin-bottom: 8px;
-        }
-        .pending-message {
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          padding: 20px;
-          background: #fef3c7;
-          border-radius: 12px;
-          color: #92400e;
-          font-size: 14px;
-          margin-bottom: 24px;
-        }
-        .login-link {
-          color: #667eea;
-          font-weight: 600;
-          text-decoration: none;
-        }
-        .login-link:hover {
-          text-decoration: underline;
-        }
-        .form-item {
-          margin-bottom: 20px;
-        }
-        .form-item label {
-          display: block;
-          font-size: 14px;
-          font-weight: 500;
-          color: #374151;
-          margin-bottom: 8px;
-        }
-        .input-wrapper {
-          position: relative;
-          display: flex;
-          align-items: center;
-        }
-        .input-icon {
-          position: absolute;
-          left: 14px;
-          color: #9ca3af;
-          display: flex;
-          align-items: center;
-        }
-        .el-input__inner {
-          width: 100%;
-          padding: 12px 16px 12px 40px;
-          border: 1px solid #dcdfe6;
-          border-radius: 8px;
-          font-size: 14px;
-          outline: none;
-          transition: all 0.2s;
-        }
-        .el-input__inner:focus {
-          border-color: #667eea;
-          box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-        }
-        .el-input__inner.input-error {
-          border-color: #ef4444;
-        }
-        .field-error {
-          color: #ef4444;
-          font-size: 12px;
-          margin-top: 4px;
-          display: block;
-        }
-        .toggle-password {
-          position: absolute;
-          right: 12px;
-          background: none;
-          border: none;
-          color: #9ca3af;
-          cursor: pointer;
-          display: flex;
-          align-items: center;
-          padding: 4px;
-        }
-        .toggle-password:hover {
-          color: #6b7280;
-        }
-        .password-match {
-          position: absolute;
-          right: 12px;
-          display: flex;
-          align-items: center;
-        }
-        .password-strength {
-          margin-top: 8px;
-        }
-        .strength-bar {
-          height: 4px;
-          background: #e5e7eb;
-          border-radius: 2px;
-          overflow: hidden;
-          margin-bottom: 4px;
-        }
-        .strength-fill {
-          height: 100%;
-          border-radius: 2px;
-          transition: width 0.3s ease;
-        }
-        .strength-text {
-          font-size: 12px;
-          font-weight: 500;
-        }
-        .submit-btn {
-          width: 100%;
-          height: 48px;
-          font-size: 16px;
-          font-weight: 600;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-          border: none;
-          transition: all 0.2s;
-        }
-        .submit-btn:hover:not(:disabled) {
-          transform: translateY(-2px);
-          box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
-        }
-        .submit-btn:disabled {
-          opacity: 0.6;
-          cursor: not-allowed;
-        }
-        .signup-footer {
-          text-align: center;
-          margin-top: 24px;
-          padding-top: 24px;
-          border-top: 1px solid #e5e7eb;
-        }
-        .signup-footer p {
-          color: #6b7280;
-          font-size: 14px;
-        }
-        .signup-footer a {
-          color: #667eea;
-          font-weight: 600;
-          text-decoration: none;
-        }
-        .signup-footer a:hover {
-          text-decoration: underline;
-        }
-        @media (max-width: 480px) {
-          .signup-card {
-            padding: 24px;
-          }
-          .signup-header h1 {
-            font-size: 24px;
-          }
-        }
-      `}</style>
+      )}
     </div>
   );
 };

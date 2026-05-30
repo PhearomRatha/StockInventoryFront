@@ -218,8 +218,8 @@ const menuItems = [
           </span>
         </div>
 
-        {/* Stock Alert */}
-        {lowStockAlert > 0 && (
+        {/* Stock Alert - Only show for non-Casher roles */}
+        {lowStockAlert > 0 && role !== ROLES.CASHER && (
           <div className="mt-4 p-3 bg-red-500/20 border border-red-500/30 rounded-lg">
             <div className="flex items-center gap-2">
               <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
@@ -256,7 +256,7 @@ const menuItems = [
               <item.icon size={18} className="text-white" />
             </div>
             <span className="font-medium flex-1">{item.label}</span>
-            {((item.path === '/reports' || item.path === '/products') && lowStockAlert > 0) && (
+            {((item.path === '/reports' || item.path === '/products') && lowStockAlert > 0 && role !== ROLES.CASHER) && (
               <span className="bg-red-500 text-white text-xs rounded-full px-2 py-1">
                 {lowStockAlert}
               </span>

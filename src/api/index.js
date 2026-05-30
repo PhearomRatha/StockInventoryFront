@@ -76,7 +76,7 @@ const createApi = (apiName) => {
   methodNames.forEach(method => {
     methods[method] = async (...args) => {
       if (isDemoMode()) {
-        const demo = await import(`./demo/${apiName === 'productApi' ? 'productApi' : apiName === 'categoryApi' ? 'categoryApi' : apiName === 'supplierApi' ? 'supplierApi' : apiName === 'customerApi' ? 'customerApi' : apiName === 'salesApi' ? 'salesApi' : apiName === 'stockInApi' ? 'stockInApi' : apiName === 'stockOutApi' ? 'stockOutApi' : apiName === 'paymentApi' ? 'paymentApi' : apiName === 'reportApi' ? 'reportApi' : apiName === 'activityLogApi' ? 'activityLogApi' : apiName === 'inventoryApi' ? 'inventoryApi' : 'dashboardApi'}`);
+        const demo = await import(`./demo/${apiName === 'productApi' ? 'productApi' : apiName === 'categoryApi' ? 'categoryApi' : apiName === 'supplierApi' ? 'supplierApi' : apiName === 'customerApi' ? 'customerApi' : apiName === 'salesApi' ? 'salesApi' : apiName === 'stockInApi' ? 'stockInApi' : apiName === 'stockOutApi' ? 'stockOutApi' : apiName === 'paymentApi' ? 'paymentApi' : apiName === 'reportApi' ? 'reportApi' : apiName === 'activityLogApi' ? 'activityLogApi' : apiName === 'inventoryApi' ? 'inventoryApi' : 'dashboardApi'}.js`);
         const api = demo.default || demo;
         if (api[method]) {
           return api[method](...args);
