@@ -1,91 +1,70 @@
-import React, { useState, useEffect } from "react";
-import axios from "axios";
+import React, { useState, useEffect, useCallback } from "react";
 import {
-  PlusIcon,
-  PencilIcon,
-  TrashIcon,
   DocumentTextIcon,
   MagnifyingGlassIcon,
-  FunnelIcon,
-  ArrowsUpDownIcon,
-  XMarkIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
   UserIcon,
-  CubeIcon,
   ChartBarIcon,
 } from "@heroicons/react/24/outline";
 
-// ✅ Base API
-const API_BASE = `${import.meta.env.VITE_API_URL}/api`;
+import { activityLogApi, customerApi } from "../../api";
+import ModalSelect from "../../components/UI/ModalSelect";
 
 function ActivityLogPage() {
   const [logs, setLogs] = useState([]);
   const [users, setUsers] = useState([]);
   const [search, setSearch] = useState("");
-  const [selectedUser, setSelectedUser] = useState("All");
-  const [selectedModule, setSelectedModule] = useState("All");
-  const [selectedAction, setSelectedAction] = useState("All");
+  const [selectedUsers, setSelectedUsers] = useState([]);
+  const [selectedModules, setSelectedModules] = useState([]);
+  const [selectedActions, setSelectedActions] = useState([]);
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [sortBy, setSortBy] = useState("created_at");
   const [sortOrder, setSortOrder] = useState("desc");
   const [loading, setLoading] = useState(true);
-  const [showModal, setShowModal] = useState(false);
-  const [isEdit, setIsEdit] = useState(false);
-  const [currentLog, setCurrentLog] = useState({});
+
+  // Modal states
+  const [userModalOpen, setUserModalOpen] = useState(false);
+  const [moduleModalOpen, setModuleModalOpen] = useState(false);
+  const [actionModalOpen, setActionModalOpen] = useState(false);
 
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
   const logsPerPage = 10;
 
-  // Fetch logs and users
-  const fetchLogs = () => {
-    const token = localStorage.getItem("token");
-    if (!token) return;
-
-    setLoading(true);
-
-    let url = `${API_BASE}/activity-logs`;
-    const params = {};
-    if (selectedUser !== "All") params.user_id = selectedUser;
-    if (selectedModule !== "All") params.module = selectedModule;
-    if (selectedAction !== "All") params.action = selectedAction;
-    if (startDate) params.start_date = startDate;
-    if (endDate) params.end_date = endDate;
-
-    if (Object.keys(params).length > 0) {
-      url = `${API_BASE}/activity-logs/filter`;
-    }
-
-    axios
-      .get(url, {
-        headers: { Authorization: `Bearer ${token}` },
-        params,
-      })
-      .then((res) => {
-        if (res.data.status === 200) {
-          const logsData = res.data.data?.data || res.data.data;
-          setLogs(Array.isArray(logsData) ? logsData : []);
+const fetchLogs = useCallback(async () => {
+      setLoading(true);
+      try {
+        const hasFilters = selectedUsers.length > 0 || selectedModules.length > 0 || selectedActions.length > 0 || startDate || endDate;
+        
+        let logsRes;
+        if (hasFilters) {
+          logsRes = await activityLogApi.filter({
+            user_id: selectedUsers.length > 0 ? selectedUsers : undefined,
+            module: selectedModules.length > 0 ? selectedModules : undefined,
+            action: selectedActions.length > 0 ? selectedActions : undefined
+          });
+        } else {
+          logsRes = await activityLogApi.getAll();
         }
-        setLoading(false);
-      })
-      .catch(() => setLoading(false));
-
-    axios
-      .get(`${API_BASE}/users`, {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-      .then((res) => {
-        const usersData = res.data.data?.data || res.data.data;
+        
+        let logsData = logsRes.success ? (logsRes.data?.data || logsRes.data || []) : [];
+        setLogs(Array.isArray(logsData) ? logsData : []);
+        
+        const usersRes = await customerApi.getAll();
+        const usersData = usersRes.success ? (usersRes.data?.data || usersRes.data || []) : [];
         setUsers(Array.isArray(usersData) ? usersData : []);
-      })
-      .catch(console.error);
-  };
+      } catch (error) {
+        console.error('Error fetching logs:', error);
+      } finally {
+        setLoading(false);
+      }
+    }, [selectedUsers, selectedModules, selectedActions, startDate, endDate]);
 
-  useEffect(() => {
-    fetchLogs();
-  }, [selectedUser, selectedModule, selectedAction, startDate, endDate]);
+   useEffect(() => {
+     fetchLogs();
+   }, [fetchLogs]);
 
   const handleSort = (newSortBy) => {
     if (sortBy === newSortBy) {
@@ -96,37 +75,33 @@ function ActivityLogPage() {
     }
   };
 
-  const openAddModal = () => {
-    setIsEdit(false);
-    setCurrentLog({});
-    setShowModal(true);
-  };
+const dateFilteredLogs = logs.filter(log => {
+     if (!startDate && !endDate) return true;
+     const logDate = new Date(log.created_at).toISOString().split('T')[0];
+     if (startDate && logDate < startDate) return false;
+     if (endDate && logDate > endDate) return false;
+     return true;
+   });
 
-  const openEditModal = (log) => {
-    setIsEdit(true);
-    setCurrentLog(log);
-    setShowModal(true);
-  };
-
-  const filteredLogs = logs
-    .filter((log) =>
-      (log.description || "").toLowerCase().includes(search.toLowerCase())
-    )
-    .sort((a, b) => {
-      const multiplier = sortOrder === "asc" ? 1 : -1;
-      if (sortBy === "created_at")
-        return multiplier * new Date(a.created_at) - new Date(b.created_at);
-      if (sortBy === "user") {
-        const userA = typeof a.user === 'object' ? a.user?.name || '' : (a.user || '');
-        const userB = typeof b.user === 'object' ? b.user?.name || '' : (b.user || '');
-        return multiplier * userA.localeCompare(userB);
-      }
-      if (sortBy === "id") return multiplier * (a.id - b.id);
-      if (sortBy === "action") return multiplier * (a.action || '').localeCompare(b.action || '');
-      if (sortBy === "module") return multiplier * (a.module || '').localeCompare(b.module || '');
-      if (sortBy === "record_id") return multiplier * (a.record_id - b.record_id);
-      return 0;
-    });
+   const filteredLogs = dateFilteredLogs
+     .filter((log) =>
+       (log.description || "").toLowerCase().includes(search.toLowerCase())
+     )
+     .sort((a, b) => {
+       const multiplier = sortOrder === "asc" ? 1 : -1;
+       if (sortBy === "created_at")
+         return multiplier * new Date(a.created_at) - new Date(b.created_at);
+       if (sortBy === "user") {
+         const userA = typeof a.user === 'object' ? a.user?.name || '' : (a.user || '');
+         const userB = typeof b.user === 'object' ? b.user?.name || '' : (b.user || '');
+         return multiplier * userA.localeCompare(userB);
+       }
+       if (sortBy === "id") return multiplier * (a.id - b.id);
+       if (sortBy === "action") return multiplier * (a.action || '').localeCompare(b.action || '');
+       if (sortBy === "module") return multiplier * (a.module || '').localeCompare(b.module || '');
+       if (sortBy === "record_id") return multiplier * (a.record_id - b.record_id);
+       return 0;
+     });
 
   const totalPages = Math.ceil(filteredLogs.length / logsPerPage);
   const paginatedLogs = filteredLogs.slice(
@@ -134,54 +109,13 @@ function ActivityLogPage() {
     currentPage * logsPerPage
   );
 
-  const handleDelete = (id) => {
-    if (window.confirm("Are you sure you want to delete this activity log?")) {
-      axios
-        .delete(`${API_BASE}/activity-logs/${id}`, {
-          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-        })
-        .then(() => {
-          fetchLogs();
-        })
-        .catch(console.error);
-    }
-  };
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    const token = localStorage.getItem("token");
-    const url = isEdit
-      ? `${API_BASE}/activity-logs/${currentLog.id}`
-      : `${API_BASE}/activity-logs`;
-
-    const method = isEdit ? "patch" : "post";
-
-    axios[method](url, currentLog, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-      },
-    })
-      .then(() => {
-        fetchLogs();
-        setShowModal(false);
-      })
-      .catch(console.error);
-  };
-
-  // User map for displaying names
-  const userMap = users.reduce((acc, user) => {
-    acc[user.id] = user.name;
-    return acc;
-  }, {});
-
-  // Statistics
-  const totalLogs = logs.length;
-  const todayLogs = logs.filter(
-    (log) =>
-      new Date(log.created_at).toDateString() === new Date().toDateString()
-  ).length;
-  const uniqueUsers = new Set(logs.map((log) => log.user_id)).size;
+// Statistics
+   const totalLogs = dateFilteredLogs.length;
+   const todayLogs = dateFilteredLogs.filter(
+     (log) =>
+       new Date(log.created_at).toDateString() === new Date().toDateString()
+   ).length;
+   const uniqueUsers = new Set(dateFilteredLogs.map((log) => log.user_id)).size;
 
   // 🔹 Skeleton Loader
   if (loading)
@@ -230,12 +164,6 @@ function ActivityLogPage() {
             </p>
           </div>
         </div>
-        <button
-          onClick={openAddModal}
-          className="flex items-center gap-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-6 py-3.5 rounded-xl hover:shadow-lg transition-all duration-300 font-medium shadow-md"
-        >
-          <PlusIcon className="w-5 h-5" /> Add Log Entry
-        </button>
       </div>
 
       {/* Stats Cards */}
@@ -290,56 +218,63 @@ function ActivityLogPage() {
             <label className="block text-sm font-medium text-gray-700 mb-2">
               User
             </label>
-            <select
-              value={selectedUser}
-              onChange={(e) => setSelectedUser(e.target.value)}
-              className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent appearance-none bg-white"
+            <button
+              type="button"
+              onClick={() => setUserModalOpen(true)}
+              className="modal-select-trigger"
             >
-              <option value="All">All Users</option>
-              {Array.isArray(users) &&
-                users.map((u) => (
-                  <option key={u.id} value={u.id}>
-                    {u.name}
-                  </option>
-                ))}
-            </select>
+              <span className={selectedUsers.length === 0 ? "trigger-placeholder" : ""}>
+                {selectedUsers.length === 0 
+                  ? "Select Users" 
+                  : selectedUsers.length === 1 
+                    ? users.find(u => u.id === selectedUsers[0])?.name || "1 user selected"
+                    : `${selectedUsers.length} users selected`
+                }
+              </span>
+              <ChevronRightIcon className="trigger-chevron w-4 h-4" />
+            </button>
           </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Module
             </label>
-            <select
-              value={selectedModule}
-              onChange={(e) => setSelectedModule(e.target.value)}
-              className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent appearance-none bg-white"
+            <button
+              type="button"
+              onClick={() => setModuleModalOpen(true)}
+              className="modal-select-trigger"
             >
-              <option value="All">All Modules</option>
-              <option value="products">Products</option>
-              <option value="sales">Sales</option>
-              <option value="stock_ins">Stock Ins</option>
-              <option value="stock_outs">Stock Outs</option>
-              <option value="suppliers">Suppliers</option>
-              <option value="customers">Customers</option>
-              <option value="users">Users</option>
-              <option value="sales_payment">Sales Payment</option>
-            </select>
+              <span className={selectedModules.length === 0 ? "trigger-placeholder" : ""}>
+                {selectedModules.length === 0 
+                  ? "Select Modules" 
+                  : selectedModules.length === 1 
+                    ? selectedModules[0].replace('_', ' ')
+                    : `${selectedModules.length} modules selected`
+                }
+              </span>
+              <ChevronRightIcon className="trigger-chevron w-4 h-4" />
+            </button>
           </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Action
             </label>
-            <select
-              value={selectedAction}
-              onChange={(e) => setSelectedAction(e.target.value)}
-              className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent appearance-none bg-white"
+            <button
+              type="button"
+              onClick={() => setActionModalOpen(true)}
+              className="modal-select-trigger"
             >
-              <option value="All">All Actions</option>
-              <option value="created">Created</option>
-              <option value="updated">Updated</option>
-              <option value="deleted">Deleted</option>
-            </select>
+              <span className={selectedActions.length === 0 ? "trigger-placeholder" : ""}>
+                {selectedActions.length === 0 
+                  ? "Select Actions" 
+                  : selectedActions.length === 1 
+                    ? selectedActions[0]
+                    : `${selectedActions.length} actions selected`
+                }
+              </span>
+              <ChevronRightIcon className="trigger-chevron w-4 h-4" />
+            </button>
           </div>
 
           <div>
@@ -364,6 +299,51 @@ function ActivityLogPage() {
         </div>
       </div>
 
+      {/* Modals */}
+      <ModalSelect
+        isOpen={userModalOpen}
+        onClose={() => setUserModalOpen(false)}
+        title="Select Users"
+        options={users.map(u => ({ value: u.id, label: u.name }))}
+        selectedValues={selectedUsers}
+        onSelectMultiple={setSelectedUsers}
+        multiSelect={true}
+        placeholder="Search users..."
+      />
+      <ModalSelect
+        isOpen={moduleModalOpen}
+        onClose={() => setModuleModalOpen(false)}
+        title="Select Modules"
+        options={[
+          { value: "products", label: "Products" },
+          { value: "sales", label: "Sales" },
+          { value: "stock_ins", label: "Stock Ins" },
+          { value: "stock_outs", label: "Stock Outs" },
+          { value: "suppliers", label: "Suppliers" },
+          { value: "customers", label: "Customers" },
+          { value: "users", label: "Users" },
+          { value: "sales_payment", label: "Sales Payment" },
+        ]}
+        selectedValues={selectedModules}
+        onSelectMultiple={setSelectedModules}
+        multiSelect={true}
+        placeholder="Search modules..."
+      />
+      <ModalSelect
+        isOpen={actionModalOpen}
+        onClose={() => setActionModalOpen(false)}
+        title="Select Actions"
+        options={[
+          { value: "created", label: "Created" },
+          { value: "updated", label: "Updated" },
+          { value: "deleted", label: "Deleted" },
+        ]}
+        selectedValues={selectedActions}
+        onSelectMultiple={setSelectedActions}
+        multiSelect={true}
+        placeholder="Search actions..."
+      />
+
       {/* Search */}
       <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 mb-6">
         <div className="relative w-full lg:w-96">
@@ -383,24 +363,23 @@ function ActivityLogPage() {
         <div className="overflow-x-auto">
           <table className="w-full min-w-[800px]">
             <thead className="bg-gradient-to-r from-gray-50 to-slate-50 border-b">
-              <tr>
-                {[                  "No",
-                  "User",
-                  "Action",
-                  "Module",
-                  "Record ID",
-                  "Description",
-                  "Date",
-                  "Actions",
-                ].map((h) => {
-                  const sortKey = h === "Date" ? "created_at" : h === "No" ? "id" : h === "Record ID" ? "record_id" : h.toLowerCase();
-                  const isSortable = !["Description", "Actions"].includes(h);
-                  return (
-                    <th
-                      key={h}
-                      className={`py-4 px-6 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider ${isSortable ? 'cursor-pointer hover:bg-gray-100' : ''}`}
-                      onClick={isSortable ? () => handleSort(sortKey) : undefined}
-                    >
+<tr>
+                 {[                  "No",
+                   "User",
+                   "Action",
+                   "Module",
+                   "Record ID",
+                   "Description",
+                   "Date",
+                 ].map((h) => {
+                   const sortKey = h === "Date" ? "created_at" : h === "No" ? "id" : h === "Record ID" ? "record_id" : h.toLowerCase();
+                   const isSortable = !["Description"].includes(h);
+                   return (
+                     <th
+                       key={h}
+                       className={`py-4 px-6 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider ${isSortable ? 'cursor-pointer hover:bg-gray-100' : ''}`}
+                       onClick={isSortable ? () => handleSort(sortKey) : undefined}
+                     >
                       {h}
                     </th>
                   );
@@ -468,48 +447,24 @@ function ActivityLogPage() {
                           `${log.user?.name || 'System'} performed ${log.action} on ${log.module}`}
                       </div>
                     </td>
-                    <td className="py-4 px-6">
+<td className="py-4 px-6">
                       <div className="text-sm text-gray-500">
-                        {new Date(log.created_at).toLocaleString()}
-                      </div>
-                    </td>
-                    <td className="py-4 px-6">
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => openEditModal(log)}
-                          className="p-2 text-gray-600 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all duration-200"
-                          title="Edit"
-                        >
-                          <PencilIcon className="w-5 h-5" />
-                        </button>
-                        <button
-                          onClick={() => handleDelete(log.id)}
-                          className="p-2 text-gray-600 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all duration-200"
-                          title="Delete"
-                        >
-                          <TrashIcon className="w-5 h-5" />
-                        </button>
+                        {log.created_at ? new Date(log.created_at).toLocaleString() : 'N/A'}
                       </div>
                     </td>
                   </tr>
                 ))
               ) : (
                 <tr>
-                  <td colSpan={8} className="py-20 text-center">
+                  <td colSpan={7} className="py-20 text-center">
                     <div className="flex flex-col items-center justify-center">
                       <DocumentTextIcon className="w-16 h-16 text-gray-300 mb-4" />
                       <p className="text-gray-500 text-lg font-medium">
                         No activity logs found
                       </p>
                       <p className="text-gray-400 mt-1">
-                        Try adjusting your filters
+                        Activity logs are automatically recorded from user actions
                       </p>
-                      <button
-                        onClick={openAddModal}
-                        className="mt-4 px-4 py-2 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition"
-                      >
-                        Add First Log
-                      </button>
                     </div>
                   </td>
                 </tr>
@@ -573,133 +528,6 @@ function ActivityLogPage() {
               Next
               <ChevronRightIcon className="w-4 h-4" />
             </button>
-          </div>
-        </div>
-      )}
-
-      {/* Modal */}
-      {showModal && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex justify-center items-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto animate-scaleIn">
-            {/* Modal Header */}
-            <div className="sticky top-0 bg-white border-b border-gray-100 p-6 flex justify-between items-center rounded-t-2xl">
-              <div>
-                <h2 className="text-2xl font-bold text-gray-900">
-                  {isEdit ? "Edit Activity Log" : "Add New Activity Log"}
-                </h2>
-                <p className="text-gray-600 mt-1">
-                  {isEdit
-                    ? "Update log details"
-                    : "Fill in the log information"}
-                </p>
-              </div>
-              <button
-                onClick={() => setShowModal(false)}
-                className="p-2 hover:bg-gray-100 rounded-lg transition"
-              >
-                <XMarkIcon className="w-6 h-6 text-gray-500" />
-              </button>
-            </div>
-
-            {/* Modal Form */}
-            <form onSubmit={handleSubmit} className="p-6">
-              <div className="space-y-5">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    User *
-                  </label>
-                  <select
-                    value={currentLog.user_id || ""}
-                    onChange={(e) =>
-                      setCurrentLog({ ...currentLog, user_id: e.target.value })
-                    }
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition appearance-none bg-white"
-                    required
-                  >
-                    <option value="">Select user</option>
-                    {users.map((u) => (
-                      <option key={u.id} value={u.id}>
-                        {u.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Action *
-                  </label>
-                  <select
-                    value={currentLog.action || ""}
-                    onChange={(e) =>
-                      setCurrentLog({ ...currentLog, action: e.target.value })
-                    }
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition appearance-none bg-white"
-                    required
-                  >
-                    <option value="">Select action</option>
-                    <option value="created">Created</option>
-                    <option value="updated">Updated</option>
-                    <option value="deleted">Deleted</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Module *
-                  </label>
-                  <select
-                    value={currentLog.module || ""}
-                    onChange={(e) =>
-                      setCurrentLog({ ...currentLog, module: e.target.value })
-                    }
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition appearance-none bg-white"
-                    required
-                  >
-                    <option value="">Select module</option>
-                    <option value="products">Products</option>
-                    <option value="sales">Sales</option>
-                    <option value="payments">Payments</option>
-                    <option value="users">Users</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Record ID
-                  </label>
-                  <input
-                    type="number"
-                    value={currentLog.record_id || ""}
-                    onChange={(e) =>
-                      setCurrentLog({
-                        ...currentLog,
-                        record_id: e.target.value,
-                      })
-                    }
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition"
-                    placeholder="Optional record ID"
-                  />
-                </div>
-              </div>
-
-              {/* Form Actions */}
-              <div className="flex justify-end gap-4 mt-8 pt-6 border-t border-gray-100">
-                <button
-                  type="button"
-                  onClick={() => setShowModal(false)}
-                  className="px-6 py-3 text-gray-700 font-medium rounded-xl border border-gray-300 hover:bg-gray-50 transition"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-medium rounded-xl hover:shadow-lg transition-all duration-300 shadow-md"
-                >
-                  {isEdit ? "Update Log" : "Create Log"}
-                </button>
-              </div>
-            </form>
           </div>
         </div>
       )}

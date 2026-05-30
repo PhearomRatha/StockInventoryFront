@@ -3,22 +3,17 @@ import { useNavigate } from 'react-router-dom';
 import { UserIcon, LockClosedIcon, EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
 import { FiUser, FiLock, FiMail, FiArrowRight, FiEye, FiEyeOff, FiCheck, FiX, FiCheckCircle } from 'react-icons/fi';
 import api from '../../plugin/axios';
-import { useAuth, ROLES } from '../../context/AuthContext';
-import { CookieUtils, register, loginWithGoogle } from '../../api/authApi';
-import { FcGoogle } from 'react-icons/fc';
-import { GoogleOAuthProvider, GoogleLogin } from '@react-oauth/google';
-import { TextField, Button, InputAdornment, IconButton, Box, Typography, CircularProgress, Divider } from '@mui/material';
+import { useAuth } from '../../context/AuthContext';
+import { authApi, CookieUtils } from '../../api';
 import { ElMessage } from '../../utils/message';
 
-const API_BASE = `${import.meta.env.VITE_API_URL}/api/auth`;
-
 const Login = () => {
-  const { login } = useAuth();
+  const { login, loading } = useAuth();
   const navigate = useNavigate();
-  
+
   // Auth mode: 'login', 'register', 'approved'
   const [authMode, setAuthMode] = useState('login');
-  
+
   // Login state
   const [showPassword, setShowPassword] = useState(false);
   const [loginForm, setLoginForm] = useState({
@@ -28,7 +23,6 @@ const Login = () => {
   const [loginMessage, setLoginMessage] = useState({ text: '', type: '' });
   const [loginErrors, setLoginErrors] = useState({ email: '', password: '' });
   const [loginLoading, setLoginLoading] = useState(false);
-  const [googleLoading, setGoogleLoading] = useState(false);
 
   // Register state
   const [registerForm, setRegisterForm] = useState({
@@ -42,29 +36,14 @@ const Login = () => {
   const [emailError, setEmailError] = useState('');
   const [passwordStrength, setPasswordStrength] = useState({ score: 0, label: '', color: '' });
 
-  // Registration success state
+// Registration success state
   const [registrationSuccess, setRegistrationSuccess] = useState(false);
 
-  // Set Password state (for Google users)
-  const [setPasswordForm, setSetPasswordForm] = useState({
-    password: '',
-    password_confirmation: ''
-  });
-  const [showSetPassword, setShowSetPassword] = useState(false);
-  const [setPasswordLoading, setSetPasswordLoading] = useState(false);
-
+  // Clear temporary storage on mount (GuestRoute handles auth redirect)
   useEffect(() => {
-    // If already authenticated, redirect to dashboard
-    const token = localStorage.getItem('token');
-    if (token) {
-      navigate("/", { replace: true });
-      return;
-    }
-    
-    // Clear temporary storage
     localStorage.removeItem('signupEmail');
     localStorage.removeItem('signupPassword');
-  }, [navigate]);
+  }, []);
 
   // Login handlers
   const handleLoginChange = useCallback((e) => {
@@ -80,115 +59,38 @@ const Login = () => {
     setShowPassword(prev => !prev);
   }, []);
 
-// Helper function to check user account status
-   const checkAccountStatus = (user) => {
-     if (!user) return { blocked: true, message: 'Account not found. Please register first or contact admin.', type: 'error' };
-     
-     // Support: string status (ACTIVE/INACTIVE), boolean status (true/false), or numeric status (0/1)
-     const statusValue = user.status;
-     let status;
-     
-     if (typeof statusValue === 'string') {
-       status = statusValue.toUpperCase() === 'ACTIVE' ? 1 : 0;
-     } else if (typeof statusValue === 'boolean') {
-       status = statusValue ? 1 : 0;
-     } else {
-       status = statusValue ?? 1;
-     }
-     
-     // Status: 0 = Pending/Inactive, 1 = Active
-     if (status === 0) {
-       return { blocked: true, message: 'Your account is pending approval or inactive. Please contact support.', type: 'warning' };
-     }
-     
-     return { blocked: false };
-   };
+  // Helper function to check user account status
+  const checkAccountStatus = (user) => {
+    if (!user) return { blocked: true, message: 'Account not found. Please register first or contact admin.', type: 'error' };
 
-  // Handle Google Login Success
-  const handleGoogleSuccess = async (credentialResponse) => {
-    setGoogleLoading(true);
-    setLoginMessage({ text: '', type: '' });
-
-    try {
-      const res = await loginWithGoogle(credentialResponse.credential);
-      
-      if (res.status === 200) {
-        const user = res.data.user;
-        const token = res.data.token;
-
-        // Check if account exists and get status
-        const statusCheck = checkAccountStatus(user);
-        if (statusCheck.blocked) {
-          setLoginMessage({
-            text: statusCheck.message,
-            type: statusCheck.type
-          });
-          setGoogleLoading(false);
-          return;
-        }
-
-        CookieUtils.set('auth_token', token, 7);
-        CookieUtils.set('auth_user', JSON.stringify(user), 7);
-        localStorage.setItem('token', token);
-        localStorage.setItem('user', JSON.stringify(user));
-        
-        api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-        await login(user, token);
-
-        ElMessage.success('Login successful! Redirecting...');
-        setGoogleLoading(false);
-
-        setTimeout(() => {
-          window.location.href = '/';
-        }, 1000);
-      } else {
-        setLoginMessage({
-          text: res.message || "Google login failed. Account not found.",
-          type: "error"
-        });
-        setGoogleLoading(false);
-      }
-    } catch (err) {
-      console.error('Google login error:', err);
-      console.error('Error response:', err.response);
-      
-      // Show more detailed error message
-      let errorMessage = 'Google login failed. Please try again.';
-      
-      if (err.response) {
-        if (err.response.status === 500) {
-          // Server error - show a more helpful message
-          errorMessage = 'Server error on backend. Please contact admin or check server logs.';
-          // Log the actual error for debugging
-          console.error('Backend error details:', err.response.data);
-        } else if (err.response.status === 422) {
-          errorMessage = err.response.data?.message || 'Invalid Google token.';
-        } else if (err.response.data?.message) {
-          errorMessage = err.response.data.message;
-        }
-      } else if (err.message) {
-        errorMessage = err.message;
-      }
-      
-      setLoginMessage({
-        text: errorMessage,
-        type: 'error'
-      });
-      setGoogleLoading(false);
+    // Demo users are always allowed
+    if (user.is_demo === true) {
+      return { blocked: false };
     }
-  };
 
-  const handleGoogleError = () => {
-    setLoginMessage({
-      text: 'Google login was cancelled or failed. Please try again.',
-      type: 'error'
-    });
-    setGoogleLoading(false);
+    // Support: string status (ACTIVE/INACTIVE), boolean status (true/false), or numeric status (0/1)
+    const statusValue = user.status;
+    let status;
+
+    if (typeof statusValue === 'string') {
+      status = statusValue.toUpperCase() === 'ACTIVE' ? 1 : 0;
+    } else if (typeof statusValue === 'boolean') {
+      status = statusValue ? 1 : 0;
+    } else {
+      status = statusValue ?? 1;
+    }
+
+    // Status: 0 = Pending/Inactive, 1 = Active
+    if (status === 0) {
+      return { blocked: true, message: 'Your account is pending approval or inactive. Please contact support.', type: 'warning' };
+    }
+
+    return { blocked: false };
   };
 
   const handleLoginSubmit = async (e) => {
     e.preventDefault();
-    
+
     // Validate using JavaScript - show errors under fields
     const errors = {};
     if (!loginForm.email) {
@@ -197,65 +99,35 @@ const Login = () => {
     if (!loginForm.password) {
       errors.password = 'Password is required';
     }
-    
+
     if (errors.email || errors.password) {
       setLoginErrors(errors);
       return;
     }
-    
-    setLoginMessage({ text: '', type: '' });
+
     setLoginLoading(true);
 
     try {
-      const res = await api.post(`${API_BASE}/login`, loginForm);
-      
-      console.log('Login response:', res.data);
+      const res = await authApi.login(loginForm);
 
-      // Handle unwrapped response format from axios interceptor
-      // After interceptor: { user, token, message } (data was unwrapped)
+      console.log('Login response:', res);
+
       let user = null;
       let token = null;
-      let message = '';
-      let success = false;
 
-      // Format after interceptor: { user, token } (unwrapped from { success: true, data: { user, token } })
-      if (res.data.user && res.data.token) {
+      // Format: { data: { user, token }, status: 200 }
+      if (res?.data?.user && res?.data?.token) {
         user = res.data.user;
         token = res.data.token;
-        message = res.data.message || '';
-        success = true;
       }
-      // Format with status: { status: 200, user, token, message }
-      else if (res.data.status === 200 && res.data.user) {
+      // Format: { status: 200, data: { user, token } }
+      else if (res?.status === 200 && res?.data?.user && res?.data?.token) {
         user = res.data.user;
         token = res.data.token;
-        message = res.data.message;
-        success = !!token;
-      }
-      // Format without interceptor unwrapping: { success: true, data: { user, token } }
-      else if (res.data.success === true && res.data.data) {
-        user = res.data.data.user;
-        token = res.data.data.token;
-        message = res.data.message;
-        success = true;
-      }
-      // Format without interceptor unwrapping: { status: 200, data: { user, token } }
-      else if (res.data.status === 200 && res.data.data) {
-        user = res.data.data.user;
-        token = res.data.data.token;
-        message = res.data.message;
-        success = true;
-      }
-      // Fallback: Check for direct token in various locations
-      else if (res.data.token || res.data.access_token) {
-        token = res.data.token || res.data.access_token;
-        user = res.data.user || res.data.data?.user;
-        message = res.data.message || '';
-        success = !!token;
       }
 
-      if (!success || !token) {
-        setLoginMessage({ text: message || res.data.message || 'Login failed. Please check your credentials.', type: 'error' });
+      if (!user || !token) {
+        setLoginMessage({ text: 'Login failed. Please check your credentials.', type: 'error' });
         setLoginLoading(false);
         return;
       }
@@ -268,28 +140,30 @@ const Login = () => {
         return;
       }
 
+      // Store user with is_demo flag for demo detection
+      const userWithDemo = user.is_demo === undefined ? { ...user, is_demo: true } : user;
+
       CookieUtils.set('auth_token', token, 7);
-        CookieUtils.set('auth_user', JSON.stringify(user), 7);
-        localStorage.setItem('token', token);
-        localStorage.setItem('user', JSON.stringify(user));
-        
-        api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-        
-        await login(user, token);
+      CookieUtils.set('auth_user', JSON.stringify(userWithDemo), 7);
+      localStorage.setItem('token', token);
+      localStorage.setItem('user', JSON.stringify(userWithDemo));
 
-        ElMessage.success('Login successful! Redirecting...');
-        setLoginLoading(false);
+      api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
 
-        setTimeout(() => {
-          window.location.href = '/';
-        }, 1000);
+      login(userWithDemo, token);
+
+      ElMessage.success('Login successful! Redirecting...');
+      setLoginLoading(false);
+
+      // Small delay to ensure state is propagated before navigation
+      setTimeout(() => navigate('/', { replace: true }), 100);
     } catch (err) {
       console.error('Login error:', err);
-      console.error('Error response:', err.response);
 
-      if (!err.response) {
-        setLoginMessage({ text: 'Cannot reach backend. Check CORS, HTTPS, or network.', type: 'error' });
-      } else {
+      // Handle demo API error format
+      if (!err.response && err.message) {
+        setLoginMessage({ text: err.message || 'Login failed. Please check your credentials.', type: 'error' });
+      } else if (err.response) {
         // Handle validation errors
         if (err.response.status === 422) {
           const validationErrors = err.response.data.errors;
@@ -306,6 +180,8 @@ const Login = () => {
         } else {
           setLoginMessage({ text: err.response?.data?.message || err.response?.data?.error || 'Invalid email or password.', type: 'error' });
         }
+      } else {
+        setLoginMessage({ text: 'Cannot reach backend. Check CORS, HTTPS, or network.', type: 'error' });
       }
 
       setLoginLoading(false);
@@ -367,19 +243,19 @@ const Login = () => {
 
     setRegisterLoading(true);
     try {
-      const response = await register({
+      const response = await authApi.register({
         name: registerForm.name,
         email: registerForm.email,
         password: registerForm.password,
         password_confirmation: registerForm.password_confirmation
       });
 
-      if (response.success) {
+      if (response?.status === 200 && response?.data?.user) {
         ElMessage.success('Registration successful! Please wait for admin approval.');
         setRegistrationSuccess(true);
         setAuthMode('approved');
       } else {
-        ElMessage.error(response.message || 'Registration failed');
+        ElMessage.error(response?.data?.message || 'Registration failed');
       }
     } catch (error) {
       console.error('Registration error:', error);
@@ -417,7 +293,7 @@ const Login = () => {
         </div>
       )}
 
-      {loginLoading ? (
+{loginLoading ? (
         <div className="loading-skeleton">
           <div className="skeleton-input"></div>
           <div className="skeleton-input"></div>
@@ -464,7 +340,7 @@ const Login = () => {
             {loginErrors.password && <span className="field-error">{loginErrors.password}</span>}
           </div>
 
-<div className="forgot-password">
+          <div className="forgot-password">
             <a href="/forgot-password">Forgot password?</a>
           </div>
 
@@ -481,46 +357,6 @@ const Login = () => {
       <div className="auth-footer">
         <p>Don't have an account? <button type="button" className="link-btn" onClick={switchToRegister}>Register</button></p>
       </div>
-
-      {/* Google Login Button - Temporarily disabled */}
-      {/* 
-      <div className="divider">
-        <span>or</span>
-      </div>
-
-      {googleLoading ? (
-        <div className="google-loading-message">
-          <CircularProgress size={24} sx={{ mr: 1 }} />
-          <span>Redirecting to dashboard...</span>
-        </div>
-      ) : (
-        import.meta.env.VITE_GOOGLE_CLIENT_ID ? (
-          <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID}>
-            <GoogleLogin
-              onSuccess={handleGoogleSuccess}
-              onError={handleGoogleError}
-              useOneTap={false}
-              theme="outline"
-              size="large"
-              text="signin_with"
-              shape="rectangular"
-              logo_alignment="left"
-            />
-          </GoogleOAuthProvider>
-        ) : (
-          <button
-            type="button"
-            className="google-btn"
-            disabled
-          >
-            <FcGoogle size={20} />
-            Google OAuth not configured
-          </button>
-        )
-      )}
-      */}
-
-
     </>
   );
 

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { FiUser, FiLock, FiMail, FiArrowRight, FiEye, FiEyeOff, FiCheck, FiX } from 'react-icons/fi';
-import { register } from '../../api/authApi';
+import { FiUser, FiLock, FiMail, FiArrowRight, FiEye, FiEyeOff, FiCheck, FiX, FiClock } from 'react-icons/fi';
+import { authApi } from '../../api';
 import { TextField, Button, InputAdornment, IconButton, Box, Typography } from '@mui/material';
 import { ElMessage } from '../../utils/message';
 
@@ -21,6 +21,7 @@ const SignupPage = () => {
     password: '',
     password_confirmation: ''
   });
+  const [registrationSuccess, setRegistrationSuccess] = useState(false);
 
   const validateEmail = (email) => {
     const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -90,13 +91,13 @@ const SignupPage = () => {
     return isValid;
   };
 
-  // Simple registration - no OTP/email verification required
-  const handleRegister = async () => {
+// Simple registration - no OTP/email verification required
+   const handleRegister = async () => {
     if (!validateForm()) return;
 
     setLoading(true);
     try {
-      const response = await register({
+      const response = await authApi.register({
         name: formData.name,
         email: formData.email,
         password: formData.password,
@@ -104,10 +105,10 @@ const SignupPage = () => {
       });
 
       if (response.success) {
-        ElMessage.success(response.message || 'Registration successful! You can now sign in with your credentials.');
-        // Clear form and redirect to login
+        ElMessage.success(response.data?.message || response.message || 'Registration successful! Your account is pending admin approval.');
+        // Clear form and show pending status
         setFormData({ name: '', email: '', password: '', password_confirmation: '' });
-        window.location.href = '/login';
+        setRegistrationSuccess(true);
       } else {
         ElMessage.error(response.message || 'Registration failed');
       }
@@ -121,6 +122,24 @@ const SignupPage = () => {
 
   return (
     <div className="signup-container">
+      {registrationSuccess ? (
+        <div className="signup-card">
+          <div className="success-header">
+            <div className="success-icon">
+              <FiCheck />
+            </div>
+            <h1>Registration Successful!</h1>
+            <p>Your account has been created and is waiting for admin approval.</p>
+          </div>
+          <div className="pending-message">
+            <FiClock style={{ marginRight: '8px', color: '#f59e0b' }} />
+            <span>Please wait for an admin to approve your account before signing in.</span>
+          </div>
+          <div className="signup-footer">
+            <a href="/login" className="login-link">Back to Login</a>
+          </div>
+        </div>
+      ) : (
       <div className="signup-card">
         <div className="signup-header">
           <h1>Create Account</h1>
@@ -270,6 +289,47 @@ const SignupPage = () => {
         .signup-header p {
           color: #6b7280;
           font-size: 14px;
+        }
+        .success-header {
+          text-align: center;
+          margin-bottom: 32px;
+        }
+        .success-icon {
+          width: 64px;
+          height: 64px;
+          background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          margin: 0 auto 16px;
+          color: white;
+          font-size: 32px;
+        }
+        .success-header h1 {
+          font-size: 28px;
+          font-weight: 700;
+          color: #1a1a2e;
+          margin-bottom: 8px;
+        }
+        .pending-message {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 20px;
+          background: #fef3c7;
+          border-radius: 12px;
+          color: #92400e;
+          font-size: 14px;
+          margin-bottom: 24px;
+        }
+        .login-link {
+          color: #667eea;
+          font-weight: 600;
+          text-decoration: none;
+        }
+        .login-link:hover {
+          text-decoration: underline;
         }
         .form-item {
           margin-bottom: 20px;

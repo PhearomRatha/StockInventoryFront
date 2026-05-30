@@ -16,16 +16,19 @@ import { FiHome,
   FiSettings,
 } from "react-icons/fi";
 import { Link, useLocation } from "react-router-dom";
-import { getStockReport } from "../../api/reportsApi";
+import { reportApi } from "../../api";
 import { useAuth, hasLegacyPermission, ROLES } from "../../context/AuthContext";
 
 function Sidebar({ onClose }) {
-  const { logout, user } = useAuth();
+  const { logout, user, isAuthenticated, loading } = useAuth();
   const location = useLocation();
   const role = user?.role; // "Admin", "Manager", "Staff"
   const [lowStockAlert, setLowStockAlert] = useState(0);
 
   useEffect(() => {
+    // Wait for auth to finish loading and ensure we have a user
+    if (loading || !isAuthenticated || !user) return;
+    
     const fetchStockAlert = async () => {
       const cacheKey = 'stock_alert_cache';
       const cacheTimeKey = 'stock_alert_time';
@@ -39,70 +42,72 @@ function Sidebar({ onClose }) {
       }
 
       try {
-        const data = await getStockReport();
-        const totalLow = (data.total_low_stock || 0) + (data.total_out_of_stock || 0);
-        setLowStockAlert(totalLow);
-        localStorage.setItem(cacheKey, totalLow.toString());
-        localStorage.setItem(cacheTimeKey, now.toString());
+        const response = await reportApi.getStock();
+        if (response.success) {
+          const totalLow = (response.data?.low_stock || 0) + (response.data?.out_of_stock || 0);
+          setLowStockAlert(totalLow);
+          localStorage.setItem(cacheKey, totalLow.toString());
+          localStorage.setItem(cacheTimeKey, now.toString());
+        }
       } catch (err) {
         console.error("Error fetching stock alert:", err);
         setLowStockAlert(0);
       }
     };
     fetchStockAlert();
-  }, []);
+  }, [loading, isAuthenticated, user]);
 
   const isActive = (path) => {
     if (path === "/") return location.pathname === "/";
     return location.pathname.startsWith(path);
   };
 
-  // Menu items configuration based on requirements
-  const menuItems = [
-    // Common items for all users
+// Menu items configuration based on requirements
+const menuItems = [
+     // Common items for all users
+     {
+       path: "/",
+       label: "Dashboard",
+       icon: FiHome,
+       roles: [ROLES.ADMIN, ROLES.MANAGER, ROLES.STAFF, ROLES.CASHER],
+       priority: 1
+     },
+     {
+       path: "/sales",
+       label: "Sales",
+       icon: FiDollarSign,
+       roles: [ROLES.ADMIN, ROLES.MANAGER, ROLES.STAFF, ROLES.CASHER],
+       priority: 2
+     },
+     {
+       path: "/products",
+       label: "Products",
+       icon: FiBox,
+       roles: [ROLES.ADMIN, ROLES.MANAGER, ROLES.STAFF],
+       permission: 'VIEW_ALL_PRODUCTS',
+       priority: 3
+     },
     {
-      path: "/",
-      label: "Dashboard",
-      icon: FiHome,
-      roles: [ROLES.ADMIN, ROLES.MANAGER, ROLES.STAFF],
-      priority: 1
-    },
-    {
-      path: "/sales",
-      label: "Sales",
-      icon: FiDollarSign,
-      roles: [ROLES.ADMIN, ROLES.MANAGER, ROLES.STAFF],
-      priority: 2
-    },
-    {
-      path: "/products",
-      label: "Products",
-      icon: FiBox,
-      roles: [ROLES.ADMIN, ROLES.MANAGER, ROLES.STAFF],
-      permission: 'VIEW_ALL_PRODUCTS',
-      priority: 3
-    },
-    {
-      path: "/stock-in",
-      label: "Stock In",
-      icon: FiDownload,
-      roles: [ROLES.ADMIN, ROLES.MANAGER, ROLES.STAFF],
-      priority: 4
-    },
-    {
-      path: "/stock-out",
-      label: "Stock Out",
-      icon: FiUpload,
-      roles: [ROLES.ADMIN, ROLES.MANAGER, ROLES.STAFF],
-      priority: 5
-    },
-    {
-      path: "/payments",
-      label: "Payments",
-      icon: FiDollarSign,
-      roles: [ROLES.ADMIN, ROLES.MANAGER, ROLES.STAFF],
-      priority: 6
-    },
+       path: "/stock-in",
+       label: "Stock In",
+       icon: FiDownload,
+       roles: [ROLES.ADMIN, ROLES.MANAGER, ROLES.STAFF],
+       priority: 4
+     },
+     {
+       path: "/stock-out",
+       label: "Stock Out",
+       icon: FiUpload,
+       roles: [ROLES.ADMIN, ROLES.MANAGER, ROLES.STAFF],
+       priority: 5
+     },
+     {
+       path: "/payments",
+       label: "Payments",
+       icon: FiDollarSign,
+       roles: [ROLES.ADMIN, ROLES.MANAGER, ROLES.STAFF],
+       priority: 6
+     },
     
     // Admin and Manager only
     {
@@ -205,6 +210,8 @@ function Sidebar({ onClose }) {
               ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30'
               : role === ROLES.MANAGER
               ? 'bg-blue-500/20 text-blue-300 border border-blue-500/30'
+              : role === ROLES.CASHER
+              ? 'bg-orange-500/20 text-orange-300 border border-orange-500/30'
               : 'bg-green-500/20 text-green-300 border border-green-500/30'
           }`}>
             {typeof role === 'object' ? (role?.name || 'User') : (role || 'User')}

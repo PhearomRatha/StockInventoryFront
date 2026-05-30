@@ -1,6 +1,6 @@
 import React, { lazy, Suspense } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
-import { useAuth } from "../context/AuthContext";
+import { useAuth, ROLES } from "../context/AuthContext";
 import ProtectedRoute, { GuestRoute, AdminRoute, ManagerRoute, StaffRoute } from "../components/Layout/ProtectedRoute";
 
 // Lazy load pages for code splitting
@@ -75,7 +75,7 @@ function AppRoutes() {
         <Route
           path="/sales"
           element={
-            <ProtectedRoute>
+            <ProtectedRoute allowedRoles={[ROLES.ADMIN, ROLES.MANAGER, ROLES.STAFF, ROLES.CASHER]}>
               <SalesPage />
             </ProtectedRoute>
           }

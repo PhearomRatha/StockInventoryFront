@@ -12,7 +12,18 @@ const api = axios.create({
 
 const TOKEN_NAME = 'auth_token'
 
+const isDemoToken = () => {
+  try {
+    const token = localStorage.getItem('token');
+    return token && (token.startsWith('demo-token') || token.startsWith('Bearer demo-token'));
+  } catch {
+    return false;
+  }
+};
+
 const clearAuthData = () => {
+  // Don't clear auth for demo users
+  if (isDemoToken()) return;
   localStorage.removeItem('token')
   localStorage.removeItem('user')
   document.cookie = `${TOKEN_NAME}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/`
@@ -42,6 +53,7 @@ api.interceptors.response.use(
     if (response.data && typeof response.data === 'object' && 'success' in response.data && response.data.success) {
       return { ...response, data: response.data.data };
     }
+    // Keep {data, status} format as-is for demo API compatibility
     return response;
   },
   (error) => {

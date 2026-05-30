@@ -7,7 +7,7 @@ import {
 } from "react-icons/fi";
 import { useAuth, ROLES } from "../../context/AuthContext";
 import { ElMessage } from "../../utils/message";
-import { getCurrentUser, updateProfile, changePassword, setPassword } from "../../api/authApi";
+import { authApi } from "../../api";
 
 function ProfilePage() {
   const { user, updateUser, isAuthenticated } = useAuth();
@@ -92,7 +92,7 @@ function ProfilePage() {
     setMessage({ text: "", type: "" });
     
     try {
-      const res = await updateProfile(editForm);
+      const res = await authApi.updateProfile(editForm);
       
       if (res.success || res.status === 200) {
         // Update auth context with new user data
@@ -155,13 +155,13 @@ function ProfilePage() {
       // If user has no google_id (regular user), set a new password
       // If user has google_id, change existing password
       if (!profile.google_id) {
-        res = await setPassword({
+        res = await authApi.setPassword({
           password: passwordForm.newPassword,
           password_confirmation: passwordForm.confirmPassword
         });
       } else {
         // User has existing password, change it
-        res = await changePassword({
+        res = await authApi.changePassword({
           current_password: passwordForm.currentPassword,
           password: passwordForm.newPassword,
           password_confirmation: passwordForm.confirmPassword

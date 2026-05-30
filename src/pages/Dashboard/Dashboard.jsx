@@ -79,11 +79,11 @@ export default function Dashboard() {
 
     try {
       const result = await dashboardApi.getOverview();
-      // getResponse wraps response with {success, data, message}
-      if (!result.success) {
+      // getResponse wraps response with {success, data, message} OR demo API returns {data: ..., status: 200}
+      const payload = result?.success === true ? result.data : (result?.data ?? result);
+      if (!payload && result?.success === false) {
         throw new Error(result.message || 'Failed to fetch dashboard');
       }
-      const payload = result.data || {};
 
       if (payload && typeof payload === 'object') {
         console.log('Dashboard FOUND. Keys:', Object.keys(payload));
@@ -104,17 +104,18 @@ export default function Dashboard() {
           percent_customers: overview.customers_percentage_change || 0,
           percent_products: overview.products_percentage_change || 0,
           percent_suppliers: overview.suppliers_percentage_change || 0,
-          percent_sales: overview.sales_percentage_change || 0,
-          percent_stockin: overview.stock_ins_percentage_change || 0,
-          percent_stockout: overview.stock_outs_percentage_change || 0,
+          percent_sales: overview.sales_change || 0,
+          percent_stockin: overview.stock_in_change || 0,
+          percent_stockout: overview.stock_out_change || 0,
         };
 
-        const chartDataParsed = {
-          sales_overview: payload.sales_overview || [],
-          stock_movement: payload.stock_movement || [],
-          customer_growth: payload.customer_growth || [],
-          category_distribution: payload.category_distribution || [],
-        };
+const chartDataParsed = {
+           sales_overview: payload.sales_overview || [],
+           stock_movement: payload.stock_movement || [],
+           stock_movement_change: payload.stock_movement_change || {},
+           customer_growth: payload.customer_growth || [],
+           category_distribution: payload.category_distribution || [],
+         };
 
         const dataToCache = {
           totals: totalsData,
@@ -141,7 +142,12 @@ export default function Dashboard() {
     }
   }, []);
 
-  useEffect(() => { fetchDashboardData(); }, [fetchDashboardData]);
+  useEffect(() => {
+    // Clear old cache to ensure fresh data with updated dates
+    localStorage.removeItem(CACHE_KEY);
+    localStorage.removeItem(CACHE_TIME_KEY);
+    fetchDashboardData();
+  }, [fetchDashboardData]);
 
   const cardData = [
     { title: "Total Customers", total: totals.total_customers, percent: totals.percent_customers, icon: <ShoppingCartIcon className="w-6 h-6 text-white" />, bg: "from-blue-500 to-blue-600" },
@@ -247,9 +253,18 @@ export default function Dashboard() {
 
         {/* 3. Stock In vs Stock Out - Bar Chart */}
         <div className="bg-white rounded-2xl p-6 shadow-lg border">
-          <h2 className="text-xl font-semibold text-gray-800 mb-4 flex items-center gap-2">
-            <ChartBarIcon className="w-5 h-5" /> Stock In vs Stock Out
-          </h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-semibold text-gray-800 flex items-center gap-2">
+              <ChartBarIcon className="w-5 h-5" /> Stock In vs Stock Out
+            </h2>
+            {chartData.stock_movement_change && (
+              <div className="text-sm text-gray-500">
+                <span className="text-green-600">+{chartData.stock_movement_change.stock_in_percent}% In</span>
+                <span className="mx-2">·</span>
+                <span className="text-red-600">+{chartData.stock_movement_change.stock_out_percent}% Out</span>
+              </div>
+            )}
+          </div>
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={chartData.stock_movement}>
               <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
@@ -271,20 +286,20 @@ export default function Dashboard() {
           {chartData.category_distribution.length > 0 ? (
             <ResponsiveContainer width="100%" height={300}>
               <PieChart>
-                <Pie
-                  data={chartData.category_distribution}
-                  dataKey="count"
-                  nameKey="category"
-                  cx="50%"
-                  cy="50%"
-                  outerRadius={100}
-                  label={({ category, percent }) => `${category} (${(percent * 100).toFixed(0)}%)`}
-                  labelLine={{ stroke: '#9ca3af' }}
-                >
-                  {chartData.category_distribution.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />
-                  ))}
-                </Pie>
+<Pie
+                    data={chartData.category_distribution}
+                    dataKey="percentage"
+                    nameKey="category"
+                    cx="50%"
+                    cy="50%"
+                    outerRadius={100}
+                    label={({ category, percentage }) => `${category} (${parseFloat(percentage).toFixed(1)}%)`}
+                    labelLine={{ stroke: '#9ca3af' }}
+                  >
+                    {chartData.category_distribution.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color || PIE_COLORS[index % PIE_COLORS.length]} />
+                    ))}
+                  </Pie>
                 <Tooltip contentStyle={{ borderRadius: 8, border: '1px solid #e5e7eb' }} />
                 <Legend />
               </PieChart>

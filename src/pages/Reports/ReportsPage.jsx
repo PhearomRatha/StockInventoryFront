@@ -1,15 +1,11 @@
 import React, { useState, useEffect, Fragment } from "react";
-import axios from "axios";
 import {
   ChartBarIcon,
   CurrencyDollarIcon,
   CubeIcon,
-  DocumentTextIcon,
 } from "@heroicons/react/24/outline";
 import { Select } from "../../components/UI";
-
-// ✅ Base API
-const API_BASE = `${import.meta.env.VITE_API_URL}/api`;
+import { reportApi } from "../../api";
 
 function ReportsPage() {
   const [activeTab, setActiveTab] = useState('sales');
@@ -19,29 +15,24 @@ function ReportsPage() {
   const [loading, setLoading] = useState(true);
   const [expandedRows, setExpandedRows] = useState(new Set());
 
-  // Filters
   const [salesFilters, setSalesFilters] = useState({ period: 'monthly', month: new Date().getMonth() + 1, year: new Date().getFullYear() });
   const [financialFilters, setFinancialFilters] = useState({ period: 'monthly', month: new Date().getMonth() + 1, year: new Date().getFullYear() });
 
-  const fetchReports = () => {
+  const fetchReports = async () => {
     setLoading(true);
 
-    // Sales Report
-    axios.get(`${API_BASE}/reports/sales`, {
-      headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-      params: salesFilters
-    }).then(res => setSalesReport(res.data)).catch(console.error);
+    try {
+      const salesRes = await reportApi.getSales(salesFilters);
+      if (salesRes.success) setSalesReport(salesRes.data);
 
-    // Financial Report
-    axios.get(`${API_BASE}/reports/financial`, {
-      headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-      params: financialFilters
-    }).then(res => setFinancialReport(res.data)).catch(console.error);
+      const financialRes = await reportApi.getFinancial(financialFilters);
+      if (financialRes.success) setFinancialReport(financialRes.data);
 
-    // Stock Report
-    axios.get(`${API_BASE}/reports/stock`, {
-      headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
-    }).then(res => setStockReport(res.data)).catch(console.error);
+      const stockRes = await reportApi.getStock();
+      if (stockRes.success) setStockReport(stockRes.data);
+    } catch (error) {
+      console.error(error);
+    }
 
     setLoading(false);
   };
@@ -89,7 +80,6 @@ function ReportsPage() {
 
   return (
     <div className="p-4 md:p-6 lg:p-8 bg-gradient-to-br from-gray-50 to-slate-100 min-h-screen">
-      {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-8">
         <div className="flex items-center gap-4">
           <div className="w-14 h-14 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg">
@@ -104,7 +94,6 @@ function ReportsPage() {
         </div>
       </div>
 
-      {/* Tabs */}
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 mb-6">
         <div className="flex border-b border-gray-200">
           {tabs.map((tab) => (
@@ -170,7 +159,7 @@ function ReportsPage() {
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
                 <div className="bg-blue-50 p-4 rounded-xl">
                   <p className="text-sm text-blue-600 font-medium">Total Sales</p>
-                  <p className="text-2xl font-bold text-blue-900">${salesReport.total_sales || 0}</p>
+                  <p className="text-2xl font-bold text-blue-900">${Number(salesReport.total_sales || 0).toFixed(2)}</p>
                 </div>
                 <div className="bg-green-50 p-4 rounded-xl">
                   <p className="text-sm text-green-600 font-medium">Total Invoices</p>
@@ -186,7 +175,6 @@ function ReportsPage() {
                 </div>
               </div>
 
-              {/* Top Products */}
               {salesReport.product_sales && salesReport.product_sales.length > 0 && (
                 <div className="mb-6">
                   <h3 className="text-lg font-semibold text-gray-900 mb-4">Top Selling Products</h3>
@@ -204,14 +192,13 @@ function ReportsPage() {
                           <tr key={index} className="hover:bg-gray-50">
                             <td className="py-3 px-4 text-sm text-gray-900">{product.product_name}</td>
                             <td className="py-3 px-4 text-sm text-gray-600">{product.quantity_sold}</td>
-                            <td className="py-3 px-4 text-sm text-gray-600">${product.total_revenue}</td>
+                            <td className="py-3 px-4 text-sm text-gray-600">${Number(product.total_revenue || 0).toFixed(2)}</td>
                           </tr>
                         ))}
                       </tbody>
                     </table>
                   </div>
-   
-                  {/* Income by Method */}
+
                   {financialReport.income_by_method && Object.keys(financialReport.income_by_method).length > 0 && (
                     <div className="mb-6">
                       <h3 className="text-lg font-semibold text-gray-900 mb-4">Income by Payment Method</h3>
@@ -219,14 +206,13 @@ function ReportsPage() {
                         {Object.entries(financialReport.income_by_method).map(([method, amount]) => (
                           <div key={method} className="bg-green-50 p-4 rounded-xl">
                             <p className="text-sm text-green-600 font-medium capitalize">{method}</p>
-                            <p className="text-xl font-bold text-green-900">${amount}</p>
+                            <p className="text-xl font-bold text-green-900">${Number(amount || 0).toFixed(2)}</p>
                           </div>
                         ))}
                       </div>
                     </div>
                   )}
-   
-                  {/* Expense by Method */}
+
                   {financialReport.expense_by_method && Object.keys(financialReport.expense_by_method).length > 0 && (
                     <div>
                       <h3 className="text-lg font-semibold text-gray-900 mb-4">Expense by Payment Method</h3>
@@ -234,7 +220,7 @@ function ReportsPage() {
                         {Object.entries(financialReport.expense_by_method).map(([method, amount]) => (
                           <div key={method} className="bg-red-50 p-4 rounded-xl">
                             <p className="text-sm text-red-600 font-medium capitalize">{method}</p>
-                            <p className="text-xl font-bold text-red-900">${amount}</p>
+                            <p className="text-xl font-bold text-red-900">${Number(amount || 0).toFixed(2)}</p>
                           </div>
                         ))}
                       </div>
@@ -243,7 +229,6 @@ function ReportsPage() {
                 </div>
               )}
 
-              {/* Top Customers */}
               {salesReport.top_customers && salesReport.top_customers.length > 0 && (
                 <div className="mb-6">
                   <h3 className="text-lg font-semibold text-gray-900 mb-4">Top Customers</h3>
@@ -260,7 +245,7 @@ function ReportsPage() {
                         {salesReport.top_customers.slice(0, 5).map((customer, index) => (
                           <tr key={index} className="hover:bg-gray-50">
                             <td className="py-3 px-4 text-sm text-gray-900">{typeof customer.customer === 'object' ? customer.customer?.name || customer.customer?.id || 'Unknown' : customer.customer}</td>
-                            <td className="py-3 px-4 text-sm text-gray-600">${customer.total_sales}</td>
+                            <td className="py-3 px-4 text-sm text-gray-600">${Number(customer.total_sales || 0).toFixed(2)}</td>
                             <td className="py-3 px-4 text-sm text-gray-600">{customer.invoice_count}</td>
                           </tr>
                         ))}
@@ -270,7 +255,6 @@ function ReportsPage() {
                 </div>
               )}
 
-              {/* Payment Methods */}
               {salesReport.sales_by_payment_method && salesReport.sales_by_payment_method.length > 0 && (
                 <div>
                   <h3 className="text-lg font-semibold text-gray-900 mb-4">Sales by Payment Method</h3>
@@ -279,7 +263,7 @@ function ReportsPage() {
                       <div key={index} className="bg-gray-50 p-4 rounded-xl">
                         <p className="text-sm text-gray-600 font-medium capitalize">{method.payment_method}</p>
                         <p className="text-xl font-bold text-gray-900">{method.count} transactions</p>
-                        <p className="text-sm text-gray-500">${method.total}</p>
+                        <p className="text-sm text-gray-500">${Number(method.total || 0).toFixed(2)}</p>
                       </div>
                     ))}
                   </div>
@@ -302,60 +286,58 @@ function ReportsPage() {
                     ]}
                   />
                 </div>
-                {/* Similar period filters */}
               </div>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                 <div className="bg-green-50 p-4 rounded-xl">
                   <p className="text-sm text-green-600 font-medium">Total Income</p>
-                  <p className="text-2xl font-bold text-green-900">${financialReport.total_income || 0}</p>
+                  <p className="text-2xl font-bold text-green-900">${Number(financialReport.total_income || 0).toFixed(2)}</p>
                 </div>
                 <div className="bg-red-50 p-4 rounded-xl">
                   <p className="text-sm text-red-600 font-medium">Total Expense</p>
-                  <p className="text-2xl font-bold text-red-900">${financialReport.total_expense || 0}</p>
+                  <p className="text-2xl font-bold text-red-900">${Number(financialReport.total_expense || 0).toFixed(2)}</p>
                 </div>
                 <div className="bg-blue-50 p-4 rounded-xl">
                   <p className="text-sm text-blue-600 font-medium">Net Profit</p>
-                  <p className="text-2xl font-bold text-blue-900">${financialReport.net_profit || 0}</p>
+                  <p className="text-2xl font-bold text-blue-900">${Number(financialReport.net_profit || 0).toFixed(2)}</p>
                 </div>
-
-                {/* Low Stock Products */}
-                {stockReport.low_stock_products && stockReport.low_stock_products.length > 0 && (
-                  <div className="mt-6">
-                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Low Stock Alert</h3>
-                    <div className="overflow-x-auto">
-                      <table className="w-full min-w-[600px]">
-                        <thead className="bg-gradient-to-r from-gray-50 to-slate-50 border-b border-gray-100">
-                          <tr>
-                            <th className="py-4 px-6 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Product</th>
-                            <th className="py-4 px-6 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Current Stock</th>
-                            <th className="py-4 px-6 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Stock Value</th>
-                            <th className="py-4 px-6 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Status</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-gray-100">
-                          {stockReport.low_stock_products.map((item, index) => (
-                            <tr key={index} className="hover:bg-gray-50/80 transition-colors duration-200">
-                              <td className="py-4 px-6 text-sm text-gray-900 font-medium">{item.product_name}</td>
-                              <td className="py-4 px-6 text-sm text-gray-600">{item.current_stock}</td>
-                              <td className="py-4 px-6 text-sm text-gray-600">${item.stock_value}</td>
-                              <td className="py-4 px-6">
-                                <span className={`inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium ${
-                                  item.message?.trim() === 'Out-of-Stock' ? 'bg-red-50 text-red-700' :
-                                  item.message?.trim() === 'Very Low Stock' ? 'bg-orange-50 text-orange-700' :
-                                  item.message?.trim() === 'Low Stock' ? 'bg-yellow-50 text-yellow-700' :
-                                  'bg-green-50 text-green-700'
-                                }`}>
-                                  {item.message}
-                                </span>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                )}
               </div>
+
+              {stockReport.low_stock_products && stockReport.low_stock_products.length > 0 && (
+                <div className="mt-6">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Low Stock Alert</h3>
+                  <div className="overflow-x-auto">
+                    <table className="w-full min-w-[600px]">
+                      <thead className="bg-gradient-to-r from-gray-50 to-slate-50 border-b border-gray-100">
+                        <tr>
+                          <th className="py-4 px-6 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Product</th>
+                          <th className="py-4 px-6 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Current Stock</th>
+                          <th className="py-4 px-6 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Stock Value</th>
+                          <th className="py-4 px-6 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Status</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100">
+                        {[...stockReport.low_stock_products].sort((a, b) => a.current_stock - b.current_stock).map((item, index) => (
+                          <tr key={index} className="hover:bg-gray-50/80 transition-colors duration-200">
+                            <td className="py-4 px-6 text-sm text-gray-900 font-medium">{item.product_name}</td>
+                            <td className="py-4 px-6 text-sm text-gray-600">{item.current_stock}</td>
+                            <td className="py-4 px-6 text-sm text-gray-600">${Number(item.stock_value || 0).toFixed(2)}</td>
+                            <td className="py-4 px-6">
+                              <span className={`inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium ${
+                                item.message?.trim() === 'Out-of-Stock' ? 'bg-red-50 text-red-700' :
+                                item.message?.trim() === 'Very Low Stock' ? 'bg-orange-50 text-orange-700' :
+                                item.message?.trim() === 'Low Stock' ? 'bg-yellow-50 text-yellow-700' :
+                                'bg-green-50 text-green-700'
+                              }`}>
+                                {item.message}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -364,7 +346,7 @@ function ReportsPage() {
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
                 <div className="bg-blue-50 p-4 rounded-xl">
                   <p className="text-sm text-blue-600 font-medium">Total Stock Value</p>
-                  <p className="text-2xl font-bold text-blue-900">${stockReport.total_stock_value || 0}</p>
+                  <p className="text-2xl font-bold text-blue-900">${Number(stockReport.total_stock_value || 0).toFixed(2)}</p>
                 </div>
                 <div className="bg-green-50 p-4 rounded-xl">
                   <p className="text-sm text-green-600 font-medium">In Stock</p>
@@ -396,7 +378,7 @@ function ReportsPage() {
                         <tr className="hover:bg-gray-50/80 transition-colors duration-200">
                           <td className="py-4 px-6 text-sm text-gray-900 font-medium">{item.product_name}</td>
                           <td className="py-4 px-6 text-sm text-gray-600">{item.current_stock}</td>
-                          <td className="py-4 px-6 text-sm text-gray-600">${item.stock_value}</td>
+                          <td className="py-4 px-6 text-sm text-gray-600">${Number(item.stock_value || 0).toFixed(2)}</td>
                           <td className="py-4 px-6">
                             <span className={`inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium ${
                               item.message?.trim() === 'Out-of-Stock' ? 'bg-red-50 text-red-700' :

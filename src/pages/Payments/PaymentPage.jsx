@@ -37,40 +37,34 @@ function PaymentPage() {
   const paymentsPerPage = 8;
 
 // Fetch payments, sales, stockIns, dashboard
-  const fetchPayments = async () => {
-    setLoading(true);
-    try {
-      const [paymentsRes, salesRes, stockInsRes, dashboardRes] = await Promise.all([
-        paymentApi.getAll(),
-        salesApi.getAll(),
-        stockInApi.getAll(),
-        paymentApi.getDashboard()
-      ]);
-      
-      if (paymentsRes.data?.status === 200 || paymentsRes.data?.data) {
-        const paymentsData = paymentsRes.data.data?.data || paymentsRes.data.data || [];
-        setPayments(Array.isArray(paymentsData) ? paymentsData : []);
-      }
-      
-      if (salesRes.data) {
-        const salesData = salesRes.data.data?.data || salesRes.data.data || [];
-        setSales(Array.isArray(salesData) ? salesData : []);
-      }
-      
-      if (stockInsRes.data) {
-        const stockInsData = stockInsRes.data.data?.data || stockInsRes.data.data || [];
-        setStockIns(Array.isArray(stockInsData) ? stockInsData : []);
-      }
-      
-      if (dashboardRes.data) {
-        setDashboard(dashboardRes.data.data || dashboardRes.data || {});
-      }
-    } catch (error) {
-      console.error('Error fetching payments:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+const fetchPayments = async () => {
+     setLoading(true);
+     try {
+       const [paymentsRes, salesRes, stockInsRes, dashboardRes] = await Promise.all([
+         paymentApi.getAll(),
+         salesApi.getAll(),
+         stockInApi.getAll(),
+         paymentApi.getDashboard()
+       ]);
+       
+       const paymentsData = paymentsRes.success ? (paymentsRes.data?.data || paymentsRes.data || []) : [];
+       setPayments(Array.isArray(paymentsData) ? paymentsData : []);
+       
+       const salesData = salesRes.success ? (salesRes.data?.data || salesRes.data || []) : [];
+       setSales(Array.isArray(salesData) ? salesData : []);
+       
+       const stockInsData = stockInsRes.success ? (stockInsRes.data?.data || stockInsRes.data || []) : [];
+       setStockIns(Array.isArray(stockInsData) ? stockInsData : []);
+       
+       if (dashboardRes.success) {
+         setDashboard(dashboardRes.data || {});
+       }
+     } catch (error) {
+       console.error('Error fetching payments:', error);
+     } finally {
+       setLoading(false);
+     }
+   };
 
   useEffect(() => {
     fetchPayments();

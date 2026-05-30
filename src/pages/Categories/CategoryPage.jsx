@@ -285,8 +285,8 @@ function CategoryPage() {
                   >
                     <td className="py-4 px-6">
                       <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 bg-indigo-50 rounded-xl flex items-center justify-center">
-                          <TagIcon className="w-6 h-6 text-indigo-600" />
+                        <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{ backgroundColor: c.color || '#6366f1' }}>
+                          <TagIcon className="w-6 h-6 text-white" />
                         </div>
                         <div>
                           <p className="font-medium text-gray-900">{c.name}</p>

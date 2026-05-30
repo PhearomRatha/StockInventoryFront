@@ -105,19 +105,31 @@ function ProductPage() {
       supplierApi.getAll(),
     ]);
 
+    console.log('Products response:', productsRes);
+    console.log('Categories response:', categoriesRes);
+    console.log('Suppliers response:', suppliersRes);
+
+    // Handle demo API format: { success: true, data: { data: [...], total: N } }
+    // Or real API format after axios unwraps: { data: [...], total: N }
     if (productsRes.success) {
-      const productsData = productsRes.data?.data || productsRes.data;
+      const productsData = productsRes.data?.data || productsRes.data || [];
       setProducts(Array.isArray(productsData) ? productsData : []);
+    } else if (productsRes.data) {
+      setProducts(Array.isArray(productsRes.data) ? productsRes.data : []);
     }
 
     if (categoriesRes.success) {
-      const categoriesData = categoriesRes.data?.data || categoriesRes.data;
+      const categoriesData = categoriesRes.data?.data || categoriesRes.data || [];
       setCategories(Array.isArray(categoriesData) ? categoriesData : []);
+    } else if (categoriesRes.data) {
+      setCategories(Array.isArray(categoriesRes.data) ? categoriesRes.data : []);
     }
 
     if (suppliersRes.success) {
-      const suppliersData = suppliersRes.data?.data || suppliersRes.data;
+      const suppliersData = suppliersRes.data?.data || suppliersRes.data || [];
       setSuppliers(Array.isArray(suppliersData) ? suppliersData : []);
+    } else if (suppliersRes.data) {
+      setSuppliers(Array.isArray(suppliersRes.data) ? suppliersRes.data : []);
     }
 
     setLoading(false);
@@ -303,9 +315,8 @@ function ProductPage() {
   // Filtered products
   const filteredProducts = products
     .filter(
-      (p) =>
-        p.name.toLowerCase().includes(search.toLowerCase()) ||
-        p.sku?.toLowerCase().includes(search.toLowerCase())
+      (p) => p && (p?.name?.toLowerCase()?.includes(search?.toLowerCase() || '') ||
+        p?.sku?.toLowerCase()?.includes(search?.toLowerCase() || ''))
     )
     .filter(
       (p) => selectedCategory === "All" || (typeof p.category === 'object' ? p.category?.name : p.category) === selectedCategory

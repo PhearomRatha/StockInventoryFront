@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   MagnifyingGlassIcon,
   XMarkIcon,
@@ -7,6 +7,7 @@ import {
   ChevronRightIcon,
   TagIcon,
 } from "@heroicons/react/24/outline";
+import "./modalSelect.css";
 
 /**
  * ModalSelect – replaces every native <select> with a modal dialog.
@@ -16,12 +17,15 @@ import {
  *  onClose         {fn}       – called when modal closes
  *  title           {string}   – modal header title
  *  options         {Array}    – [{ value, label, icon?, badge?, category? }]
- *  selectedValue   {any}      – currently selected value
- *  onSelect        {fn}       – called with chosen value when user clicks an item
+ *  selectedValue   {any}      – currently selected value (single mode)
+ *  selectedValues  {Array}    – currently selected values (multi mode)
+ *  onSelect        {fn}       – called with chosen value when user clicks an item (single mode)
+ *  onSelectMultiple{fn}      – called with array of values (multi mode)
  *  placeholder     {string}   – search placeholder
  *  pageSize        {number}   – items per page (default 8)
  *  categories      {Array}    – optional list of category strings for top scroll bar
  *  showIcons       {boolean}  – show add/remove icon buttons per row (optional)
+ *  multiSelect     {boolean}  – enable multi-select mode
  *  onAdd           {fn}       – called with item when add icon clicked
  *  onRemove        {fn}       – called with item when remove icon clicked
  *  emptyMessage    {string}   – shown when no options match
@@ -32,11 +36,14 @@ const ModalSelect = ({
   title = "Select an option",
   options = [],
   selectedValue,
+  selectedValues = [],
   onSelect,
+  onSelectMultiple,
   placeholder = "Search...",
   pageSize = 8,
   categories = [],
   showIcons = false,
+  multiSelect = false,
   onAdd,
   onRemove,
   emptyMessage = "No options found",
@@ -44,8 +51,17 @@ const ModalSelect = ({
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [activeCategory, setActiveCategory] = useState("All");
+  // Internal selection state for multi-select (doesn't trigger parent callbacks until Apply)
+  const [internalSelected, setInternalSelected] = useState([]);
   const searchRef = useRef(null);
   const catBarRef = useRef(null);
+
+  // Initialize internal selection on open for multi-select
+  useEffect(() => {
+    if (isOpen && multiSelect) {
+      setInternalSelected([...selectedValues]);
+    }
+  }, [isOpen, multiSelect, selectedValues]);
 
   // Reset on open
   useEffect(() => {
@@ -86,6 +102,26 @@ const ModalSelect = ({
   const handleSelect = (opt) => {
     onSelect(opt.value, opt);
     onClose();
+  };
+
+  const handleApply = () => {
+    if (multiSelect && onSelectMultiple) {
+      onSelectMultiple(internalSelected);
+    }
+    onClose();
+  };
+
+  const handleCancel = () => {
+    setInternalSelected([...selectedValues]);
+    onClose();
+  };
+
+  const toggleSelection = (opt) => {
+    if (!multiSelect) return;
+    const newValues = internalSelected.includes(opt.value)
+      ? internalSelected.filter(v => v !== opt.value)
+      : [...internalSelected, opt.value];
+    setInternalSelected(newValues);
   };
 
   const handleSearch = (val) => {
@@ -207,17 +243,19 @@ const ModalSelect = ({
             </div>
           ) : (
             pageItems.map((opt) => {
-              const isSelected = opt.value == selectedValue;
+              const isSelected = multiSelect
+                ? internalSelected.includes(opt.value)
+                : opt.value == selectedValue;
               return (
                 <div
                   key={opt.value}
                   className={`modal-select-item ${isSelected ? "selected" : ""}`}
-                  onClick={() => handleSelect(opt)}
+                  onClick={() => multiSelect ? toggleSelection(opt) : handleSelect(opt)}
                   role="option"
                   aria-selected={isSelected}
                   tabIndex={0}
                   onKeyDown={(e) =>
-                    (e.key === "Enter" || e.key === " ") && handleSelect(opt)
+                    (e.key === "Enter" || e.key === " ") && (multiSelect ? toggleSelection(opt) : handleSelect(opt))
                   }
                 >
                   {/* Left: optional image / avatar */}
@@ -303,7 +341,7 @@ const ModalSelect = ({
           )}
         </div>
 
-        {/* ── Pagination ── */}
+{/* ── Pagination ── */}
         {totalPages > 1 && (
           <div className="modal-select-pagination">
             <span className="modal-select-page-info">
@@ -345,6 +383,24 @@ const ModalSelect = ({
                 <ChevronRightIcon className="w-4 h-4" />
               </button>
             </div>
+          </div>
+        )}
+
+        {/* ── Multi-select Action Bar ── */}
+        {multiSelect && (
+          <div className="modal-select-actions-bar">
+            <button
+              className="modal-select-cancel-btn"
+              onClick={handleCancel}
+            >
+              Cancel
+            </button>
+            <button
+              className="modal-select-apply-btn"
+              onClick={handleApply}
+            >
+              Apply ({internalSelected.length})
+            </button>
           </div>
         )}
       </div>

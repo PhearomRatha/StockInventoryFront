@@ -261,7 +261,10 @@
 }
 .modal-select-item.selected {
   background: linear-gradient(135deg, #eef2ff, #f5f3ff);
-  border-color: #c7d2fe;
+  border-color: #6366f1;
+}
+.modal-select-item.selected .modal-select-check {
+  display: block;
 }
 .modal-select-item:focus {
   outline: none;
@@ -475,4 +478,49 @@
   color: #9ca3af;
   flex-shrink: 0;
   transition: transform 0.2s;
+}
+
+/* ── Multi-select Action Bar ── */
+.modal-select-actions-bar {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  padding: 1rem 1.5rem;
+  border-top: 1px solid #f0f0f5;
+  flex-shrink: 0;
+  background: #fafafa;
+}
+
+.modal-select-cancel-btn {
+  padding: 0.5rem 1.25rem;
+  border-radius: 0.5rem;
+  border: 1px solid #e5e7eb;
+  background: #ffffff;
+  color: #6b7280;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.modal-select-cancel-btn:hover {
+  background: #f3f4f6;
+  color: #374151;
+}
+
+.modal-select-apply-btn {
+  padding: 0.5rem 1.25rem;
+  border-radius: 0.5rem;
+  border: none;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  color: #ffffff;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.modal-select-apply-btn:hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
 }

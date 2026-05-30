@@ -8,8 +8,7 @@ import { useAuth, ROLES } from "../../context/AuthContext";
 import { canManageUser, hasLegacyPermission } from "../../context/AuthContext";
 import { ElMessage } from "../../utils/message";
 import { getUsers, createUser, updateUser, deleteUser, resetUserPassword, approveUser, rejectUser } from "../../api/adminApi";
-import api from "../../plugin/axios";
-import ENDPOINTS from "../../api/endpoints";
+import { roleApi } from "../../api";
 import { Select } from "../../components/UI";
 
 function UserManagement() {
@@ -60,54 +59,52 @@ function UserManagement() {
     confirmPassword: ""
   });
 
-  // Fetch users
-  const fetchUsers = useCallback(async (page = 1) => {
-    setLoading(true);
-    try {
-      const params = {
-        page,
-        role: roleFilter !== "all" ? roleFilter : undefined,
-        status: statusFilter !== "all" ? statusFilter : undefined,
-        search: searchQuery || undefined
-      };
-      
-      const res = await getUsers(params);
-      console.log('Users response:', res);
-      
-      // Handle different response structures
-      if (res.data && res.data.data) {
-        // Paginated response: { data: { current_page, data: [...], ... } }
-        const usersData = res.data.data.data || res.data.data;
-        setUsers(Array.isArray(usersData) ? usersData : []);
-        setCurrentPage(res.data.data.current_page || 1);
-        setTotalPages(res.data.data.last_page || 1);
-        setTotalUsers(res.data.data.total || 0);
-      } else if (Array.isArray(res.data)) {
-        setUsers(res.data);
-        setTotalUsers(res.data.length);
-      }
-    } catch (err) {
-      console.error('Error fetching users:', err);
-      ElMessage.error(err.message || 'Failed to fetch users');
-    } finally {
-      setLoading(false);
-    }
-  }, [roleFilter, statusFilter, searchQuery]);
+// Fetch users
+   const fetchUsers = useCallback(async (page = 1) => {
+     setLoading(true);
+     try {
+       const params = {
+         page,
+         role: roleFilter !== "all" ? roleFilter : undefined,
+         status: statusFilter !== "all" ? statusFilter : undefined,
+         search: searchQuery || undefined
+       };
+       
+       const res = await getUsers(params);
+       console.log('Users response:', res);
+       
+       // Handle different response structures
+       if (res?.data) {
+         // Demo API format: { data: { data: [...], total: N, current_page: N, last_page: N } }
+         // Real API format: { data: { data: [...], total: N, current_page: N, last_page: N } }
+         const responseData = res.data;
+         const usersData = responseData?.data || responseData;
+         setUsers(Array.isArray(usersData) ? usersData : []);
+         setCurrentPage(responseData?.current_page || 1);
+         setTotalPages(responseData?.last_page || 1);
+         setTotalUsers(responseData?.total || 0);
+       } else if (Array.isArray(res)) {
+         setUsers(res);
+         setTotalUsers(res.length);
+       }
+     } catch (err) {
+       console.error('Error fetching users:', err);
+       ElMessage.error(err.message || 'Failed to fetch users');
+     } finally {
+       setLoading(false);
+     }
+   }, [roleFilter, statusFilter, searchQuery]);
 
-  // Fetch roles
-  const fetchRoles = useCallback(async () => {
-    try {
-      const result = await api.get(ENDPOINTS.ROLES.INDEX);
-      if (result.data && result.data.data) {
-        const rolesData = result.data.data.data || result.data.data;
-        setRoles(Array.isArray(rolesData) ? rolesData : []);
-      } else if (Array.isArray(result.data)) {
-        setRoles(result.data);
-      }
-    } catch (err) {
-      console.error('Error fetching roles:', err);
-    }
-  }, []);
+// Fetch roles
+   const fetchRoles = useCallback(async () => {
+     try {
+       const result = await roleApi.getAll();
+       const rolesData = result?.data || result?.data?.data || [];
+       setRoles(Array.isArray(rolesData) ? rolesData : []);
+     } catch (err) {
+       console.error('Error fetching roles:', err);
+     }
+   }, []);
 
   useEffect(() => {
     fetchUsers(1);
@@ -401,16 +398,17 @@ const getUserStatus = (user) => {
             <div className="flex items-center gap-2">
               <FaFilter className="text-gray-500" />
               <div className="w-48">
-                <Select
-                  value={roleFilter}
-                  onChange={(val) => setRoleFilter(val)}
-                  options={[
-                    { value: "all", label: "All Roles" },
-                    { value: ROLES.ADMIN, label: "Admin" },
-                    { value: ROLES.MANAGER, label: "Manager" },
-                    { value: ROLES.STAFF, label: "Staff" }
-                  ]}
-                />
+<Select
+                   value={roleFilter}
+                   onChange={(val) => setRoleFilter(val)}
+                   options={[
+                     { value: "all", label: "All Roles" },
+                     { value: ROLES.ADMIN, label: "Admin" },
+                     { value: ROLES.MANAGER, label: "Manager" },
+                     { value: ROLES.STAFF, label: "Staff" },
+                     { value: ROLES.CASHER, label: "Casher" }
+                   ]}
+                 />
               </div>
             </div>
 
@@ -457,14 +455,31 @@ const getUserStatus = (user) => {
             {users.map((u) => {
               const status = getUserStatus(u);
               return (
-                <div key={u.id} className="bg-white p-6 rounded-2xl shadow-xl hover:shadow-2xl transition-shadow duration-300 flex flex-col justify-between border border-gray-200">
+                <div key={u.id} className="bg-white p-6 rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-300 flex flex-col justify-between border border-gray-200 hover:border-blue-300">
                   <div>
-                    <h2 className="text-lg font-semibold mb-1">{u.name}</h2>
-                    <p className="text-gray-600 mb-1">{u.email}</p>
-                    <p className="text-gray-600 mb-1">Role: {getRoleName(u.role)}</p>
-                    <span className={`px-3 py-1 rounded-full text-sm font-semibold ${status.class}`}>
-                      {status.label}
-                    </span>
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold text-lg">
+                        {u.name?.charAt(0) || '?'}
+                      </div>
+                      <div>
+                        <h2 className="text-xl font-bold text-gray-900">{u.name}</h2>
+                        <p className="text-gray-500 text-sm">{u.email}</p>
+                      </div>
+                    </div>
+                     {/* Role Badge with color */}
+                    <div className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold mt-2 ${
+                      u.role === ROLES.ADMIN 
+                        ? 'bg-purple-100 text-purple-800' 
+                        : u.role === ROLES.MANAGER
+                        ? 'bg-blue-100 text-blue-800'
+                        : u.role === ROLES.STAFF
+                        ? 'bg-green-100 text-green-800'
+                        : u.role === ROLES.CASHER
+                        ? 'bg-orange-100 text-orange-800'
+                        : 'bg-gray-100 text-gray-800'
+                    }`}>
+                      {getRoleName(u.role)}
+                    </div>
                   </div>
                   
                   <div className="mt-4 flex justify-end gap-2 text-gray-700">
@@ -582,19 +597,20 @@ const getUserStatus = (user) => {
                 </div>
                 
                 <div className="mb-3">
-                  <Select
-                    label="Role"
-                    value={createForm.role}
-                    onChange={(val) => setCreateForm(prev => ({ ...prev, role: val }))}
-                    options={[
-                      ...(currentUser?.role === ROLES.ADMIN ? [
-                        { value: ROLES.ADMIN, label: "Admin" },
-                        { value: ROLES.MANAGER, label: "Manager" }
-                      ] : []),
-                      { value: ROLES.STAFF, label: "Staff" }
-                    ]}
-                    required
-                  />
+<Select
+                     label="Role"
+                     value={createForm.role}
+                     onChange={(val) => setCreateForm(prev => ({ ...prev, role: val }))}
+                     options={[
+                       ...(currentUser?.role === ROLES.ADMIN ? [
+                         { value: ROLES.ADMIN, label: "Admin" },
+                         { value: ROLES.MANAGER, label: "Manager" },
+                         { value: ROLES.CASHER, label: "Casher" }
+                       ] : []),
+                       { value: ROLES.STAFF, label: "Staff" }
+                     ]}
+                     required
+                   />
                 </div>
                 
                 <div className="mb-3">

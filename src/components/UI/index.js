@@ -1,6 +1,5 @@
 // Reusable UI Components Index
 // Import all components here for easy access
-import './modalSelect.css';
 
 export { default as PageHeader } from './PageHeader';
 export { default as StatsCard, TotalProductsCard, TotalStockCard, LowStockCard, AvgPriceCard } from './StatsCard';

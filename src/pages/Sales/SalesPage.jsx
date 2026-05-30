@@ -54,6 +54,8 @@ function SalesPage() {
   const [selectedCustomerId, setSelectedCustomerId] = useState(null);
   const [showCustomerDropdown, setShowCustomerDropdown] = useState(false);
   const [cartErrors, setCartErrors] = useState({});
+  const [productsCurrentPage, setProductsCurrentPage] = useState(1);
+  const productsPerPage = 12;
 
   // ── modal (add/edit) ──────────────────────────────────────────────────────
   const [showModal, setShowModal] = useState(false);
@@ -67,14 +69,13 @@ function SalesPage() {
   const [newItem, setNewItem] = useState({ product_id: "", quantity: 1, discount_percent: 0, maxQuantity: 1 });
   const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
-
-  // ── QR / payment ──────────────────────────────────────────────────────────
   const [qrCode, setQrCode] = useState(null);
   const [generatingQR, setGeneratingQR] = useState(false);
   const [verifying, setVerifying] = useState(false);
   const [currentSaleId, setCurrentSaleId] = useState(null);
   const [currentMd5, setCurrentMd5] = useState(null);
   const [paymentError, setPaymentError] = useState(null);
+
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
 
@@ -85,7 +86,8 @@ function SalesPage() {
     setLoading(true);
     try {
       const res = await salesApi.getAll();
-      setSales(Array.isArray(res?.data || res) ? (res?.data || res) : []);
+      const data = res.success ? (res.data?.data || res.data || []) : [];
+      setSales(Array.isArray(data) ? data : []);
     } catch (e) {
       console.error(e);
     } finally {
@@ -170,7 +172,7 @@ function SalesPage() {
 
   const filteredSales = sales
     .filter((s) => {
-      const cname = typeof s.customer === "object" ? s.customer?.name : s.customer;
+      const cname = typeof s.customer === "object" ? (s.customer?.name || "_") : (s.customer || "_");
       const matchSearch = debouncedSearch === "" ||
         cname?.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
         s.items?.some(i => (typeof i.product === "object" ? i.product?.name : i.product)?.toLowerCase().includes(debouncedSearch.toLowerCase()));
@@ -195,6 +197,13 @@ function SalesPage() {
   const paidSales = sales.filter(s => s.payment_status === "paid");
   const totalRevenue = paidSales.reduce((sum, s) => sum + parseFloat(s.total_amount || 0), 0);
   const averageSale = paidSales.length > 0 ? (totalRevenue / paidSales.length).toFixed(2) : "0.00";
+
+  // Product pagination for cashier view
+  const productsTotalPages = Math.ceil(searchedProducts.length / productsPerPage);
+  const paginatedProducts = searchedProducts.slice(
+    (productsCurrentPage - 1) * productsPerPage,
+    productsCurrentPage * productsPerPage
+  );
 
   // ── cart helpers ──────────────────────────────────────────────────────────
   const calcTotal = (items) =>
@@ -250,14 +259,11 @@ function SalesPage() {
     if (paymentMethod === "Bakong") setGeneratingQR(true);
 
     const runBakongFallback = () => {
-      // Simulate network delay then show QR
       setTimeout(() => {
         setGeneratingQR(false);
-        const fakeRef = `BKQR-${Date.now()}`;
-        const fakeQr = `https://bakong.nbc.gov.kh/payment?amount=${calcTotal(cart).toFixed(2)}&currency=USD&ref=${fakeRef}&merchant=DEMO`;
-        setQrCode(fakeQr);
+        setQrCode("00020101021115311974011600520446BONG1000231208129140010ratha@bkrt5204599953031165802KH5914RA THA Phearom6010Phnom Penh63043AD8");
         setCurrentSaleId("demo-" + Date.now());
-        setCurrentMd5(fakeRef);
+        setCurrentMd5("1EDZ9iEBbsjqscJv8");
         setSubmitting(false);
       }, 1800);
     };
@@ -431,12 +437,9 @@ function SalesPage() {
     const runModalBakongFallback = () => {
       setTimeout(() => {
         setGeneratingQR(false);
-        setSubmitting(false);
-        const fakeRef = `BKQR-${Date.now()}`;
-        const fakeQr = `https://bakong.nbc.gov.kh/payment?amount=${calcTotal(modalCart).toFixed(2)}&currency=USD&ref=${fakeRef}&merchant=DEMO`;
-        setQrCode(fakeQr);
+        setQrCode("00020101021115311974011600520446BONG1000231208129140010ratha@bkrt5204599953031165802KH5914RA THA Phearom6010Phnom Penh63043AD8");
         setCurrentSaleId("demo-" + Date.now());
-        setCurrentMd5(fakeRef);
+        setCurrentMd5("1EDZ9iEBbsjqscJv8");
         setShowModal(false);
       }, 1800);
     };
@@ -455,7 +458,7 @@ function SalesPage() {
           } else {
             runModalBakongFallback();
           }
-        } else {
+        } else if (!isEdit) {
           clearCache();
           fetchSales(true);
           setShowModal(false);
@@ -466,7 +469,6 @@ function SalesPage() {
           runModalBakongFallback();
         } else {
           setSubmitting(false);
-          setGeneratingQR(false);
         }
       });
   };
@@ -547,7 +549,7 @@ function SalesPage() {
                   type="text"
                   placeholder="Search products..."
                   value={cashierProductSearch}
-                  onChange={(e) => setCashierProductSearch(e.target.value)}
+                  onChange={(e) => { setCashierProductSearch(e.target.value); setProductsCurrentPage(1); }}
                   className="w-full pl-9 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent"
                 />
                 {searchingProducts && (
@@ -563,38 +565,66 @@ function SalesPage() {
                   <p className="text-gray-400 text-sm">Search for products above</p>
                 </div>
               ) : (
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 max-h-[58vh] overflow-y-auto pr-1">
-                  {searchedProducts.map((p) => {
-                    const inCart = cart.find(i => i.product_id === p.id);
-                    const oos = p.stock_quantity <= 0;
-                    return (
-                      <button
-                        key={p.id}
-                        disabled={oos}
-                        onClick={() => addToCart(p, setCart, cart)}
-                        className={`group relative flex flex-col items-center text-center p-3 rounded-xl border transition-all ${
-                          oos
-                            ? "opacity-40 cursor-not-allowed border-gray-100 bg-gray-50"
-                            : inCart
-                            ? "border-indigo-400 bg-indigo-50 shadow-sm"
-                            : "border-gray-100 hover:border-indigo-200 hover:shadow-sm bg-white"
-                        }`}
-                      >
-                        {inCart && (
-                          <span className="absolute top-2 right-2 w-5 h-5 bg-indigo-600 text-white text-xs rounded-full flex items-center justify-center font-bold">
-                            {inCart.quantity}
-                          </span>
-                        )}
-                        <div className={`w-12 h-12 rounded-xl flex items-center justify-center mb-2 ${inCart ? "bg-indigo-100" : "bg-gray-100"}`}>
-                          <CubeIcon className={`w-6 h-6 ${inCart ? "text-indigo-600" : "text-gray-400"}`} />
-                        </div>
-                        <p className="text-xs font-medium text-gray-900 leading-tight mb-0.5 line-clamp-2">{p.name}</p>
-                        <p className="text-sm font-bold text-indigo-600">${fmt(p.price)}</p>
-                        <p className="text-xs text-gray-400">Stock: {p.stock_quantity}</p>
-                      </button>
-                    );
-                  })}
-                </div>
+                <>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 max-h-[58vh] overflow-y-auto pr-1">
+                    {paginatedProducts.map((p) => {
+                      const inCart = cart.find(i => i.product_id === p.id);
+                      const oos = p.stock_quantity <= 0;
+                      return (
+                        <button
+                          key={p.id}
+                          disabled={oos}
+                          onClick={() => addToCart(p, setCart, cart)}
+                          className={`group relative flex flex-col items-center text-center p-3 rounded-xl border transition-all ${
+                            oos
+                              ? "opacity-40 cursor-not-allowed border-gray-100 bg-gray-50"
+                              : inCart
+                              ? "border-indigo-400 bg-indigo-50 shadow-sm"
+                              : "border-gray-100 hover:border-indigo-200 hover:shadow-sm bg-white"
+                          }`}
+                        >
+                          {inCart && (
+                            <span className="absolute top-2 right-2 w-5 h-5 bg-indigo-600 text-white text-xs rounded-full flex items-center justify-center font-bold">
+                              {inCart.quantity}
+                            </span>
+                          )}
+                          <div className={`w-12 h-12 rounded-xl flex items-center justify-center mb-2 overflow-hidden ${inCart ? "bg-indigo-100" : "bg-gray-100"}`}>
+                            {p.image ? (
+                              <img src={p.image} alt={p.name} className="w-full h-full object-cover" />
+                            ) : (
+                              <CubeIcon className={`w-6 h-6 ${inCart ? "text-indigo-600" : "text-gray-400"}`} />
+                            )}
+                          </div>
+                          <p className="text-xs font-medium text-gray-900 leading-tight mb-0.5 line-clamp-2">{p.name}</p>
+                          <p className="text-sm font-bold text-indigo-600">${fmt(p.price)}</p>
+                          <p className="text-xs text-gray-400">Stock: {p.stock_quantity}</p>
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {productsTotalPages > 1 && (
+                    <div className="flex justify-between items-center mt-4 pt-3 border-t border-gray-100">
+                      <span className="text-xs text-gray-400">Page {productsCurrentPage} of {productsTotalPages}</span>
+                      <div className="flex gap-1">
+                        <button
+                          onClick={() => setProductsCurrentPage(p => Math.max(p - 1, 1))}
+                          disabled={productsCurrentPage === 1}
+                          className="p-1.5 border border-gray-200 rounded-lg disabled:opacity-40 hover:bg-gray-50 transition"
+                        >
+                          <ChevronLeftIcon className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => setProductsCurrentPage(p => Math.min(p + 1, productsTotalPages))}
+                          disabled={productsCurrentPage === productsTotalPages}
+                          className="p-1.5 border border-gray-200 rounded-lg disabled:opacity-40 hover:bg-gray-50 transition"
+                        >
+                          <ChevronRightIcon className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </>
               )}
             </div>
           </div>
@@ -774,9 +804,12 @@ function SalesPage() {
                   <tr><td colSpan={6} className="py-16 text-center text-gray-400 text-sm">No sales found</td></tr>
                 ) : paginatedSales.map((s) => (
                   <tr key={s.id} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-5 py-3.5 text-gray-600">{new Date(s.created_at).toLocaleDateString()}</td>
-                    <td className="px-5 py-3.5 font-medium text-gray-900">{typeof s.customer === "object" ? s.customer?.name : s.customer}</td>
-                    <td className="px-5 py-3.5 font-semibold text-gray-900">${s.total_amount}</td>
+                    <td className="px-5 py-3.5 text-gray-600">
+                      {new Date(s.created_at).toLocaleDateString('en-US', { month: 'numeric', day: 'numeric', year: 'numeric' })} {' '}
+                      {new Date(s.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </td>
+                    <td className="px-5 py-3.5 font-medium text-gray-900">{typeof s.customer === "object" ? (s.customer?.name || "_") : (s.customer || "_")}</td>
+                    <td className="px-5 py-3.5 font-semibold text-gray-900">${fmt(s.total_amount)}</td>
                     <td className="px-5 py-3.5 text-gray-500">{s.payment_method}</td>
                     <td className="px-5 py-3.5">
                       <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${s.payment_status === "paid" ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700"}`}>
@@ -1009,7 +1042,7 @@ function SalesPage() {
           <div className="bg-white rounded-2xl shadow-2xl p-8 text-center w-full max-w-sm">
             <h2 className="text-lg font-bold text-gray-900 mb-1">Bakong payment</h2>
             <p className="text-sm text-gray-400 mb-5">Scan this QR code to complete payment</p>
-            <QRCodeCanvas value={qrCode} size={220} level="M" includeMargin className="mx-auto mb-6" />
+            <QRCodeCanvas value={qrCode} size={256} level="H" includeMargin className="mx-auto mb-6 bg-white p-4 rounded" />
             {paymentError && <p className="text-xs text-red-500 mb-3 bg-red-50 rounded-lg px-3 py-2">{paymentError}</p>}
             <div className="flex gap-3">
               <button onClick={verifyPayment} disabled={verifying} className="flex-1 py-2.5 bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white rounded-xl text-sm font-medium transition">
@@ -1023,15 +1056,14 @@ function SalesPage() {
         </div>
       )}
 
-      {/* ── Success modal ───────────────────────────────────────────────── */}
+      {/* ── Success modal ────────────────────────────────────────────────── */}
       {showSuccessModal && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl p-8 text-center w-full max-w-sm">
-            <CheckCircleIcon className="w-14 h-14 text-green-500 mx-auto mb-3" />
-            <h2 className="text-lg font-bold text-gray-900 mb-1">Payment successful!</h2>
-            <p className="text-sm text-gray-400 mb-5">{successMessage}</p>
-            <button onClick={() => setShowSuccessModal(false)} className="w-full py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-xl text-sm font-medium transition">
-              Continue
+          <div className="bg-white rounded-2xl shadow-2xl p-8 text-center w-72">
+            <CheckCircleIcon className="w-12 h-12 text-green-500 mx-auto mb-4" />
+            <p className="font-semibold text-gray-900 mb-4">{successMessage}</p>
+            <button onClick={() => setShowSuccessModal(false)} className="px-6 py-2 bg-indigo-600 text-white rounded-xl text-sm font-medium hover:bg-indigo-700 transition">
+              OK
             </button>
           </div>
         </div>

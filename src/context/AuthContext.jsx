@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import api from '../plugin/axios';
-import { logout as apiLogout, CookieUtils } from '../api/authApi';
+import { authApi, CookieUtils } from '../api';
+import { logout as apiLogout } from '../api/authApi';
 
 const AuthContext = createContext();
 
@@ -123,6 +124,18 @@ const normalizeUser = (userData) => {
   return { ...userData, role };
 };
 
+// Ensure is_demo is preserved
+const preserveDemoFlag = (userData) => {
+  if (!userData) return userData;
+  const isDemo = userData.is_demo === true || (typeof localStorage !== 'undefined' && (() => {
+    try {
+      const stored = localStorage.getItem('user');
+      return stored && JSON.parse(stored)?.is_demo === true;
+    } catch { return false; }
+  })());
+  return { ...userData, is_demo: isDemo };
+};
+
 // ==================== AuthProvider Component ====================
 
 export const AuthProvider = ({ children }) => {
@@ -149,7 +162,7 @@ export const AuthProvider = ({ children }) => {
             return;
           }
           
-          const normalizedUser = normalizeUser(userData);
+          const normalizedUser = preserveDemoFlag(normalizeUser(userData));
           setUser(normalizedUser);
           CookieUtils.set(USER_NAME, JSON.stringify(normalizedUser), 7);
           localStorage.setItem('user', JSON.stringify(normalizedUser));
@@ -157,9 +170,12 @@ export const AuthProvider = ({ children }) => {
           setIsAuthenticated(true);
 
           api.defaults.headers.common['Authorization'] = `Bearer ${storedToken}`;
+        } else {
+          setIsAuthenticated(false);
         }
       } catch (error) {
         console.error('Auth initialization error:', error);
+        setIsAuthenticated(false);
       }
       setLoading(false);
     };
@@ -175,10 +191,11 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   // Login function - stores token in both cookie and fallback localStorage
-  const login = useCallback(async (userData, authToken) => {
+  const login = useCallback((userData, authToken) => {
     try {
       const tokenValue = authToken || userData.token;
-      const normalizedUser = normalizeUser(userData);
+      // Preserve is_demo flag during normalization
+      const normalizedUser = preserveDemoFlag(normalizeUser(userData));
       
       setUser(normalizedUser);
       setToken(tokenValue);
