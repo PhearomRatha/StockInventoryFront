@@ -29,12 +29,14 @@ function StockOutPage() {
     notes: "",
   });
 
-  const [customers, setCustomers] = useState([]);
-  const [stockOuts, setStockOuts] = useState([]);
-  const [loading, setLoading] = useState({
-    customers: true,
-    stockOuts: true,
-  });
+const [customers, setCustomers] = useState([]);
+   const [products, setProducts] = useState([]);
+   const [stockOuts, setStockOuts] = useState([]);
+   const [loading, setLoading] = useState({
+     customers: true,
+     products: true,
+     stockOuts: true,
+   });
 
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [showErrorModal, setShowErrorModal] = useState(false);
@@ -45,26 +47,27 @@ function StockOutPage() {
     loadDashboardData();
   }, []);
 
-  const loadDashboardData = async () => {
-    try {
-      setLoading({ customers: true, stockOuts: true });
-      const result = await stockOutApi.getDashboard();
+const loadDashboardData = async () => {
+     try {
+       setLoading({ customers: true, products: true, stockOuts: true });
+       const result = await stockOutApi.getDashboard();
 
-      if (result.success) {
-        setCustomers(result.data?.customers || []);
-        setStockOuts(result.data?.stockOuts || result.data?.stock_outs || []);
-      } else {
-        setModalMessage(result.message || t("stockOut.failedRecord"));
-        setShowErrorModal(true);
-      }
-    } catch (err) {
-      console.error("Load error:", err);
-      setModalMessage(t("stockOut.failedRecord"));
-      setShowErrorModal(true);
-    } finally {
-      setLoading({ customers: false, stockOuts: false });
-    }
-  };
+       if (result.success) {
+         setCustomers(result.data?.customers || []);
+         setProducts(result.data?.products || []);
+         setStockOuts(result.data?.stockOuts || result.data?.stock_outs || []);
+       } else {
+         setModalMessage(result.message || t("stockOut.failedRecord"));
+         setShowErrorModal(true);
+       }
+     } catch (err) {
+       console.error("Load error:", err);
+       setModalMessage(t("stockOut.failedRecord"));
+       setShowErrorModal(true);
+     } finally {
+       setLoading({ customers: false, products: false, stockOuts: false });
+     }
+   };
 
   // Form changes
   const handleChange = (e) => {
