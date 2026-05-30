@@ -80,22 +80,29 @@ const Login = () => {
     setShowPassword(prev => !prev);
   }, []);
 
-  // Helper function to check user account status
-  const checkAccountStatus = (user) => {
-    if (!user) return { blocked: true, message: 'Account not found. Please register first or contact admin.', type: 'error' };
-    
-    const status = user.status ?? 1; // Default to 1 (Active) if status is undefined
-    
-    // Status: 0 = Pending, 1 = Active, 2 = Rejected
-    switch (status) {
-      case 0:
-        return { blocked: true, message: 'Your account is pending approval. Please wait for admin approval.', type: 'warning' };
-      case 2:
-        return { blocked: true, message: 'Your account has been rejected. Please contact support.', type: 'error' };
-      default:
-        return { blocked: false };
-    }
-  };
+// Helper function to check user account status
+   const checkAccountStatus = (user) => {
+     if (!user) return { blocked: true, message: 'Account not found. Please register first or contact admin.', type: 'error' };
+     
+     // Support: string status (ACTIVE/INACTIVE), boolean status (true/false), or numeric status (0/1)
+     const statusValue = user.status;
+     let status;
+     
+     if (typeof statusValue === 'string') {
+       status = statusValue.toUpperCase() === 'ACTIVE' ? 1 : 0;
+     } else if (typeof statusValue === 'boolean') {
+       status = statusValue ? 1 : 0;
+     } else {
+       status = statusValue ?? 1;
+     }
+     
+     // Status: 0 = Pending/Inactive, 1 = Active
+     if (status === 0) {
+       return { blocked: true, message: 'Your account is pending approval or inactive. Please contact support.', type: 'warning' };
+     }
+     
+     return { blocked: false };
+   };
 
   // Handle Google Login Success
   const handleGoogleSuccess = async (credentialResponse) => {
@@ -200,8 +207,6 @@ const Login = () => {
     setLoginLoading(true);
 
     try {
-      await api.get('/sanctum/csrf-cookie');
-      
       const res = await api.post(`${API_BASE}/login`, loginForm);
       
       console.log('Login response:', res.data);
@@ -296,6 +301,8 @@ const Login = () => {
           }
         } else if (err.response.status === 423) {
           setLoginMessage({ text: err.response.data.message || 'Account is temporarily locked. Please try again later.', type: 'error' });
+        } else if (err.response.status === 403) {
+          setLoginMessage({ text: err.response.data.message || 'Your account is not active. Please contact support.', type: 'warning' });
         } else {
           setLoginMessage({ text: err.response?.data?.message || err.response?.data?.error || 'Invalid email or password.', type: 'error' });
         }
@@ -457,7 +464,7 @@ const Login = () => {
             {loginErrors.password && <span className="field-error">{loginErrors.password}</span>}
           </div>
 
-          <div className="forgot-password">
+<div className="forgot-password">
             <a href="/forgot-password">Forgot password?</a>
           </div>
 
@@ -470,6 +477,10 @@ const Login = () => {
           </button>
         </form>
       )}
+
+      <div className="auth-footer">
+        <p>Don't have an account? <button type="button" className="link-btn" onClick={switchToRegister}>Register</button></p>
+      </div>
 
       {/* Google Login Button - Temporarily disabled */}
       {/* 
@@ -648,18 +659,47 @@ const Login = () => {
     </>
   );
 
-  // Render main content based on auth mode
-  const renderContent = () => {
-    switch (authMode) {
-      case 'register':
-        return renderRegisterForm();
-      case 'approved':
-        return renderApprovedStatus();
-      case 'login':
-      default:
-        return renderLoginForm();
-    }
-  };
+// Render approved status (after registration)
+   const renderApprovedStatus = () => (
+     <>
+       <div className="auth-header">
+         <h1>Registration Submitted</h1>
+         <p>Your account is pending approval</p>
+       </div>
+
+       <div className="registration-pending">
+         <div className="success-icon">
+           <FiCheckCircle size={48} style={{ color: '#eab308' }} />
+         </div>
+         <h2>Waiting for Approval</h2>
+         <p>Your account has been created and is pending administrator approval. You will be notified once your account is approved.</p>
+         <button
+           type="button"
+           className="login-btn"
+           onClick={switchToLogin}
+         >
+           Go to Login
+         </button>
+       </div>
+
+       <div className="auth-footer">
+         <p>Already have an account? <button type="button" className="link-btn" onClick={switchToLogin}>Sign in</button></p>
+       </div>
+     </>
+   );
+
+   // Render main content based on auth mode
+   const renderContent = () => {
+     switch (authMode) {
+       case 'register':
+         return renderRegisterForm();
+       case 'approved':
+         return renderApprovedStatus();
+       case 'login':
+       default:
+         return renderLoginForm();
+     }
+   };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 py-12 px-4 sm:px-6 lg:px-8">
